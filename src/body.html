@@ -1,0 +1,102 @@
+<canvas id="stage" aria-label="Meja billiard"></canvas>
+
+<div id="hud" hidden>
+  <header id="hudTop">
+    <button class="hud-menu" id="btnPause" aria-label="Jeda"><svg width="24" height="24" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="3" rx="1.5" fill="#fff"/><rect x="4" y="10.5" width="16" height="3" rx="1.5" fill="#fff"/><rect x="4" y="16" width="16" height="3" rx="1.5" fill="#fff"/></svg></button>
+    <div class="hud-player left" id="p0">
+      <div class="avwrap"><svg class="ring" viewBox="0 0 50 50"><circle class="ring-bg" cx="25" cy="25" r="22"/><circle class="ring-fg" cx="25" cy="25" r="22"/></svg><div class="av" id="av0"></div><span class="lvl" id="lv0">1</span></div>
+      <div class="hud-meta"><div class="pname" id="pn0"></div><div class="tray" id="tr0"></div></div>
+    </div>
+    <div class="pot" aria-label="Hadiah">
+      <svg width="40" height="40" viewBox="0 0 40 40"><defs><radialGradient id="gc" cx="35%" cy="30%"><stop offset="0" stop-color="#fff2b0"/><stop offset=".55" stop-color="#F4C542"/><stop offset="1" stop-color="#b8850c"/></radialGradient></defs><ellipse cx="20" cy="30" rx="15" ry="6" fill="#8a6208"/><ellipse cx="20" cy="27" rx="15" ry="6" fill="url(#gc)"/><ellipse cx="20" cy="21" rx="15" ry="6" fill="#a4740b"/><ellipse cx="20" cy="18" rx="15" ry="6" fill="url(#gc)"/><ellipse cx="20" cy="18" rx="8.5" ry="3" fill="none" stroke="#b8850c" stroke-width="1.5"/></svg>
+      <div><b id="pot">0</b><small>Hadiah</small></div>
+    </div>
+    <div class="hud-player right" id="p1">
+      <div class="avwrap"><svg class="ring" viewBox="0 0 50 50"><circle class="ring-bg" cx="25" cy="25" r="22"/><circle class="ring-fg" cx="25" cy="25" r="22"/></svg><div class="av" id="av1"></div><span class="lvl" id="lv1">1</span></div>
+      <div class="hud-meta"><div class="pname" id="pn1"></div><div class="tray" id="tr1"></div></div>
+      <div class="conn" id="conn" title="Koneksi"><i></i><i></i><i></i></div>
+    </div>
+  </header>
+  <div id="turnChip"></div>
+  <div id="toast" role="status"></div>
+  <div id="spin" title="Titik pukul bola putih (spin)"><canvas id="spinCv" width="168" height="168"></canvas></div>
+  <div id="fine">
+    <button id="fineL" aria-label="Putar bidik ke kiri"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M15 5l-8 7 8 7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button id="fineR" aria-label="Putar bidik ke kanan"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M9 5l8 7-8 7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </div>
+  <aside id="power" aria-label="Power"><div id="powerTrack"><div id="powerFill"></div><div id="powerHandle"></div></div><output id="powerVal">50</output></aside>
+</div>
+<div id="rotateHint">Putar perangkat ke landscape agar meja tampil lebih besar</div>
+
+<div id="screens">
+  <section class="screen scrim active" id="screenMenu" aria-label="Menu utama">
+    <div class="menu-wrap">
+      <div class="chips"><div class="chip" id="chipProfile"><div class="av mini-av" id="menuAv"></div><span id="menuName"></span><span id="menuLevel" style="color:var(--gold)"></span></div>
+        <div class="chip coins"><svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="#F4C542"/><circle cx="11" cy="11" r="6.5" fill="none" stroke="#b8850c" stroke-width="1.6"/></svg><span id="menuCoins"></span></div></div>
+      <div>
+        <h1 class="logo">Pantul</h1>
+        <p class="tag">Billiard 8-ball kompetitif dengan fisika bola yang terasa nyata.</p>
+        <div class="menu-actions">
+          <button class="btn primary" data-go="modes">Main</button>
+          <button class="btn" data-go="cues">Koleksi Cue</button>
+          <button class="btn" data-go="settings">Pengaturan</button>
+        </div>
+      </div>
+      <div class="foot">Prototype · semua aset original</div>
+    </div>
+  </section>
+
+  <section class="screen scrim" id="screenModes" aria-label="Pilih mode">
+    <div class="panel modes">
+      <h2>Pilih mode</h2><p class="sub">Semua mode memakai aturan 8-ball yang sama.</p>
+      <div class="mode-grid" id="modeGrid">
+        <button class="mode-card" data-mode="bot" aria-pressed="true"><b>Lawan bot</b><span>Latihan melawan komputer. Pilih tingkat kesulitan di bawah.</span></button>
+        <button class="mode-card" data-mode="local" aria-pressed="false"><b>Dua pemain</b><span>Gantian menembak di satu layar. Tanpa hadiah koin.</span></button>
+        <button class="mode-card" data-mode="online" aria-pressed="false"><b>Online</b><span>Cari lawan lewat matchmaking. Saat ini masih simulasi lokal; server sungguhan tinggal disambungkan.</span></button>
+      </div>
+      <div class="diff-row" id="diffRow"><span>Tingkat kesulitan</span><div class="seg" id="diffSeg"><button data-d="easy" aria-pressed="false">Mudah</button><button data-d="medium" aria-pressed="true">Sedang</button><button data-d="hard" aria-pressed="false">Sulit</button></div></div>
+      <div class="row"><button class="btn green" id="btnStart">Mulai main</button><button class="btn" data-go="menu" data-back="1">Kembali</button></div>
+    </div>
+  </section>
+
+  <section class="screen scrim" id="screenSettings" aria-label="Pengaturan">
+    <div class="panel narrow">
+      <h2>Pengaturan</h2>
+      <div class="set-row"><span>Nama pemain</span><input class="text" id="setName" maxlength="14" autocomplete="off"></div>
+      <div class="set-row"><span>Efek suara</span><button class="switch" role="switch" data-set="sfx" aria-label="Efek suara"></button></div>
+      <div class="set-row"><span>Musik latar</span><button class="switch" role="switch" data-set="music" aria-label="Musik latar"></button></div>
+      <div class="set-row"><span>Garis bantu bidik</span><button class="switch" role="switch" data-set="aimAssist" aria-label="Garis bantu bidik"></button></div>
+      <div class="set-row"><span>Prediksi pantulan cushion</span><button class="switch" role="switch" data-set="showBounce" aria-label="Prediksi pantulan"></button></div>
+      <div class="stack"><button class="btn" id="btnSettingsBack">Selesai</button></div>
+    </div>
+  </section>
+
+  <section class="screen scrim" id="screenMM" aria-label="Mencari lawan">
+    <div class="panel narrow mm"><div class="spinner" id="mmSpin"></div><h2 id="mmTitle">Mencari lawan…</h2><div class="vs" id="mmVs"></div><p class="sub" id="mmSub">Menyiapkan meja</p></div>
+  </section>
+
+  <section class="screen scrim" id="screenPause" aria-label="Jeda">
+    <div class="panel narrow"><h2>Jeda</h2>
+      <div class="stack">
+        <button class="btn green" id="btnResume">Lanjut</button>
+        <button class="btn" id="btnPauseSettings">Pengaturan</button>
+        <button class="btn" id="btnDisc" hidden>Uji sambung ulang</button>
+        <button class="btn" id="btnRestart">Mulai ulang</button>
+        <button class="btn danger" id="btnQuit">Keluar ke menu</button>
+      </div></div>
+  </section>
+
+  <section class="screen scrim" id="screenResult" aria-label="Hasil">
+    <div class="panel narrow result"><h2 id="resTitle"></h2><p class="sub" id="resReason" style="text-align:center"></p><div class="reward" id="resReward"></div>
+      <div class="stack"><button class="btn green" id="btnRematch">Main lagi</button><button class="btn" id="btnResMenu">Menu</button></div></div>
+  </section>
+
+  <section class="screen" id="screenCues" aria-label="Koleksi cue">
+    <div class="cues-page">
+      <div class="cues-head"><button class="btn small" data-go="menu" data-back="1">Kembali</button><h2>Cue Collection</h2>
+        <div class="chip coins"><svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="#F4C542"/><circle cx="11" cy="11" r="6.5" fill="none" stroke="#b8850c" stroke-width="1.6"/></svg><span id="cueCoins"></span></div>
+        <div class="chip" style="padding-left:12px;color:var(--cue-gold)"><span id="cuePts"></span></div></div>
+      <div class="cues-list" id="cuesList"></div>
+    </div>
+  </section>
+</div>

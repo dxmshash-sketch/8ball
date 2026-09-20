@@ -1,10 +1,15 @@
 {
   "name": "pantul",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Pantul — game billiard 8-ball (Canvas 2D, tanpa dependensi)",
+  "description": "Pantul — game billiard 8-ball (Canvas 2D, tanpa dependensi runtime)",
   "scripts": {
     "build": "python3 tools/build.py",
     "test": "node tools/test.js"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/cli": "^6.2.0",
+    "@capacitor/core": "^6.2.0"
   }
 }

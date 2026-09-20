@@ -4,9 +4,20 @@ Game billiard 8-ball berbasis Canvas 2D, satu file HTML tanpa dependensi: aturan
 (top/back/side), bot 3 tingkat, mode dua pemain, lapisan multiplayer siap sambung, dan koleksi cue.
 
 ## Main
-Buka `index.html` di browser (atau lewat GitHub Pages setelah rilis).
+Buka `www/index.html` di browser (atau lewat GitHub Pages setelah rilis).
 Mouse: arahkan untuk membidik, seret power bar di kanan lalu lepas untuk menembak.
 Keyboard: ←/→ bidik (Shift = halus), Space tahan/lepas = power, Enter = tembak, Esc = jeda.
+
+## Install di Android
+**Cara 1 — APK (dibangun otomatis oleh GitHub Actions)**
+1. Push repo ini ke GitHub, lalu push tag: `git push origin main --tags`.
+2. Buka tab **Actions → Build APK Android**. Setelah hijau, unduh artifact `pantul-apk` (zip berisi `pantul.apk`).
+   Untuk tag `v*`, APK yang sama juga otomatis terlampir di halaman **Releases**.
+3. Salin `pantul.apk` ke HP, buka, dan izinkan *Install unknown apps* untuk aplikasi pembuka (Files/Chrome) bila diminta.
+Jalankan manual kapan saja: Actions → Build APK Android → **Run workflow**.
+APK ini bertanda tangan *debug* — cukup untuk dipasang sendiri; untuk Play Store perlu keystore rilis.
+
+**Cara 2 — PWA (tanpa APK)**: setelah GitHub Pages aktif, buka URL-nya di Chrome Android → menu ⋮ → **Install app** / *Add to Home screen*. Berjalan layar penuh dan landscape.
 
 ## Pengembangan
 ```
@@ -27,6 +38,8 @@ npm test                 # uji geometri, physics, aturan, validator, dan pertand
 | 08-audio | abstraksi audio |
 | 09-store | profil, pengaturan, katalog cue |
 | 10-render, 11-ui, 12-main | renderer, HUD & input, bootstrap |
+
+`tools/`: `build.py` (rakit `www/`), `gen_cues.py`, `gen_icons.py`, `android_patch.py` (dipakai CI), `test.js`.
 
 ## Aset
 Gambar cue di `assets/cues/` dibuat oleh `tools/gen_cues.py` (original). Ganti field `image` di `src/09-store.js`

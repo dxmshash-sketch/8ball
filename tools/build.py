@@ -1,5 +1,5 @@
-"""Rakit satu file index.html dari src/ + PNG di assets/cues (di-embed sebagai data URI)."""
-import base64, json, pathlib
+"""Rakit www/ (index.html + manifest + service worker + ikon) dari src/ dan assets/. PNG cue di-embed sebagai data URI."""
+import base64, json, pathlib, shutil
 root = pathlib.Path(__file__).resolve().parent.parent
 src = root / 'src'
 order = ['01-config','02-core','03-physics','04-rules','05-net','06-bot','07-game','08-audio','__CUES__','09-store','10-render','11-ui','12-main']
@@ -12,6 +12,11 @@ html = f'''<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Pantul — Billiard 8-Ball</title>
 <meta name="theme-color" content="#222831">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@600;700&display=swap" rel="stylesheet">
 <style>
@@ -23,7 +28,15 @@ html = f'''<!doctype html>
 <script>
 {js}
 </script>
+<script>
+if ('serviceWorker' in navigator && /^https?:/.test(location.protocol) && !window.Capacitor) navigator.serviceWorker.register('sw.js').catch(function () {{}});
+</script>
 </body>
 </html>'''
-(root/'index.html').write_text(html)
-print('index.html', len(html)//1024, 'KB')
+www = root / 'www'
+if www.exists(): shutil.rmtree(www)
+(www / 'icons').mkdir(parents=True)
+(www / 'index.html').write_text(html)
+for f in ('manifest.webmanifest', 'sw.js'): shutil.copy(src / f, www / f)
+for f in ('icon-192.png', 'icon-512.png', 'icon-512-maskable.png'): shutil.copy(root / 'assets' / 'icons' / f, www / 'icons' / f)
+print('www/index.html', len(html) // 1024, 'KB')

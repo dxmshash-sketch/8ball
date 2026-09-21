@@ -5,9 +5,9 @@ const mem = {}; const window = { localStorage: { getItem: (k) => (k in mem ? mem
 const ctx = vm.createContext({ console, setTimeout, clearTimeout, Math, Set, Map, Float32Array, Float64Array, Uint8Array, Proxy, Error, Object, Array, Number, JSON, isFinite, Date, window, String, parseFloat, Image: function () {} });
 const code = ['01-config', '02-core', '03-physics', '04-rules', '05-net', '06-bot', '07-game'].map(src).join('\n') +
   "\nconst CUE_IMAGES = new Proxy({}, { get: () => 'data:image/png;base64,AAAA' });\n" + ['09-content', '10-store', '11-leaderboard'].map(src).join('\n') +
-  '\nthis.__x={CONFIG,buildTableGeometry,PhysicsWorld,Rng,Game,MatchRules,ShotValidator,Store,levelInfo,xpForLevel,rewardsForLevel,BETS,HOUSE_FEE,START_COINS,TABLE_THEMES,CUE_CATALOG,MockLeaderboard,botAvatar,AVATAR_COLORS,fmtShort,BADGE_DEFS,DAILY_REWARDS};';
+  '\nthis.__x={NineBallRules,CONFIG,buildTableGeometry,PhysicsWorld,Rng,Game,MatchRules,ShotValidator,Store,levelInfo,xpForLevel,rewardsForLevel,BETS,HOUSE_FEE,START_COINS,TABLE_THEMES,CUE_CATALOG,MockLeaderboard,botAvatar,AVATAR_COLORS,fmtShort,BADGE_DEFS,DAILY_REWARDS};';
 vm.runInContext(code, ctx);
-const X = ctx.__x; const { CONFIG, buildTableGeometry, PhysicsWorld, Rng, Game, MatchRules, ShotValidator, Store, levelInfo, rewardsForLevel } = X;
+const X = ctx.__x; const { NineBallRules, CONFIG, buildTableGeometry, PhysicsWorld, Rng, Game, MatchRules, ShotValidator, Store, levelInfo, rewardsForLevel } = X;
 let failed = 0;
 const ok = (name, cond, info) => { console.log((cond ? 'PASS ' : 'FAIL ') + name + (info !== undefined ? '  ' + info : '')); if (!cond) failed++; };
 const freshStore = () => { for (const k of Object.keys(mem)) delete mem[k]; return new Store(); };
@@ -100,4 +100,67 @@ for (let i = 1; i <= 3; i++) {
   ok('match bot vs bot #' + i + ' selesai tanpa error', g.state === 'GAME_OVER' && !err, err || g.result.reason);
   ok('  ekonomi konsisten (saldo = 29000 + payout)', g.state === 'GAME_OVER' && st.coins === 30000 - 1000 + g.result.summary.payout && st.data.stats.matches === 1);
 }
+
+/* ---- 9-ball: aturan ---- */
+{
+  const rep9 = (o) => Object.assign({ firstContact: 1, pocketed: [], pocketedAt: [], call: -1, cuePocketed: false, railAfterContact: true, cushionBalls: 0 }, o);
+  const mk = (variant, brk) => { const r = new NineBallRules(variant); r.reset(0); if (!brk) r.isBreak = false; return r; };
+  { const r = mk('standard', true), res = r.evaluate(rep9({ pocketed: [4], pocketedAt: [{ id: 4, pocket: 2 }] })); ok('9B break sah + bola masuk: lanjut menembak', !res.foul && res.continueTurn && r.currentSeat === 0); }
+  { const r = mk('standard', true), res = r.evaluate(rep9({ cushionBalls: 3 })); ok('9B break tanpa bola masuk & <4 cushion = foul', !!res.foul && res.ballInHand === 'any' && r.currentSeat === 1); }
+  { const r = mk('standard', true), res = r.evaluate(rep9({ cushionBalls: 4 })); ok('9B break 4 bola kena cushion sah, giliran pindah', !res.foul && !res.continueTurn && r.currentSeat === 1); }
+  { const r = mk('standard', true), res = r.evaluate(rep9({ firstContact: 2, pocketed: [3] })); ok('9B break wajib kena bola 1 dulu', !!res.foul); }
+  { const r = mk('standard', true), res = r.evaluate(rep9({ pocketed: [9], pocketedAt: [{ id: 9, pocket: 0 }] })); ok('9B golden break: bola 9 masuk saat break = menang', res.gameOver && res.gameOver.winner === 0 && res.gameOver.golden === true); }
+  { const r = mk('standard', true), res = r.evaluate(rep9({ cuePocketed: true, pocketed: [9], pocketedAt: [{ id: 9, pocket: 0 }] })); ok('9B scratch + 9 masuk saat break: bola 9 respot, tidak menang', !res.gameOver && res.respot.includes(9) && !r.pocketedIds.has(9) && r.currentSeat === 1); }
+  { const r = mk('standard', false); r.pocketedIds = new Set([1, 2]); ok('9B bola terkecil = 3', r.lowest() === 3 && r.legalTargets()[0] === 3 && r.isLegalFirstContact(0, 3) && !r.isLegalFirstContact(0, 4)); }
+  { const r = mk('standard', false), res = r.evaluate(rep9({ firstContact: 2 })); ok('9B menyentuh bola bukan terkecil = foul', /bola 1/.test(res.foul) && res.ballInHand === 'any'); }
+  { const r = mk('standard', false), res = r.evaluate(rep9({ firstContact: -1 })); ok('9B tidak menyentuh apa pun = foul', !!res.foul); }
+  { const r = mk('standard', false), res = r.evaluate(rep9({ railAfterContact: false })); ok('9B tanpa bola masuk & tanpa cushion = foul', !!res.foul); }
+  { const r = mk('standard', false), res = r.evaluate(rep9({ cuePocketed: true })); ok('9B bola putih masuk = foul, bola bebas di mana saja', !!res.foul && res.ballInHand === 'any'); }
+  { const r = mk('standard', false), res = r.evaluate(rep9({ pocketed: [5], pocketedAt: [{ id: 5, pocket: 3 }] })); ok('9B bola apa pun boleh masuk (standar): lanjut', !res.foul && res.continueTurn && r.currentSeat === 0); }
+  { const r = mk('standard', false); r.pocketedIds = new Set([1, 2, 3, 4, 5, 6, 7, 8]); const res = r.evaluate(rep9({ firstContact: 9, pocketed: [9], pocketedAt: [{ id: 9, pocket: 1 }] })); ok('9B bola 9 sah masuk = menang', res.gameOver && res.gameOver.winner === 0 && !res.gameOver.golden); }
+  { const r = mk('standard', false), res = r.evaluate(rep9({ firstContact: 1, pocketed: [9], pocketedAt: [{ id: 9, pocket: 1 }] })); ok('9B kombinasi: kena 1 lalu 9 masuk = menang', res.gameOver && res.gameOver.winner === 0); }
+  { const r = mk('standard', false), res = r.evaluate(rep9({ firstContact: 2, pocketed: [9], pocketedAt: [{ id: 9, pocket: 1 }] })); ok('9B bola 9 masuk saat foul: respot, bukan menang', !res.gameOver && res.respot.includes(9) && !r.pocketedIds.has(9) && r.currentSeat === 1); }
+  { const r = mk('standard', false); r.currentSeat = 1; const res = r.evaluate(rep9({ pocketed: [1], pocketedAt: [{ id: 1, pocket: 0 }] })); ok('9B pemenang adalah penembak (seat 1)', !res.foul && r.currentSeat === 1 && res.continueTurn); }
+  // varian kantong pilihan
+  { const r = mk('call', true); ok('kantong pilihan: break tidak wajib memilih kantong', r.callRequired() === false); const res = r.evaluate(rep9({ pocketed: [3, 4], pocketedAt: [{ id: 3, pocket: 0 }, { id: 4, pocket: 5 }] })); ok('kantong pilihan: break bola masuk di kantong mana pun sah', !res.foul && res.continueTurn); }
+  { const r = mk('call', false); ok('kantong pilihan: setelah break wajib memilih kantong', r.callRequired() === true); const res = r.evaluate(rep9({ pocketed: [1], pocketedAt: [{ id: 1, pocket: 4 }], call: 4 })); ok('kantong pilihan: masuk di kantong yang dipilih = sah, lanjut', !res.foul && res.continueTurn && r.currentSeat === 0); }
+  { const r = mk('call', false), res = r.evaluate(rep9({ pocketed: [1], pocketedAt: [{ id: 1, pocket: 4 }], call: 2 })); ok('kantong pilihan: masuk kantong lain = FOUL', res.foul === 'Bola masuk kantong yang salah' && res.ballInHand === 'any' && r.currentSeat === 1); }
+  { const r = mk('call', false), res = r.evaluate(rep9({ pocketed: [1, 5], pocketedAt: [{ id: 1, pocket: 2 }, { id: 5, pocket: 3 }], call: 2 })); ok('kantong pilihan: satu bola masuk kantong salah cukup untuk foul', !!res.foul); }
+  { const r = mk('call', false), res = r.evaluate(rep9({ call: 3 })); ok('kantong pilihan: tidak ada bola masuk = bukan foul (giliran pindah)', !res.foul && !res.continueTurn && r.currentSeat === 1); }
+  { const r = mk('call', false), res = r.evaluate(rep9({ pocketed: [1], pocketedAt: [{ id: 1, pocket: 2 }], call: -1 })); ok('kantong pilihan: tanpa memilih kantong = foul', res.foul === 'Kantong tujuan belum dipilih'); }
+  { const r = mk('call', false); r.pocketedIds = new Set([1, 2, 3, 4, 5, 6, 7, 8]); const res = r.evaluate(rep9({ firstContact: 9, pocketed: [9], pocketedAt: [{ id: 9, pocket: 1 }], call: 1 })); ok('kantong pilihan: bola 9 di kantong yang dipilih = menang', res.gameOver && res.gameOver.winner === 0); }
+  { const r = mk('call', false); r.pocketedIds = new Set([1, 2, 3, 4, 5, 6, 7, 8]); const res = r.evaluate(rep9({ firstContact: 9, pocketed: [9], pocketedAt: [{ id: 9, pocket: 0 }], call: 1 })); ok('kantong pilihan: bola 9 di kantong salah = foul + respot, tidak menang', !res.gameOver && !!res.foul && res.respot.includes(9)); }
+  { const view = { matchId: 'M', acceptsShots: true, currentSeat: 0, expectedSeq: 0, cue: { x: 400, y: 364 }, ballInHandZone: 'none', isPlacementValid: () => true, callRequired: true };
+    const shot = { matchId: 'M', seat: 0, seq: 0, angle: 0.1, power: 0.5, spinX: 0, spinY: 0, cue: { x: 400, y: 364 } };
+    ok('validator: shot tanpa call ditolak saat wajib', ShotValidator.validate(shot, view) !== null && ShotValidator.validate({ ...shot, call: 9 }, view) !== null);
+    ok('validator: shot dengan call 0–5 diterima', ShotValidator.validate({ ...shot, call: 3 }, view) === null && ShotValidator.validate(shot, { ...view, callRequired: false }) === null); }
+}
+/* ---- 9-ball: rack, respot, dan Game ---- */
+{
+  const st = freshStore(), g = new Game({ ui: nul, audio: nul, store: st }); g.startMatch({ game: '9ball', mode: 'local' }); g._rack(new Rng(5));
+  const on = g.world.balls.filter((b) => b.state === 0 && b.id > 0), T = CONFIG.table;
+  ok('rack 9-ball: hanya bola 1–9 di meja', on.length === 9 && on.every((b) => b.id >= 1 && b.id <= 9));
+  ok('rack 9-ball: bola 1 di apex (foot spot) & bola 9 di tengah diamond', Math.abs(g.world.balls[1].x - T.footSpotX) < 0.1 && Math.abs(g.world.balls[9].y - T.height / 2) < 0.1 && g.world.balls[9].x > g.world.balls[1].x);
+  let overlap = false; for (let i = 0; i < on.length; i++) for (let j = i + 1; j < on.length; j++) if (Math.hypot(on[i].x - on[j].x, on[i].y - on[j].y) < 2 * T.ballRadius) overlap = true;
+  ok('rack 9-ball: tidak ada bola yang bertumpuk', !overlap);
+  ok('rack 9-ball: bola 10–15 tidak ikut simulasi', g.world.balls.slice(10).every((b) => b.state === 1 && b.sinkT >= 1));
+  g.world.balls[9].state = 1; g._respotBall(9); ok('respot bola 9 di foot spot', g.world.balls[9].state === 0 && Math.abs(g.world.balls[9].x - T.footSpotX) < 0.1 || g.world.balls[9].x > T.footSpotX);
+  g.world.balls[9].state = 1; g.world.balls[1].x = T.footSpotX; g.world.balls[1].y = T.height / 2; g._respotBall(9);
+  ok('respot bola 9 bila foot spot terisi: geser ke belakang tanpa menumpuk', g.world.balls[9].x > T.footSpotX && Math.hypot(g.world.balls[9].x - g.world.balls[1].x, g.world.balls[9].y - g.world.balls[1].y) >= 2 * T.ballRadius);
+  ok('Game 9call memakai NineBallRules varian kantong', (() => { const g2 = new Game({ ui: nul, audio: nul, store: freshStore() }); g2.startMatch({ game: '9call', mode: 'local' }); return g2.rules.variant === 'call'; })());
+  ok('Game tanpa pilihan game = 8-ball', (() => { const g2 = new Game({ ui: nul, audio: nul, store: freshStore() }); g2.startMatch({ mode: 'local' }); return g2.rules instanceof MatchRules && g2.gameType === '8ball'; })());
+}
+for (const [type, label] of [['9ball', '9-ball standar'], ['9call', '9-ball kantong pilihan']]) {
+  for (let i = 1; i <= 3; i++) {
+    const r = new Rng(i * 313 + (type === '9call' ? 7 : 0)); const realRandom = Math.random; Math.random = () => r.next();
+    const st = freshStore(), g = new Game({ ui: nul, audio: nul, store: st }); g.startMatch({ game: type, mode: 'bot', difficulty: ['easy', 'medium', 'hard'][i - 1], bet: 1000 });
+    let t = 0, err = null, calls = 0, wrongCallFouls = 0;
+    const origFinish = g._finishShot.bind(g); g._finishShot = function () { const rp = this.report; if (type === '9call' && !this.rules.isBreak && rp) calls += rp.call >= 0 ? 1 : 0; origFinish(); };
+    try { while (g.state !== 'GAME_OVER' && t < 4000) { g.update(1 / 60); t += 1 / 60; if (['PLAYER_TURN', 'OPPONENT_TURN', 'BREAK', 'BALL_IN_HAND'].includes(g.state)) g.seats[g.currentSeat].control = 'bot'; } } catch (e) { err = e.message; }
+    Math.random = realRandom;
+    ok(label + ' bot vs bot #' + i + ' selesai tanpa error', g.state === 'GAME_OVER' && !err, err || g.result.reason);
+    ok('  ' + label + ' #' + i + ': pemenang sah lewat bola 9 & ekonomi konsisten', g.state === 'GAME_OVER' && /Bola 9|Golden/.test(g.result.reason) && st.coins === 29000 + g.result.summary.payout);
+  }
+}
+{ const st = freshStore(); st.recordMatch({ youWon: true, bet: 100, game: '9ball', golden: true }); ok('statistik & badge 9-ball (menang, golden break)', st.data.stats.wins9 === 1 && st.data.stats.golden === 1 && st.data.unlocks.badges.includes('nine_1') && st.data.unlocks.badges.includes('golden')); }
 console.log(failed ? '\n' + failed + ' tes gagal' : '\nSemua tes lulus'); process.exit(failed ? 1 : 0);

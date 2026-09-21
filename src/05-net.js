@@ -17,6 +17,7 @@ class ShotValidator {
     for (let i = 0; i < nums.length; i++) if (typeof nums[i] !== 'number' || !isFinite(nums[i])) return 'Nilai tembakan tidak valid';
     if (shot.power < 0.02 || shot.power > 1.0001) return 'Power di luar batas';
     if (shot.spinX * shot.spinX + shot.spinY * shot.spinY > 1.0001) return 'Spin di luar batas';
+    if (view.callRequired && !(Number.isInteger(shot.call) && shot.call >= 0 && shot.call < 6)) return 'Kantong tujuan belum dipilih';
     if (!shot.cue || !isFinite(shot.cue.x) || !isFinite(shot.cue.y)) return 'Posisi bola putih tidak valid';
     const moved = Math.abs(shot.cue.x - view.cue.x) > 0.5 || Math.abs(shot.cue.y - view.cue.y) > 0.5;
     if (moved && (view.ballInHandZone === 'none' || !view.isPlacementValid(shot.cue.x, shot.cue.y))) return 'Penempatan bola putih tidak sah';

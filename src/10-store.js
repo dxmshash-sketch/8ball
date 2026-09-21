@@ -8,7 +8,7 @@ class Store {
     this.key = 'pantul.v3'; this.customKey = 'pantul.custom.v1'; this.imgCache = new Map(); this.listeners = [];
     this.data = {
       profile: { name: 'Pemain', coins: START_COINS, xp: 0, avatar: { sym: 'ball8', color: 0, frame: 'none' }, badge: null, created: Date.now() },
-      stats: { matches: 0, wins: 0, losses: 0, streak: 0, bestStreak: 0, potted: 0, maxBetWon: 0, totalWon: 0, totalLost: 0 },
+      stats: { matches: 0, wins: 0, losses: 0, streak: 0, bestStreak: 0, potted: 0, maxBetWon: 0, totalWon: 0, totalLost: 0, wins9: 0, golden: 0 },
       progress: { claimedLevel: 1, dailyLast: null, dailyStreak: 0, helpLast: 0 },
       unlocks: { avatars: FREE_AVATAR_ITEMS.slice(), badges: [] },
       cues: { equipped: 'maple', owned: { maple: 1 } },
@@ -41,6 +41,7 @@ class Store {
     s.matches++;
     if (r.youWon) { s.wins++; s.streak++; s.bestStreak = Math.max(s.bestStreak, s.streak); payout = Math.floor(bet * 2 * (1 - HOUSE_FEE)); p.coins += payout; s.totalWon += payout - bet; s.maxBetWon = Math.max(s.maxBetWon, bet); }
     else { s.losses++; s.streak = 0; s.totalLost += bet; }
+    if (r.youWon && r.game && r.game !== '8ball') { s.wins9++; if (r.golden) s.golden++; }
     s.potted += r.potted || 0;
     const lg = Math.log10(Math.max(100, bet));
     const xpGain = r.youWon ? 40 + Math.round(lg * 12) : 15 + Math.round(lg * 4);

@@ -118,7 +118,7 @@ class UI {
     $('hud').hidden = next === S.MENU || next === S.MATCHMAKING;
     if (next === S.MENU) { this.stack = []; this.refreshMenu(); this.show('screenMenu', true); return; }
     if (next === S.MATCHMAKING) { this.show('screenMM'); return; }
-    if (next === S.GAME_OVER) { $('turnChip').style.display = 'none'; return; }
+    if (next === S.GAME_OVER) { $('turnChip').style.display = 'none'; $('tracker').hidden = true; return; }
     if (this.current === 'screenMM' || this.current === 'screenResult') this.hideAll();
     this.refreshPlayers(game);
   }
@@ -143,14 +143,21 @@ class UI {
     for (let i = 0; i < 2; i++) {
       $('pn' + i).textContent = seats[i].name; $('lv' + i).textContent = i === 0 && game.mode !== 'local' ? this.store.level() : seats[i].level;
       $('av' + i).innerHTML = this._seatAvatar(game, i, 0);
-      const g = r.groups[i]; let html = '', n = 0;
+      const g = game.gameType === '8ball' ? r.groups[i] : null; let html = '', n = 0;
+      $('tr' + i).style.display = game.gameType === '8ball' ? '' : 'none';
       if (g) for (const id of r.pocketedIds) if (groupOf(id) === g) { const b = { c: CONFIG.colors.balls[id <= 8 ? id : id - 8], stripe: id > 8 }; html += '<span class="mb' + (b.stripe ? ' stripe' : '') + '" style="--c:' + b.c + '"></span>'; n++; }
       for (; n < 7; n++) html += '<span class="slot"></span>';
       $('tr' + i).innerHTML = html;
     }
-    $('pot').textContent = game.bet ? fmtShort(game.bet * 2) : '—';
+    $('pot').textContent = game.bet ? fmtShort(game.bet * 2) : '—'; this._tracker(game);
     $('conn').style.display = game.mode === 'online' ? 'flex' : 'none';
     this.updateBanner(game);
+  }
+  /** Pelacak 9-ball: bola 1–9, yang sudah masuk meredup, bola target (terkecil) diberi cincin emas. */
+  _tracker(game) {
+    const el = $('tracker'); if (game.gameType === '8ball') { el.hidden = true; return; }
+    const low = game.rules.lowest(); el.hidden = false;
+    el.innerHTML = Array.from({ length: 9 }, (_, i) => i + 1).map((id) => '<span class="mb' + (id > 8 ? ' stripe' : '') + (game.rules.pocketedIds.has(id) ? ' off' : '') + (id === low ? ' next' : '') + '" style="--c:' + CONFIG.colors.balls[id <= 8 ? id : id - 8] + '"></span>').join('');
   }
   connectionChanged(game, ok) { $('conn').classList.toggle('off', !ok); }
   updateBanner(game) {
@@ -163,6 +170,7 @@ class UI {
       case S.FOUL: txt = 'Foul'; cls = 'foul'; break;
       default: txt = '';
     }
+    if (txt && game.isTurnState() && game.rules.callRequired() && seat.control === 'local') txt += game.aim.call < 0 ? ' · pilih kantong' : ' · kantong ✓';
     chip.textContent = txt; chip.className = cls; chip.style.display = txt ? '' : 'none';
     if (game.ballInHandZone === 'head' && game.state === S.BREAK && seat.control === 'local') chip.insertAdjacentHTML('beforeend', '<span class="wide-only"> · geser bola putih di area kiri</span>');
   }
@@ -244,6 +252,7 @@ class InputController {
     const nearCue = Math.hypot(w.x - cue.x, w.y - cue.y) < CONFIG.table.ballRadius * 3.2;
     if (g.canPlace() && (g.state === GameState.BALL_IN_HAND || nearCue)) { this.mode = 'place'; this.canvas.setPointerCapture(e.pointerId); const p = this._world(e, touch); g.moveCue(p.x, p.y); return; }
     if (!g.canControl()) return;
+    if (g.rules.callRequired()) { const idx = this._pocketAt(w); if (idx >= 0) { this.mode = 'pocketTap'; this.tapIdx = idx; this.tapX = e.clientX; this.tapY = e.clientY; this.canvas.setPointerCapture(e.pointerId); return; } }   // ketuk kantong = pilih tujuan
     this.mode = 'aim'; this.canvas.setPointerCapture(e.pointerId); this.startPointer = Math.atan2(w.y - cue.y, w.x - cue.x); this.startAim = g.aim.angle;
     if (!touch) g.setAimAngle(this.startPointer);
   }
@@ -252,10 +261,13 @@ class InputController {
     if (this.mode === 'place') { const p = this._world(e, touch); g.moveCue(p.x, p.y); return; }
     if (!g.canControl()) return;
     const w = this._world(e, false), cue = g.cue, d = Math.hypot(w.x - cue.x, w.y - cue.y);
+    if (this.mode === 'pocketTap') { if (Math.hypot(e.clientX - this.tapX, e.clientY - this.tapY) < 10) return; this.mode = 'aim'; this.startPointer = Math.atan2(w.y - cue.y, w.x - cue.x); this.startAim = g.aim.angle; }   // digeser = mulai membidik
     if (!touch) { if (d > CONFIG.table.ballRadius * 1.6 && (this.mode === 'aim' || e.buttons === 0)) g.setAimAngle(Math.atan2(w.y - cue.y, w.x - cue.x)); return; }
     if (this.mode === 'aim' && d > CONFIG.table.ballRadius * 2) g.setAimAngle(this.startAim + Util.wrapAngle(Math.atan2(w.y - cue.y, w.x - cue.x) - this.startPointer) * 0.55);
   }
-  up() { if (this.mode === 'place' && this.game.state === GameState.BALL_IN_HAND) this.game.confirmPlacement(); this.mode = 'none'; }
+  _pocketAt(w) { const P = this.game.world.pockets; let best = -1, bd = 80 * 80; for (let i = 0; i < P.length; i++) { const d2 = (P[i].x - w.x) ** 2 + (P[i].y - w.y) ** 2; if (d2 < bd) { bd = d2; best = i; } } return best; }
+  up() { if (this.mode === 'pocketTap') { this.ui.audio.play('ui', 0.5); this.game.setCall(this.tapIdx); }
+    if (this.mode === 'place' && this.game.state === GameState.BALL_IN_HAND) this.game.confirmPlacement(); this.mode = 'none'; }
   key(e, down) {
     const g = this.game; if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
     if (down && e.code === 'Escape') { if (g.isActiveMatch()) g.setPaused(!g.paused); return; }

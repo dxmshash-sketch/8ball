@@ -241,7 +241,7 @@ class Renderer {
   _updateCamera(dt) {
     const g = this.game, T = CONFIG.table, wide = this.layout.mode === 'wide', zs = [1, wide ? 1.15 : 1.4, wide ? 1.4 : 1.75][this.store.data.settings.aimZoom | 0] || 1;   // layar lebar sudah besar → zoom lebih halus
     let tz = 1, tx = T.width / 2, ty = T.height / 2;
-    if (zs > 1 && g.isTurnState() && !g.paused) {
+    if (zs > 1 && g.isTurnState() && !g.paused && g.gameType !== '9call') {   // kantong pilihan: seluruh kantong harus terlihat → tanpa zoom
       const cue = g.world.balls[0]; AimPredictor.cast(g.world, cue.x, cue.y, Math.cos(g.aim.angle), Math.sin(g.aim.angle), 0, this.pred);
       tz = zs; tx = cue.x + (this.pred.x - cue.x) * 0.42; ty = cue.y + (this.pred.y - cue.y) * 0.42;
     }
@@ -272,6 +272,7 @@ class Renderer {
     c.fillStyle = 'rgba(0,25,50,0.34)';
     for (let i = 0; i < 16; i++) { const b = world.balls[i]; if (b.state !== BallState.ON_TABLE) continue; c.beginPath(); c.ellipse(b.x + ox, b.y + oy, R * 1.02, R * 0.92, this.rot, 0, 7); c.fill(); }
     if (inMatch && g.aimLineVisible() && !g.paused) this._drawAim(c);
+    if (inMatch && g.gameType === '9call' && g.rules.callRequired() && (g.isTurnState() || g.state === GameState.SHOT_RESOLVING)) this._drawCall(c);
     for (let i = 15; i >= 0; i--) {
       const b = world.balls[i];
       if (b.state === BallState.ON_TABLE) { if (b.dirty) sp.render(b); c.drawImage(sp.sprites[i].cv, b.x - half, b.y - half, 2 * half, 2 * half); }
@@ -299,6 +300,19 @@ class Renderer {
     c.save(); c.translate(cue.x, cue.y); c.rotate(g.aim.angle);
     c.fillStyle = 'rgba(0,25,50,0.28)'; c.beginPath(); c.moveTo(-off, 5); c.lineTo(-off - L, 5 - 12); c.lineTo(-off - L, 5 + 12); c.closePath(); c.fill();
     c.drawImage(img, -off - L, -h / 2, L, h); c.restore();
+  }
+  /** Penanda kantong (varian kantong pilihan): cincin putus-putus = bisa diketuk, cincin emas berdenyut = kantong yang dipilih. */
+  _drawCall(c) {
+    const g = this.game, px = 1 / this.k, pulse = 0.5 + 0.5 * Math.sin(this.time * 5), pick = g.canControl();
+    for (let i = 0; i < 6; i++) {
+      const sh = this.geo.pocketShapes[i], mx = (sh.tipA[0] + sh.tipB[0]) / 2, my = (sh.tipA[1] + sh.tipB[1]) / 2, r = sh.corner ? 27 : 23, sel = i === g.aim.call;
+      if (sel) {
+        c.fillStyle = 'rgba(244,197,66,' + (0.16 + 0.14 * pulse).toFixed(2) + ')'; c.strokeStyle = '#F4C542'; c.lineWidth = 3 * px; c.beginPath(); c.arc(mx, my, r + pulse * 3, 0, 7); c.fill(); c.stroke();
+        c.fillStyle = '#F4C542'; c.beginPath(); c.arc(mx, my, 3.2, 0, 7); c.fill();
+      } else if (pick) {
+        c.strokeStyle = 'rgba(255,255,255,' + (0.28 + 0.2 * pulse).toFixed(2) + ')'; c.lineWidth = 1.8 * px; c.setLineDash([5 * px, 5 * px]); c.beginPath(); c.arc(mx, my, r, 0, 7); c.stroke(); c.setLineDash([]);
+      }
+    }
   }
   _drawAim(c) {
     const g = this.game, world = g.world, cue = world.balls[0], R = CONFIG.table.ballRadius, px = 1 / this.k;

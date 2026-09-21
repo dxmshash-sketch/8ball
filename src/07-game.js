@@ -33,11 +33,11 @@ class Game {
     this.cfg = CONFIG; this.ui = services.ui; this.audio = services.audio; this.store = services.store;
     this.settings = this.store.data.settings;
     this.world = new PhysicsWorld(CONFIG);
-    this.rules = new MatchRules();
+    this.rules = new MatchRules(); this.gameType = '8ball';
     this.sm = new StateMachine(GameState.MENU, STATE_TRANSITIONS);
     this.sm.onChange((next, prev) => this.ui.stateChanged(this, next, prev));
     this.particles = new ParticlePool(180);
-    this.aim = { angle: 0, power: 0.5, spinX: 0, spinY: 0 };
+    this.aim = { angle: 0, power: 0.5, spinX: 0, spinY: 0, call: -1 };
     this.seats = [{ name: 'Pemain', control: 'local', level: 1 }, { name: 'Lawan', control: 'bot', level: 1 }];
     this.mode = 'bot'; this.difficulty = 'medium'; this.lastOptions = null;
     this.time = 0; this.paused = false; this.shake = 0;
@@ -76,7 +76,29 @@ class Game {
     return true;
   }
 
-  _rack(rng) {
+  _rack(rng) { if (this.gameType === '8ball') this._rack8(rng); else this._rack9(rng); }
+  _hideBall(b) { b.state = BallState.POCKETED; b.sinkT = 1; b.stop(); b.x = -500; b.y = -500; b.pocketIndex = 0; }
+  /** Rack 9-ball: diamond (1-2-3-2-1), bola 1 di apex (foot spot), bola 9 di tengah, sisanya acak. Bola 10–15 tidak dipakai. */
+  _rack9(rng) {
+    const T = this.cfg.table, R = T.ballRadius, balls = this.world.balls, dx = R * Math.sqrt(3) + 0.35, dy = R + 0.2, rows = [1, 2, 3, 2, 1], slots = [];
+    rows.forEach((n, r) => { for (let c = 0; c < n; c++) slots.push({ x: T.footSpotX + r * dx, y: T.height / 2 + (c - (n - 1) / 2) * 2 * dy }); });
+    const order = new Array(9), rest = rng.shuffle([2, 3, 4, 5, 6, 7, 8]); order[0] = 1; order[4] = 9;
+    for (let i = 0; i < 9; i++) if (order[i] === undefined) order[i] = rest.pop();
+    for (let i = 0; i < 9; i++) { const b = balls[order[i]]; b.state = BallState.ON_TABLE; b.stop(); b.x = slots[i].x; b.y = slots[i].y; b.sinkT = 0; b.resetOrientation(rng); }
+    for (let id = 10; id <= 15; id++) this._hideBall(balls[id]);
+    const c = balls[0]; c.state = BallState.ON_TABLE; c.stop(); c.x = T.headStringX; c.y = T.height / 2; c.resetOrientation(null);
+    this.world.events.clear(); this.world.accumulator = 0;
+  }
+  /** Kembalikan bola 9 (masuk saat foul) ke foot spot; bila terisi, geser ke arah foot rail lalu ke arah head. */
+  _respotBall(id) {
+    const T = this.cfg.table, R = T.ballRadius, b = this.world.balls[id], y = T.height / 2;
+    const free = (x) => this.world.balls.every((o) => o === b || o.state !== BallState.ON_TABLE || Math.hypot(o.x - x, o.y - y) >= 2 * R + 1);
+    b.state = BallState.ON_TABLE; b.sinkT = 0; b.stop(); b.resetOrientation(this.rng); b.y = y; b.dirty = true;
+    for (let x = T.footSpotX; x <= T.width - R; x += 2) if (free(x)) { b.x = x; return; }
+    for (let x = T.footSpotX; x >= R; x -= 2) if (free(x)) { b.x = x; return; }
+    b.x = T.footSpotX;
+  }
+  _rack8(rng) {
     const T = this.cfg.table, R = T.ballRadius, balls = this.world.balls;
     const dx = R * Math.sqrt(3) + 0.35, dy = R + 0.2;
     const slots = [];
@@ -97,7 +119,7 @@ class Game {
 
   /* ------------------------------ menu / attract ------------------------------ */
   _resetAttract() {
-    this._rack(new Rng((Math.random() * 4294967296) >>> 0));
+    this._rack8(new Rng((Math.random() * 4294967296) >>> 0));
     this.attract.t = 0; this.attract.phase = 'wait';
   }
   _updateAttract(dt) {
@@ -121,7 +143,9 @@ class Game {
     const bet = opts.mode === 'local' ? 0 : Math.max(0, opts.bet | 0);
     if (bet > 0 && !this.store.spend(bet)) return false;
     this.bet = bet; this.pottedBySeat = [0, 0];
-    this.lastOptions = opts; this.mode = opts.mode; this.difficulty = opts.difficulty || 'medium';
+    this.lastOptions = opts; this.mode = opts.mode;
+    this.gameType = ['8ball', '9ball', '9call'].indexOf(opts.game) === -1 ? '8ball' : opts.game;
+    this.rules = this.gameType === '8ball' ? new MatchRules() : new NineBallRules(this.gameType === '9call' ? 'call' : 'standard'); this.difficulty = opts.difficulty || 'medium';
     const profile = this.store.data.profile, bot = this.cfg.bots[this.difficulty];
     const myLevel = 1 + Math.floor(profile.xp / 100);
     this.seed = (Math.random() * 4294967296) >>> 0;
@@ -147,7 +171,7 @@ class Game {
   _bindTransport(t) {
     t.authority = (shot) => ShotValidator.validate(shot, {
       matchId: this.matchId, acceptsShots: this.isTurnState() && !this.cueAnim, currentSeat: this.rules.currentSeat,
-      expectedSeq: this.expectedSeq, cue: { x: this.cue.x, y: this.cue.y }, ballInHandZone: this.ballInHandZone,
+      expectedSeq: this.expectedSeq, cue: { x: this.cue.x, y: this.cue.y }, ballInHandZone: this.ballInHandZone, callRequired: !!(this.rules.callRequired && this.rules.callRequired()),
       isPlacementValid: (x, y) => this.isPlacementValid(x, y),
     });
     t.on('shot', (s) => this._onShotAccepted(s));
@@ -180,7 +204,7 @@ class Game {
   }
   _afterTurnStart(isBreak) {
     this.botState = { t: 0, plan: null, placed: false };
-    this.shotPending = false; this._tickSec = -1; this.aim.spinX = 0; this.aim.spinY = 0; this.aim.power = 0.5;
+    this.shotPending = false; this._tickSec = -1; this.aim.call = -1; this.aim.spinX = 0; this.aim.spinY = 0; this.aim.power = 0.5;
     this.aim.angle = isBreak ? 0 : this._angleToNearestTarget();
     this.turnTotal = this.turnLeft = this._turnSeconds();
     this.ui.refreshPlayers(this); this._publishSnapshot();
@@ -261,7 +285,7 @@ class Game {
       } else if (e.type === PhysicsEvent.POCKET) {
         if (!silent) this.audio.play('pocket', Math.min(1, e.speed / 2000));
         this.particles.burst(e.x, e.y, 14, e.a === 0 ? 1 : 0, 260);
-        if (rep) { if (e.a === 0) rep.cuePocketed = true; else rep.pocketed.push(e.a); }
+        if (rep) { if (e.a === 0) rep.cuePocketed = true; else { rep.pocketed.push(e.a); rep.pocketedAt.push({ id: e.a, pocket: e.b }); } }
       }
     }
     ev.clear();
@@ -274,7 +298,7 @@ class Game {
     this.shotPending = true;
     this.transport.sendShot({
       matchId: this.matchId, seat: seatIdx, seq: this.expectedSeq,
-      angle: this.aim.angle, power: this.aim.power, spinX: this.aim.spinX, spinY: this.aim.spinY,
+      angle: this.aim.angle, power: this.aim.power, spinX: this.aim.spinX, spinY: this.aim.spinY, call: this.aim.call,
       cue: { x: cue.x, y: cue.y },
     });
     return true;
@@ -292,7 +316,7 @@ class Game {
 
   _strike() {
     const s = this.pendingShot;
-    this.report = { seat: s.seat, isBreak: this.wasBreak, firstContact: -1, pocketed: [], cuePocketed: false, railAfterContact: false, cushionBalls: 0, cushionSeen: new Uint8Array(16) };
+    this.report = { seat: s.seat, isBreak: this.wasBreak, firstContact: -1, pocketed: [], pocketedAt: [], call: s.call, cuePocketed: false, railAfterContact: false, cushionBalls: 0, cushionSeen: new Uint8Array(16) };
     const st = this.cueStats, mine = s.seat === 0;      // perk cue hanya untuk seat 0 (bukan mode dua pemain)
     const fm = mine ? 0.92 + st.force * 0.016 : 1, sm = mine ? 0.8 + st.spin * 0.04 : 1;
     this.world.strike(Math.cos(s.angle), Math.sin(s.angle), s.power * fm, s.spinX * sm, s.spinY * sm);
@@ -317,7 +341,8 @@ class Game {
       const who = this.seats[res.assigned.seat].name, g = res.assigned.group === 'solid' ? 'bola penuh (1–7)' : 'bola strip (9–15)';
       this.ui.toast(who + ' memegang ' + g, 'info');
     }
-    if (res.gameOver) { this._endMatch(res.gameOver.winner, res.gameOver.reason); return; }
+    for (const id of res.respot || []) this._respotBall(id);
+    if (res.gameOver) { this._endMatch(res.gameOver.winner, res.gameOver.reason, !!res.gameOver.golden); return; }
     if (res.foul) { this._foul(res.foul, res.nextSeat); return; }
     if (res.continueTurn) this.ui.toast('Lanjut menembak', 'ok');
     this._beginTurn(res.nextSeat);
@@ -353,9 +378,9 @@ class Game {
     this.ui.refreshPlayers(this); this._publishSnapshot();
   }
 
-  _endMatch(winner, reason) {
+  _endMatch(winner, reason, golden) {
     const youWon = winner === 0;
-    this.result = { winner, reason, youWon, bet: this.bet, mode: this.mode, winnerName: this.seats[winner].name, potted: this.pottedBySeat[0], summary: null };
+    this.result = { winner, reason, youWon, golden: !!golden, game: this.gameType, bet: this.bet, mode: this.mode, winnerName: this.seats[winner].name, potted: this.pottedBySeat[0], summary: null };
     if (this.mode !== 'local') this.result.summary = this.store.recordMatch(this.result);
     this.sm.transition(GameState.GAME_OVER);
     this.audio.play(this.mode === 'local' || youWon ? 'win' : 'lose');
@@ -388,6 +413,7 @@ class Game {
       b.plan = this.rules.isBreak ? this.brain.planBreak(this.cue) : this.brain.planShot(this._botView());
       const th = this.cfg.bots[this.mode === 'bot' ? this.difficulty : 'medium'].think;
       b.think = th[0] + this.rng.next() * (th[1] - th[0]); b.t = 0; b.startAngle = this.aim.angle;
+      if (this.rules.callRequired()) this.aim.call = b.plan.pocket >= 0 ? b.plan.pocket : 0;
     }
     const a = this.aim, p = b.plan;
     a.angle = Util.lerpAngle(b.startAngle, p.angle, Util.easeOutCubic(b.t / (b.think * 0.7)));
@@ -405,8 +431,11 @@ class Game {
     const l = Math.sqrt(x * x + y * y), k = l > 1 ? 1 / l : 1;
     this.aim.spinX = x * k; this.aim.spinY = y * k;
   }
+  /** Varian kantong pilihan: pilih kantong tujuan (0–5) sebelum menembak. */
+  setCall(i) { if (!this.canControl() || !this.rules.callRequired() || !(i >= 0 && i < 6)) return false; this.aim.call = i; this.ui.updateBanner(this); return true; }
   requestShot() {
     if (!this.canControl() || this.aim.power < 0.03) return false;
+    if (this.rules.callRequired() && this.aim.call < 0) { this.ui.toast('Pilih kantong tujuan dulu — ketuk salah satu kantong', 'foul'); return false; }
     return this._submitShot(this.rules.currentSeat);
   }
   _setCue(x, y) { this.cue.x = x; this.cue.y = y; this.cue.stop(); this.cue.dirty = true; }
@@ -447,7 +476,7 @@ class Game {
   serialize() {
     const r = this.rules;
     return {
-      matchId: this.matchId, state: this.sm.state, expectedSeq: this.expectedSeq, zone: this.ballInHandZone, rackCount: this.rackCount,
+      matchId: this.matchId, gameType: this.gameType, state: this.sm.state, expectedSeq: this.expectedSeq, zone: this.ballInHandZone, rackCount: this.rackCount,
       balls: this.world.balls.map((b) => ({ id: b.id, state: b.state, x: b.x, y: b.y })),
       rules: { groups: r.groups.slice(), tableOpen: r.tableOpen, currentSeat: r.currentSeat, isBreak: r.isBreak, pocketed: Array.from(r.pocketedIds) },
     };

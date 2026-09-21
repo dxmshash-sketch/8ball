@@ -37,9 +37,10 @@ Object.assign(UI.prototype, {
   render_modes() {
     const st = this.store, el = $('pageModes'), coins = st.coins, local = this.selectedMode === 'local';
     if (BETS.indexOf(this.selectedBet) === -1 || this.selectedBet > coins) this.selectedBet = [...BETS].reverse().find((b) => b <= Math.min(coins, 5000)) || BETS[0];
-    const bet = this.selectedBet, canPlay = local || coins >= bet;
+    const bet = this.selectedBet, canPlay = local || coins >= bet, game = this.selectedGame || '8ball';
+    const GAMES = { '8ball': ['8 Ball', 'Klasik: bola penuh (1–7) atau strip (9–15), bola 8 menentukan kemenangan.'], '9ball': ['9 Ball', 'Bola 1–9, selalu kena bola bernomor terkecil lebih dulu. Masukkan bola 9 untuk menang.'], '9call': ['9 Ball · Pilih Kantong', 'Aturan 9 Ball, tetapi sebelum menembak Anda memilih kantong tujuan. Bola masuk kantong lain = foul.'] };
     el.innerHTML =
-      '<h2>Pilih mode</h2><p class="sub">Semua mode memakai aturan 8-ball yang sama.</p>' +
+      '<h2>Pilih permainan</h2><div class="seg" style="margin:4px 0 6px">' + Object.keys(GAMES).map((k) => '<button data-act="game" data-v="' + k + '" aria-pressed="' + (game === k) + '">' + GAMES[k][0] + '</button>').join('') + '</div><p class="sub" style="margin-bottom:12px">' + GAMES[game][1] + '</p>' +
       '<div class="mode-grid">' + [['bot', 'Lawan bot', 'Latihan melawan komputer, tiga tingkat kesulitan.'], ['online', 'Online', 'Cari lawan lewat matchmaking. Saat ini simulasi lokal; server sungguhan tinggal disambungkan.'], ['local', 'Dua pemain', 'Gantian di satu layar. Tanpa taruhan dan tanpa hadiah.']]
         .map((m) => '<button class="mode-card" data-act="mode" data-v="' + m[0] + '" aria-pressed="' + (this.selectedMode === m[0]) + '"><b>' + m[1] + '</b><span>' + m[2] + '</span></button>').join('') + '</div>' +
       (this.selectedMode === 'bot' ? '<div class="diff-row"><span>Tingkat kesulitan</span><div class="seg">' + [['easy', 'Mudah'], ['medium', 'Sedang'], ['hard', 'Sulit']].map((d) => '<button data-act="diff" data-v="' + d[0] + '" aria-pressed="' + (this.selectedDiff === d[0]) + '">' + d[1] + '</button>').join('') + '</div></div>' : '') +
@@ -49,11 +50,12 @@ Object.assign(UI.prototype, {
         '<div class="payout"><span>Menang <b class="ok">+' + fmtCoins(Math.floor(bet * 2 * (1 - HOUSE_FEE))) + '</b></span><span>Kalah <b class="bad">−' + fmtCoins(bet) + '</b></span><span class="muted">Biaya rumah ' + Math.round(HOUSE_FEE * 100) + '%</span></div>') +
       '<div class="row"><button class="btn green" data-act="start"' + (canPlay ? '' : ' disabled') + '>Mulai main</button><button class="btn" data-back>Kembali</button>' + (canPlay ? '' : '<span class="bad">Saldo tidak cukup</span>') + '</div>';
     this._bind(el, {
+      game: (d) => { this.selectedGame = d.v; this.render_modes(); },
       mode: (d) => { this.selectedMode = d.v; this.render_modes(); },
       diff: (d) => { this.selectedDiff = d.v; this.render_modes(); },
       bet: (d) => { this.selectedBet = +d.v; this.render_modes(); },
       start: () => {
-        if (!this.game.startMatch({ mode: this.selectedMode, difficulty: this.selectedDiff, bet: this.selectedBet })) this.toast('Saldo tidak cukup untuk taruhan ini', 'foul');
+        if (!this.game.startMatch({ game: this.selectedGame || '8ball', mode: this.selectedMode, difficulty: this.selectedDiff, bet: this.selectedBet })) this.toast('Saldo tidak cukup untuk taruhan ini', 'foul');
         else this.stack = [];
       },
     });

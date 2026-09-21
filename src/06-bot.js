@@ -15,22 +15,23 @@ class BotBrain {
   planShot(view) {
     const cue = view.balls[0];
     const cands = this._candidates(view, cue.x, cue.y, view.targets);
-    let angle, power;
+    let angle, power, pocket = -1;
     if (cands.length) {
       cands.sort((p, q) => q.score - p.score);
       const top = Math.min(this.level.pickTop, cands.length);
       const pick = cands[this.rng.int(top)];
-      angle = pick.angle; power = pick.power;
+      angle = pick.angle; power = pick.power; pocket = pick.pocket;
     } else {
       let best = null, bd = Infinity;
       for (const id of view.targets) { const b = view.balls[id]; const d = Math.hypot(b.x - cue.x, b.y - cue.y); if (d < bd) { bd = d; best = b; } }
       if (!best) return { angle: 0, power: 0.4, spinX: 0, spinY: 0 };
       angle = Math.atan2(best.y - cue.y, best.x - cue.x);
+      let bp = 0, bd2 = Infinity; view.pockets.forEach((k, i) => { const d2 = (k.x - best.x) ** 2 + (k.y - best.y) ** 2; if (d2 < bd2) { bd2 = d2; bp = i; } }); pocket = bp;   // tembakan darurat: kantong terdekat
       power = Util.clamp(1.4 * ShotMath.speedForDistance(bd + 260, this.cfg.physics) / this.cfg.physics.maxShotSpeed, 0.3, 0.85);
     }
     angle += this.rng.gauss() * this.level.aimSigma;
     power = Util.clamp(power * (1 + this.rng.gauss() * this.level.powerSigma), 0.1, 1);
-    return { angle, power, spinX: 0, spinY: 0 };
+    return { angle, power, spinX: 0, spinY: 0, pocket };
   }
 
   choosePlacement(view) {
@@ -72,7 +73,7 @@ class BotBrain {
         const vImp = vObj / Math.max(0.35, cos * 0.96);
         const v0 = 1.4 * ShotMath.speedForDistance(dCG + ShotMath.distanceForSpeed(vImp, P), P);   // 1,4 = kompensasi fase sliding (v→5/7 v)
         const score = cos - (dCG / 2400) * 0.35 - (dTP / 2400) * 0.5 - (k.corner ? 0 : 0.08);
-        out.push({ angle: Math.atan2(cdy, cdx), power: Util.clamp(v0 / P.maxShotSpeed, 0.12, 1), score, targetId: id });
+        out.push({ angle: Math.atan2(cdy, cdx), power: Util.clamp(v0 / P.maxShotSpeed, 0.12, 1), score, targetId: id, pocket: p });
       }
     }
     return out;

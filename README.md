@@ -9,13 +9,21 @@ Mouse: arahkan untuk membidik, seret power bar di kanan lalu lepas untuk menemba
 Keyboard: ←/→ bidik (Shift = halus), Space tahan/lepas = power, Enter = tembak, Esc = jeda.
 
 ## Fitur
-- **Gameplay:** 8-ball lengkap, physics spin (top/back/side), 3 tingkat bot, dua pemain satu layar, mode online (simulasi lokal, siap disambung server).
+- **Tiga permainan:** 8 Ball, **9 Ball standar**, dan **9 Ball · Pilih Kantong** (lihat aturan di bawah).
+- **Gameplay:** physics spin (top/back/side), 3 tingkat bot, dua pemain satu layar, mode online (simulasi lokal, siap disambung server).
 - **Layout:** landscape lebar, landscape ponsel, dan **portrait** (meja diputar 90° agar mengisi layar). Kamera zoom halus ke area bidik (Setelan → Zoom saat membidik).
 - **Ekonomi BCPOOL:** akun baru 30.000 koin; taruhan 100 hingga 5.000.000; menang = 2× taruhan dikurangi biaya 5%; keluar di tengah = kalah. Hadiah harian 7 hari, bantuan koin saat hampir bangkrut.
 - **Level & hadiah:** kurva XP, animasi naik level, klaim hadiah (koin, cue, tema meja, avatar, bingkai).
 - **Profil:** avatar, warna, bingkai, dan badge pencapaian. **Peringkat:** simulasi lokal (antarmuka `MockLeaderboard` siap diganti server).
 - **Toko meja:** 8 tema bawaan (kayu, neon, ornamen, logam) dibeli dengan koin. **12 cue** dengan level & statistik yang memengaruhi permainan.
 - **Developer (Setelan → Halaman Developer):** buat skin cue dan meja dari gambar sendiri, pratinjau langsung, template panduan, ekspor/impor JSON. Skin hanya kosmetik dan tersimpan di perangkat.
+
+## Aturan 9 Ball
+- Bola 1–9 di rack diamond (bola 1 di apex, bola 9 di tengah). Wajib menyentuh **bola bernomor terkecil** lebih dulu; setelah kontak harus ada bola masuk atau ada bola menyentuh cushion.
+- Foul (bola putih masuk, salah bola pertama, tidak kena apa pun, tidak ada cushion): lawan mendapat **ball-in-hand** di mana saja.
+- Bola 9 masuk secara sah (termasuk kombinasi) = **menang**; saat break = *golden break*. Bola 9 yang masuk saat foul **dikembalikan** ke foot spot.
+- **Pilih Kantong:** sebelum setiap tembakan (kecuali break) pilih kantong tujuan dengan mengetuk kantongnya. Bola apa pun yang masuk **kantong lain** = foul. Tembakan tanpa memilih kantong tidak bisa dilakukan. Kamera tidak zoom di varian ini agar semua kantong terlihat.
+- Belum ada: push-out, aturan 3 foul beruntun, dan opsi terima/re-rack pada break tidak sah (break tidak sah = foul biasa).
 
 ## Audio
 Efek suara dimuat dari `assets/audio/*.mp3` (di-embed saat build) dan dipetakan ke event game di `src/08-audio.js` (`fileMap`):

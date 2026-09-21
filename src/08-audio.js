@@ -5,7 +5,22 @@
 class AudioManager {
   constructor(settings) {
     this.settings = settings; this.ctx = null; this.master = null; this.sfxBus = null; this.musicBus = null;
-    this.samples = new Map(); this.noise = null; this.frameCount = 0; this.lastFrame = -1; this.musicTimer = null; this.musicStep = 0;
+    this.samples = new Map(); this.noise = null; this.musicTimer = null; this.musicStep = 0;
+    this.buffers = new Map(); this.packLoading = false; this.active = 0; this.lastPlay = {};
+    const jit = (a, b) => a + Math.random() * (b - a);
+    /** Event game → berkas audio (assets/audio). Tiap fungsi mengembalikan {file, gain, rate}; bila berkas belum siap dipakai suara sintetis. */
+    this.fileMap = {
+      ball: (v) => ({ file: 'ball_collision', gain: 0.22 + 0.78 * v, rate: jit(0.96, 1.07) }),
+      cushion: (v) => ({ file: 'cushion_collision', gain: 0.3 + 0.7 * v, rate: jit(0.95, 1.06) }),
+      cue: (v) => ({ file: v >= 0.5 ? 'cue_collision_strong' : 'cue_collision_weak', gain: 0.55 + 0.45 * v, rate: jit(0.98, 1.04) }),
+      pocket: (v) => ({ file: 'pocket', gain: 0.6 + 0.4 * v, rate: jit(0.97, 1.03) }),
+      break: () => ({ file: 'impact', gain: 0.9, rate: 1 }),
+      rack: () => ({ file: 'rack', gain: 0.85, rate: 1 }),
+      foul: () => ({ file: 'foul', gain: 0.9, rate: 1 }),
+      levelup: () => ({ file: 'levelUpStar', gain: 0.9, rate: 1 }),
+      clock: () => ({ file: 'clock', gain: 1, rate: 1 }),
+    };
+    this.minGap = { ball: 0.018, cushion: 0.03, pocket: 0.05, clock: 0.3, rack: 0.5, foul: 0.3 };
     this.synth = {
       ball: (v) => { this._noiseBurst(0.028, 2600, 0.5 * v + 0.08, 'highpass'); this._tone(1700 + v * 900, 0.05, 'sine', 0.22 * v + 0.05, 0.7); },
       cushion: (v) => { this._noiseBurst(0.11, 420, 0.4 * v + 0.08, 'lowpass'); this._tone(150, 0.09, 'sine', 0.3 * v + 0.05, 0.6); },
@@ -28,6 +43,7 @@ class AudioManager {
       const d = this.noise.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
     }
     if (this.ctx.state === 'suspended') this.ctx.resume();
+    this._loadPack();
     this.applySettings();
   }
   applySettings() { if (!this.ctx) return; this.sfxBus.gain.value = this.settings.sfx ? 1 : 0; if (this.settings.music) this._startMusic(); else this._stopMusic(); }
@@ -35,15 +51,39 @@ class AudioManager {
     if (!this.ctx) return Promise.resolve();
     return fetch(url).then((r) => r.arrayBuffer()).then((b) => this.ctx.decodeAudioData(b)).then((buf) => this.samples.set(name, buf));
   }
+  /** Decode semua berkas audio yang di-embed (AUDIO_DATA). Onset dideteksi agar jeda senyap encoder MP3 dilewati. */
+  _loadPack() {
+    if (this.packLoading || !this.ctx || typeof AUDIO_DATA === 'undefined') return;
+    this.packLoading = true;
+    for (const name of Object.keys(AUDIO_DATA)) {
+      try {
+        const bin = atob(AUDIO_DATA[name].split(',')[1]), bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        this.ctx.decodeAudioData(bytes.buffer, (buf) => this._register(name, buf), () => { /* gagal decode: pakai suara sintetis */ });
+      } catch (e) { /* abaikan */ }
+    }
+  }
+  _register(name, buf) {
+    const d = buf.getChannelData(0); let peak = 0; for (let i = 0; i < d.length; i++) { const a = d[i] < 0 ? -d[i] : d[i]; if (a > peak) peak = a; }
+    let on = 0; const thr = peak * 0.02; while (on < d.length && Math.abs(d[on]) < thr) on++;
+    const onset = Math.max(0, on / buf.sampleRate - 0.002);
+    const norm = peak < 0.1 ? Math.min(8, 0.45 / Math.max(peak, 1e-4)) : 1;        // berkas yang sangat pelan (mis. clock) dinormalkan
+    this.buffers.set(name, { buf, onset, norm });
+  }
   play(name, intensity) {
     if (!this.ctx || !this.settings.sfx) return;
-    const v = intensity === undefined ? 0.6 : Math.max(0, Math.min(1, intensity));
-    const now = this.ctx.currentTime;
-    if (now !== this.lastFrame) { this.lastFrame = now; this.frameCount = 0; }
-    if (++this.frameCount > 6) return;                  // batasi suara serentak
-    const buf = this.samples.get(name);
-    if (buf) { const s = this.ctx.createBufferSource(), g = this.ctx.createGain(); s.buffer = buf; g.gain.value = 0.3 + 0.7 * v; s.connect(g); g.connect(this.sfxBus); s.start(); return; }
+    const v = intensity === undefined ? 0.6 : Math.max(0, Math.min(1, intensity)), now = this.ctx.currentTime;
+    const gap = this.minGap[name]; if (gap && now - (this.lastPlay[name] || -1) < gap) return; this.lastPlay[name] = now;
+    const ovr = this.samples.get(name);
+    if (ovr) { const s = this.ctx.createBufferSource(), g = this.ctx.createGain(); s.buffer = ovr; g.gain.value = 0.3 + 0.7 * v; s.connect(g); g.connect(this.sfxBus); s.start(); return; }
+    const spec = this.fileMap[name] && this.fileMap[name](v), ent = spec && this.buffers.get(spec.file);
+    if (ent) { this._playBuf(ent, spec); return; }
     const fn = this.synth[name]; if (fn) fn(v);
+  }
+  _playBuf(ent, spec) {
+    if (this.active >= 24) return;
+    const c = this.ctx, s = c.createBufferSource(), g = c.createGain();
+    s.buffer = ent.buf; s.playbackRate.value = spec.rate; g.gain.value = Math.min(4, spec.gain * ent.norm);
+    s.connect(g); g.connect(this.sfxBus); this.active++; s.onended = () => { this.active--; }; s.start(0, ent.onset);
   }
   _tone(freq, dur, type, gain, endRatio, delay) {
     const c = this.ctx, t = c.currentTime + (delay || 0), o = c.createOscillator(), g = c.createGain();

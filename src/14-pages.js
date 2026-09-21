@@ -126,7 +126,7 @@ Object.assign(UI.prototype, {
       '<div id="luWallet" class="muted" style="min-height:22px"></div><button class="btn primary big" id="luBtn">Klaim hadiah</button>';
     this.fillPreviews(el, 190);
     if (o.countFrom) countUp($('luNum'), o.countFrom, +o.ring, 900, (v) => String(Math.round(v)));
-    this.overlayReturn = this.current; this.show('screenLevelUp'); this.audio.play('win', 0.6);
+    this.overlayReturn = this.current; this.show('screenLevelUp'); this.audio.play(o.sound || 'win', 0.6);
     this.fx.burst(innerWidth / 2, innerHeight * 0.32, 90, 1);
     let claimed = false;
     $('luBtn').onclick = () => {
@@ -233,6 +233,6 @@ Object.assign(UI.prototype, {
   },
   showLevelUp(sm) {
     const items = this.store.claimableLevels().reduce((a, r) => a.concat(r.items), []);
-    this.showRewardModal({ title: 'Naik Level!', sub: 'Level ' + sm.prevLevel + ' → ' + sm.newLevel, ring: String(sm.newLevel), countFrom: sm.prevLevel, items, claim: () => { this.store.claimAllLevels(); return true; }, onClose: () => { $('resBal').textContent = fmtCoins(this.store.coins); } });
+    this.showRewardModal({ title: 'Naik Level!', sub: 'Level ' + sm.prevLevel + ' → ' + sm.newLevel, ring: String(sm.newLevel), countFrom: sm.prevLevel, sound: 'levelup', items, claim: () => { this.store.claimAllLevels(); return true; }, onClose: () => { $('resBal').textContent = fmtCoins(this.store.coins); } });
   },
 });

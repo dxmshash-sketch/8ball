@@ -2,9 +2,15 @@
 import base64, json, pathlib, shutil
 root = pathlib.Path(__file__).resolve().parent.parent
 src = root / 'src'
-order = ['01-config','02-core','03-physics','04-rules','05-net','06-bot','07-game','08-audio','__CUES__','09-content','10-store','11-leaderboard','12-render','13-ui','14-pages','15-dev','16-main']
+order = ['01-config','02-core','03-physics','04-rules','05-net','06-bot','07-game','__AUDIO__','08-audio','__CUES__','09-content','10-store','11-leaderboard','12-render','13-ui','14-pages','15-dev','16-main']
 imgs = {p.stem: 'data:image/png;base64,' + base64.b64encode(p.read_bytes()).decode() for p in sorted((root/'assets'/'cues').glob('*.png'))}
-js = '\n'.join(('const CUE_IMAGES = ' + json.dumps(imgs) + ';') if f == '__CUES__' else (src/(f+'.js')).read_text() for f in order)
+aud_dir = root / 'assets' / 'audio'
+audio = {p.stem: 'data:audio/mpeg;base64,' + base64.b64encode(p.read_bytes()).decode() for p in sorted(aud_dir.glob('*.mp3'))} if aud_dir.exists() else {}
+def part(f):
+    if f == '__CUES__': return 'const CUE_IMAGES = ' + json.dumps(imgs) + ';'
+    if f == '__AUDIO__': return 'const AUDIO_DATA = ' + json.dumps(audio) + ';   // kosong → game memakai suara sintetis bawaan'
+    return (src/(f+'.js')).read_text()
+js = '\n'.join(part(f) for f in order)
 html = f'''<!doctype html>
 <html lang="id">
 <head>

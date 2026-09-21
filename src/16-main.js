@@ -12,7 +12,7 @@
   window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => renderer.resize(), 80); });
   window.addEventListener('orientationchange', () => setTimeout(() => renderer.resize(), 200));
   window.addEventListener('blur', () => { if (game.isActiveMatch() && !game.paused) game.setPaused(true); });
-  window.__pantul = { game, renderer, store, ui };     // untuk debugging/tes
+  window.__pantul = { game, renderer, store, ui, audio };     // untuk debugging/tes
   let last = performance.now();
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;

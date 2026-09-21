@@ -17,6 +17,13 @@ Keyboard: ←/→ bidik (Shift = halus), Space tahan/lepas = power, Enter = temb
 - **Toko meja:** 8 tema bawaan (kayu, neon, ornamen, logam) dibeli dengan koin. **12 cue** dengan level & statistik yang memengaruhi permainan.
 - **Developer (Setelan → Halaman Developer):** buat skin cue dan meja dari gambar sendiri, pratinjau langsung, template panduan, ekspor/impor JSON. Skin hanya kosmetik dan tersimpan di perangkat.
 
+## Audio
+Efek suara dimuat dari `assets/audio/*.mp3` (di-embed saat build) dan dipetakan ke event game di `src/08-audio.js` (`fileMap`):
+`ball_collision` (bola×bola), `cushion_collision`, `cue_collision_strong/weak` (pukulan, dipilih menurut power), `pocket`, `impact` (break),
+`rack` (bola disusun), `foul`, `levelUpStar` (naik level), `clock` (5 detik terakhir giliran). Jeda senyap encoder MP3 dipangkas otomatis
+dan berkas yang sangat pelan dinormalkan. Bila folder `assets/audio` kosong/tidak ada, game memakai suara sintetis bawaan.
+**Pastikan Anda memegang hak/lisensi atas berkas audio yang Anda letakkan di sana** sebelum merilis publik.
+
 ## Spesifikasi gambar skin
 | Aset | Ukuran | Catatan |
 |---|---|---|

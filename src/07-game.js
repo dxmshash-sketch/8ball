@@ -167,7 +167,7 @@ class Game {
 
   _finishMatchmaking() {
     this.breakerSeat = this.result || this.rackCount > 0 ? 1 - this.breakerSeat : this.seed & 1;
-    this._beginRack(this.breakerSeat);
+    this._beginRack(this.breakerSeat); this.audio.play('rack', 0.8);
     this.sm.transition(GameState.BREAK);
     this._afterTurnStart(true);
     this.turnTotal = this.turnLeft = this.cfg.rules.breakSeconds;
@@ -180,7 +180,7 @@ class Game {
   }
   _afterTurnStart(isBreak) {
     this.botState = { t: 0, plan: null, placed: false };
-    this.shotPending = false; this.aim.spinX = 0; this.aim.spinY = 0; this.aim.power = 0.5;
+    this.shotPending = false; this._tickSec = -1; this.aim.spinX = 0; this.aim.spinY = 0; this.aim.power = 0.5;
     this.aim.angle = isBreak ? 0 : this._angleToNearestTarget();
     this.turnTotal = this.turnLeft = this._turnSeconds();
     this.ui.refreshPlayers(this); this._publishSnapshot();
@@ -219,6 +219,8 @@ class Game {
     if (!this.shotPending && !this.disconnected) {
       this.turnLeft -= dt;
       if (this.turnLeft <= 0) { this._timeout(); return; }
+      const sec = Math.ceil(this.turnLeft);                                         // detak jam untuk pemain lokal di 5 detik terakhir
+      if (sec <= 5 && sec !== this._tickSec && this.seats[this.rules.currentSeat].control === 'local') { this._tickSec = sec; this.audio.play('clock', 0.7); }
     }
     this._updateBot(dt);
   }
@@ -303,7 +305,7 @@ class Game {
     const rep = this.report; this.report = null;
     const res = this.rules.evaluate(rep);
     if (res.reRack) {
-      this._beginRack(res.nextSeat);
+      this._beginRack(res.nextSeat); this.audio.play('rack', 0.8);
       this.ui.toast('Bola 8 masuk saat break — bola disusun ulang', 'info');
       this.sm.transition(GameState.BREAK); this._afterTurnStart(true);
       this.turnTotal = this.turnLeft = this.cfg.rules.breakSeconds;

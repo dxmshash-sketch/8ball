@@ -1,4 +1,5 @@
-import numpy as np, base64, json, io
+import numpy as np, base64, json, io, pathlib
+OUT = pathlib.Path(__file__).resolve().parent.parent / 'assets' / 'cues'; OUT.mkdir(parents=True, exist_ok=True)
 from PIL import Image
 
 SS = 2                       # supersample
@@ -47,7 +48,7 @@ def finish(base, name, glow=None):
     if glow:  # cahaya tipis di sekitar cue
         pass
     im = im.resize((1200, 120), Image.LANCZOS)
-    im.save(f'assets/cues/{name}.png', optimize=True)
+    im.save(OUT / f'{name}.png', optimize=True)
 
 def rings(xs_, w=0.004, col='#d9b45a'):
     m = np.zeros((1, W))
@@ -141,10 +142,82 @@ L.append((band(0.62, 0.955), rgb('#0f0f14')))
 L.append(diamonds(0.11, 0.62, 0.955, 0.22, '#8f7cc9'))
 tip_and_ferrule(L, '#9aa0b5'); finish(paint(L), 'malam')
 
-# ---------------- data URI ----------------
-out = {}
-for n in ['maple', 'jade', 'garuda', 'batik', 'kristal', 'malam']:
-    b = open(f'assets/cues/{n}.png', 'rb').read()
-    out[n] = 'data:image/png;base64,' + base64.b64encode(b).decode()
-    print(n, len(b) // 1024, 'KB')
-json.dump(out, open('/tmp/_unused.json', 'w'))
+
+# ============ pola tambahan ============
+def zigzag(period, x0, x1, thick, col):
+    tri = np.abs(((xn / period) % 1.0) - 0.5) * 2
+    d = np.abs(tri * 0.9 - 0.45 - v * 0.5)
+    return band(x0, x1) * np.clip((thick - d) / 0.03, 0, 1), rgb(col)
+
+def waves(k, x0, x1, thick, col):
+    d = np.abs(np.sin(xn * k + v * 2.2))
+    return band(x0, x1) * np.clip((thick - d) / 0.05, 0, 1), rgb(col)
+
+def dots(k, x0, x1, r, col):
+    fx = ((xn * k) % 1.0) - 0.5; fy = v * 0.5
+    return band(x0, x1) * np.clip((r - np.sqrt(fx ** 2 + fy ** 2)) / 0.05, 0, 1), rgb(col)
+
+# ---------------- 7. Kobaran (Epic) ----------------
+L = [(np.ones((1, W)), rgb('#2a0a0a'))]
+L.append((band(0.0, 0.05), rgb('#c2410c')))
+L.append(chevrons(0.026, 0.05, 0.46, 0.28, '#ff7a1a'))
+L.append(chevrons(0.026, 0.05, 0.46, 0.10, '#ffd24a'))
+L.append(rings([0.46, 0.475], 0.006, '#e9b93a'))
+L.append((band(0.49, 0.72), rgb('#3d0f0d')))
+L.append(diamonds(0.08, 0.49, 0.72, 0.26, '#ff8a2a'))
+L.append((band(0.72, 0.955), rgb('#7a1d10')))
+L.append(rings([0.72], 0.005, '#e9b93a'))
+tip_and_ferrule(L, '#ffb060'); finish(paint(L), 'kobaran')
+
+# ---------------- 8. Samudra (Rare) ----------------
+L = [(np.ones((1, W)), rgb('#0f4c81'))]
+L.append((band(0.0, 0.05), rgb('#9fb7c9')))
+L.append(waves(70, 0.05, 0.62, 0.20, '#7fd0ff'))
+L.append(rings([0.62, 0.634], 0.005, '#cfd9e2'))
+L.append((band(0.64, 0.955), rgb('#2f95d0')))
+L.append(waves(46, 0.64, 0.955, 0.12, '#bfeaff'))
+tip_and_ferrule(L); finish(paint(L), 'samudra')
+
+# ---------------- 9. Rimba (Rare) ----------------
+L = [(np.ones((1, W)), rgb('#2f5d34'))]
+L.append((band(0.0, 0.05), rgb('#7a4a20')))
+L.append((band(0.05, 0.36), rgb('#5b3a1e')))
+L.append(diamonds(0.06, 0.05, 0.36, 0.28, '#e2d18a'))
+L.append(rings([0.36, 0.372], 0.006, '#d9c27a'))
+L.append((band(0.385, 0.70), rgb('#3f7d45')))
+L.append(chevrons(0.024, 0.385, 0.70, 0.20, '#2a5230'))
+L.append((band(0.70, 0.955), rgb('#8a5a2b')))
+L.append(rings([0.70], 0.005, '#d9c27a'))
+tip_and_ferrule(L); finish(paint(L), 'rimba')
+
+# ---------------- 10. Raja Emas (Legendary) ----------------
+L = [(np.ones((1, W)), rgb('#f4ecd8'))]
+L.append((band(0.0, 0.06), rgb('#d9a521')))
+L.append(chevrons(0.03, 0.06, 0.44, 0.16, '#d9a521'))
+L.append(rings([0.44, 0.455, 0.47], 0.005, '#c98f14'))
+L.append((band(0.485, 0.72), rgb('#efe3c4')))
+L.append(diamonds(0.09, 0.485, 0.72, 0.28, '#d9a521'))
+L.append((band(0.72, 0.955), rgb('#f7f0de')))
+L.append(rings([0.72, 0.732], 0.005, '#d9a521'))
+tip_and_ferrule(L, '#d9a521'); finish(paint(L), 'rajaemas')
+
+# ---------------- 11. Petir (Epic) ----------------
+L = [(np.ones((1, W)), rgb('#101018'))]
+L.append((band(0.0, 0.05), rgb('#9aa0b5')))
+L.append(zigzag(0.05, 0.05, 0.55, 0.13, '#37e0ff'))
+L.append(rings([0.55, 0.564], 0.005, '#9aa0b5'))
+L.append((band(0.58, 0.955), rgb('#16161f')))
+L.append(zigzag(0.06, 0.58, 0.955, 0.09, '#1a9fc0'))
+tip_and_ferrule(L, '#37e0ff'); finish(paint(L), 'petir')
+
+# ---------------- 12. Sakura (Rare) ----------------
+L = [(np.ones((1, W)), rgb('#f6d5e0'))]
+L.append((band(0.0, 0.05), rgb('#e0a37a')))
+L.append(dots(80, 0.05, 0.60, 0.42, '#ffffff'))
+L.append(dots(80, 0.05, 0.60, 0.18, '#e8799c'))
+L.append(rings([0.60, 0.614], 0.005, '#e0a37a'))
+L.append((band(0.63, 0.955), rgb('#f0b8cb')))
+L.append(chevrons(0.04, 0.63, 0.955, 0.08, '#ffffff'))
+tip_and_ferrule(L, '#e8799c'); finish(paint(L), 'sakura')
+
+print(sorted(p.name for p in OUT.glob('*.png')))

@@ -2,7 +2,7 @@
 import base64, json, pathlib, shutil
 root = pathlib.Path(__file__).resolve().parent.parent
 src = root / 'src'
-order = ['01-config','02-core','03-physics','04-rules','05-net','06-bot','07-game','08-audio','__CUES__','09-store','10-render','11-ui','12-main']
+order = ['01-config','02-core','03-physics','04-rules','05-net','06-bot','07-game','08-audio','__CUES__','09-content','10-store','11-leaderboard','12-render','13-ui','14-pages','15-dev','16-main']
 imgs = {p.stem: 'data:image/png;base64,' + base64.b64encode(p.read_bytes()).decode() for p in sorted((root/'assets'/'cues').glob('*.png'))}
 js = '\n'.join(('const CUE_IMAGES = ' + json.dumps(imgs) + ';') if f == '__CUES__' else (src/(f+'.js')).read_text() for f in order)
 html = f'''<!doctype html>

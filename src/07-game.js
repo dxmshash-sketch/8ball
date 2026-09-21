@@ -48,6 +48,7 @@ class Game {
     this.transport = null; this.brain = null; this.botState = { t: 0, plan: null, placed: false };
     this.disconnected = false; this.attract = { t: 0, phase: 'wait' };
     this.cueStats = { force: 5, aim: 5, spin: 5, time: 5 };
+    this.bet = 0; this.pottedBySeat = [0, 0];
     this.rng = new Rng((Math.random() * 4294967296) >>> 0);
     this._resetAttract();
   }
@@ -114,8 +115,12 @@ class Game {
   }
 
   /* ------------------------------ match lifecycle ------------------------------ */
+  /** @returns {boolean} false bila saldo tidak cukup untuk taruhan. */
   startMatch(opts) {
     this._closeTransport();
+    const bet = opts.mode === 'local' ? 0 : Math.max(0, opts.bet | 0);
+    if (bet > 0 && !this.store.spend(bet)) return false;
+    this.bet = bet; this.pottedBySeat = [0, 0];
     this.lastOptions = opts; this.mode = opts.mode; this.difficulty = opts.difficulty || 'medium';
     const profile = this.store.data.profile, bot = this.cfg.bots[this.difficulty];
     const myLevel = 1 + Math.floor(profile.xp / 100);
@@ -136,6 +141,7 @@ class Game {
     this.sm.transition(GameState.MATCHMAKING);
     this.mmTimer = this.cfg.rules.matchmakingSeconds[this.mode];
     this.ui.showMatchmaking(this);
+    return true;
   }
 
   _bindTransport(t) {
@@ -303,6 +309,7 @@ class Game {
       this.turnTotal = this.turnLeft = this.cfg.rules.breakSeconds;
       return;
     }
+    for (const id of rep.pocketed) this.pottedBySeat[rep.seat]++;
     if (rep.cuePocketed) this._respotCue();
     if (res.assigned) {
       const who = this.seats[res.assigned.seat].name, g = res.assigned.group === 'solid' ? 'bola penuh (1–7)' : 'bola strip (9–15)';
@@ -346,14 +353,17 @@ class Game {
 
   _endMatch(winner, reason) {
     const youWon = winner === 0;
-    let reward = 0;
-    if (this.mode === 'bot') reward = youWon ? this.cfg.bots[this.difficulty].reward : 10;
-    else if (this.mode === 'online') reward = youWon ? 120 : 15;
-    this.result = { winner, reason, youWon, reward, mode: this.mode, winnerName: this.seats[winner].name };
-    if (this.mode !== 'local') this.store.recordMatch(this.result);
+    this.result = { winner, reason, youWon, bet: this.bet, mode: this.mode, winnerName: this.seats[winner].name, potted: this.pottedBySeat[0], summary: null };
+    if (this.mode !== 'local') this.result.summary = this.store.recordMatch(this.result);
     this.sm.transition(GameState.GAME_OVER);
     this.audio.play(this.mode === 'local' || youWon ? 'win' : 'lose');
     this.ui.showResult(this);
+  }
+  /** Keluar di tengah pertandingan bertaruh = kalah (taruhan hangus). */
+  forfeit() {
+    if (this.sm.state === GameState.MATCHMAKING && this.bet > 0) { this.store.addCoins(this.bet); this.bet = 0; return null; }   // batal sebelum main: taruhan kembali
+    if (!this.isActiveMatch() || this.mode === 'local' || this.bet <= 0) return null;
+    return this.store.recordMatch({ youWon: false, bet: this.bet, potted: this.pottedBySeat[0], mode: this.mode });
   }
 
   /* ------------------------------ bot ------------------------------ */
@@ -421,12 +431,14 @@ class Game {
   /* ------------------------------ pause / navigasi ------------------------------ */
   setPaused(p) { if (p && !this.isActiveMatch()) return; this.paused = p; this.ui.pausedChanged(this, p); }
   quitToMenu() {
+    const forfeited = this.forfeit();
     this._closeTransport(); this.paused = false; this.disconnected = false; this.cueAnim = null; this.shotPending = false;
     if (this.sm.state !== GameState.MENU) this.sm.transition(GameState.MENU);
     this._resetAttract(); this.ui.pausedChanged(this, false);
+    return forfeited;
   }
-  restartMatch() { const o = this.lastOptions; this.quitToMenu(); if (o) this.startMatch(o); }
-  rematch() { if (this.lastOptions && this.sm.state === GameState.GAME_OVER) this.startMatch(this.lastOptions); }
+  restartMatch() { const o = this.lastOptions; this.quitToMenu(); return o ? this.startMatch(o) : false; }
+  rematch() { return this.lastOptions && this.sm.state === GameState.GAME_OVER ? this.startMatch(this.lastOptions) : false; }
   simulateDisconnect() { if (this.transport && this.mode === 'online' && this.isTurnState()) { this.transport.disconnect(); this.transport.reconnect(); return true; } return false; }
 
   /* ------------------------------ snapshot (reconnect) ------------------------------ */

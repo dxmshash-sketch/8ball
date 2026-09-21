@@ -1,10 +1,11 @@
 <canvas id="stage" aria-label="Meja billiard"></canvas>
+<canvas id="fx" aria-hidden="true"></canvas>
 
 <div id="hud" hidden>
   <header id="hudTop">
     <button class="hud-menu" id="btnPause" aria-label="Jeda"><svg width="24" height="24" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="3" rx="1.5" fill="#fff"/><rect x="4" y="10.5" width="16" height="3" rx="1.5" fill="#fff"/><rect x="4" y="16" width="16" height="3" rx="1.5" fill="#fff"/></svg></button>
     <div class="hud-player left" id="p0">
-      <div class="avwrap"><svg class="ring" viewBox="0 0 50 50"><circle class="ring-bg" cx="25" cy="25" r="22"/><circle class="ring-fg" cx="25" cy="25" r="22"/></svg><div class="av" id="av0"></div><span class="lvl" id="lv0">1</span></div>
+      <div class="avwrap"><svg class="ring" viewBox="0 0 50 50"><circle class="ring-bg" cx="25" cy="25" r="22"/><circle class="ring-fg" cx="25" cy="25" r="22"/></svg><div class="avslot" id="av0"></div><span class="lvl" id="lv0">1</span></div>
       <div class="hud-meta"><div class="pname" id="pn0"></div><div class="tray" id="tr0"></div></div>
     </div>
     <div class="pot" aria-label="Hadiah">
@@ -12,62 +13,63 @@
       <div><b id="pot">0</b><small>Hadiah</small></div>
     </div>
     <div class="hud-player right" id="p1">
-      <div class="avwrap"><svg class="ring" viewBox="0 0 50 50"><circle class="ring-bg" cx="25" cy="25" r="22"/><circle class="ring-fg" cx="25" cy="25" r="22"/></svg><div class="av" id="av1"></div><span class="lvl" id="lv1">1</span></div>
+      <div class="avwrap"><svg class="ring" viewBox="0 0 50 50"><circle class="ring-bg" cx="25" cy="25" r="22"/><circle class="ring-fg" cx="25" cy="25" r="22"/></svg><div class="avslot" id="av1"></div><span class="lvl" id="lv1">1</span></div>
       <div class="hud-meta"><div class="pname" id="pn1"></div><div class="tray" id="tr1"></div></div>
       <div class="conn" id="conn" title="Koneksi"><i></i><i></i><i></i></div>
     </div>
   </header>
+  <div id="spin" title="Titik pukul bola putih (spin)"><canvas id="spinCv" width="168" height="168"></canvas></div>
   <div id="turnChip"></div>
   <div id="toast" role="status"></div>
-  <div id="spin" title="Titik pukul bola putih (spin)"><canvas id="spinCv" width="168" height="168"></canvas></div>
   <div id="fine">
     <button id="fineL" aria-label="Putar bidik ke kiri"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M15 5l-8 7 8 7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <button id="fineR" aria-label="Putar bidik ke kanan"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M9 5l8 7-8 7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
   </div>
   <aside id="power" aria-label="Power"><div id="powerTrack"><div id="powerFill"></div><div id="powerHandle"></div></div><output id="powerVal">50</output></aside>
 </div>
-<div id="rotateHint">Putar perangkat ke landscape agar meja tampil lebih besar</div>
 
 <div id="screens">
   <section class="screen scrim active" id="screenMenu" aria-label="Menu utama">
     <div class="menu-wrap">
-      <div class="chips"><div class="chip" id="chipProfile"><div class="av mini-av" id="menuAv"></div><span id="menuName"></span><span id="menuLevel" style="color:var(--gold)"></span></div>
-        <div class="chip coins"><svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="#F4C542"/><circle cx="11" cy="11" r="6.5" fill="none" stroke="#b8850c" stroke-width="1.6"/></svg><span id="menuCoins"></span></div></div>
+      <div class="chips">
+        <button class="chip" id="chipProfile" aria-label="Profil"><span id="menuAv"></span><span class="chip-name"><b id="menuName"></b><small id="menuLevel"></small></span></button>
+        <div class="chip coins" title="Saldo BCPOOL"><svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="#F4C542"/><circle cx="11" cy="11" r="6.5" fill="none" stroke="#b8850c" stroke-width="1.6"/></svg><span id="menuCoins"></span></div>
+      </div>
       <div>
         <h1 class="logo">Pantul</h1>
         <p class="tag">Billiard 8-ball kompetitif dengan fisika bola yang terasa nyata.</p>
         <div class="menu-actions">
-          <button class="btn primary" data-go="modes">Main</button>
-          <button class="btn" data-go="cues">Koleksi Cue</button>
-          <button class="btn" data-go="settings">Pengaturan</button>
+          <button class="btn primary big" data-go="modes">Main</button>
+          <div class="menu-grid">
+            <button class="tile" data-go="rewards"><span class="ico" data-ico="gift"></span>Hadiah<i class="dot" id="dotRewards" hidden></i></button>
+            <button class="tile" data-go="board"><span class="ico" data-ico="rank"></span>Peringkat</button>
+            <button class="tile" data-go="tables"><span class="ico" data-ico="table"></span>Meja</button>
+            <button class="tile" data-go="cues"><span class="ico" data-ico="cue"></span>Cue</button>
+            <button class="tile" data-go="profile"><span class="ico" data-ico="user"></span>Profil</button>
+            <button class="tile" data-go="settings"><span class="ico" data-ico="gear"></span>Setelan</button>
+          </div>
+          <button class="btn small green" id="btnHelp" hidden>Ambil bantuan koin +3.000</button>
         </div>
       </div>
-      <div class="foot">Prototype · semua aset original</div>
+      <div class="foot">Pantul · prototype → rilis · semua aset original</div>
     </div>
   </section>
 
-  <section class="screen scrim" id="screenModes" aria-label="Pilih mode">
-    <div class="panel modes">
-      <h2>Pilih mode</h2><p class="sub">Semua mode memakai aturan 8-ball yang sama.</p>
-      <div class="mode-grid" id="modeGrid">
-        <button class="mode-card" data-mode="bot" aria-pressed="true"><b>Lawan bot</b><span>Latihan melawan komputer. Pilih tingkat kesulitan di bawah.</span></button>
-        <button class="mode-card" data-mode="local" aria-pressed="false"><b>Dua pemain</b><span>Gantian menembak di satu layar. Tanpa hadiah koin.</span></button>
-        <button class="mode-card" data-mode="online" aria-pressed="false"><b>Online</b><span>Cari lawan lewat matchmaking. Saat ini masih simulasi lokal; server sungguhan tinggal disambungkan.</span></button>
-      </div>
-      <div class="diff-row" id="diffRow"><span>Tingkat kesulitan</span><div class="seg" id="diffSeg"><button data-d="easy" aria-pressed="false">Mudah</button><button data-d="medium" aria-pressed="true">Sedang</button><button data-d="hard" aria-pressed="false">Sulit</button></div></div>
-      <div class="row"><button class="btn green" id="btnStart">Mulai main</button><button class="btn" data-go="menu" data-back="1">Kembali</button></div>
-    </div>
-  </section>
+  <section class="screen scrim" id="screenModes" aria-label="Pilih mode"><div class="panel modes" id="pageModes"></div></section>
 
   <section class="screen scrim" id="screenSettings" aria-label="Pengaturan">
     <div class="panel narrow">
       <h2>Pengaturan</h2>
-      <div class="set-row"><span>Nama pemain</span><input class="text" id="setName" maxlength="14" autocomplete="off"></div>
       <div class="set-row"><span>Efek suara</span><button class="switch" role="switch" data-set="sfx" aria-label="Efek suara"></button></div>
       <div class="set-row"><span>Musik latar</span><button class="switch" role="switch" data-set="music" aria-label="Musik latar"></button></div>
       <div class="set-row"><span>Garis bantu bidik</span><button class="switch" role="switch" data-set="aimAssist" aria-label="Garis bantu bidik"></button></div>
       <div class="set-row"><span>Prediksi pantulan cushion</span><button class="switch" role="switch" data-set="showBounce" aria-label="Prediksi pantulan"></button></div>
-      <div class="stack"><button class="btn" id="btnSettingsBack">Selesai</button></div>
+      <div class="set-row"><span>Zoom saat membidik</span><div class="seg" id="zoomSeg"><button data-z="0">Mati</button><button data-z="1">Sedang</button><button data-z="2">Dekat</button></div></div>
+      <div class="stack">
+        <button class="btn" data-go="dev">Halaman Developer · skin DIY</button>
+        <button class="btn danger" id="btnReset">Reset semua data</button>
+        <button class="btn" id="btnSettingsBack">Selesai</button>
+      </div>
     </div>
   </section>
 
@@ -76,7 +78,7 @@
   </section>
 
   <section class="screen scrim" id="screenPause" aria-label="Jeda">
-    <div class="panel narrow"><h2>Jeda</h2>
+    <div class="panel narrow"><h2>Jeda</h2><p class="sub" id="pauseNote"></p>
       <div class="stack">
         <button class="btn green" id="btnResume">Lanjut</button>
         <button class="btn" id="btnPauseSettings">Pengaturan</button>
@@ -86,17 +88,13 @@
       </div></div>
   </section>
 
-  <section class="screen scrim" id="screenResult" aria-label="Hasil">
-    <div class="panel narrow result"><h2 id="resTitle"></h2><p class="sub" id="resReason" style="text-align:center"></p><div class="reward" id="resReward"></div>
-      <div class="stack"><button class="btn green" id="btnRematch">Main lagi</button><button class="btn" id="btnResMenu">Menu</button></div></div>
-  </section>
+  <section class="screen scrim" id="screenResult" aria-label="Hasil"><div class="panel narrow result" id="pageResult"></div></section>
+  <section class="screen scrim" id="screenLevelUp" aria-label="Naik level"><div class="lu" id="pageLevelUp"></div></section>
 
-  <section class="screen" id="screenCues" aria-label="Koleksi cue">
-    <div class="cues-page">
-      <div class="cues-head"><button class="btn small" data-go="menu" data-back="1">Kembali</button><h2>Cue Collection</h2>
-        <div class="chip coins"><svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="#F4C542"/><circle cx="11" cy="11" r="6.5" fill="none" stroke="#b8850c" stroke-width="1.6"/></svg><span id="cueCoins"></span></div>
-        <div class="chip" style="padding-left:12px;color:var(--cue-gold)"><span id="cuePts"></span></div></div>
-      <div class="cues-list" id="cuesList"></div>
-    </div>
-  </section>
+  <section class="screen pagescreen" id="screenProfile"><div class="pg" id="pageProfile"></div></section>
+  <section class="screen pagescreen" id="screenRewards"><div class="pg" id="pageRewards"></div></section>
+  <section class="screen pagescreen" id="screenBoard"><div class="pg" id="pageBoard"></div></section>
+  <section class="screen pagescreen" id="screenTables"><div class="pg" id="pageTables"></div></section>
+  <section class="screen pagescreen cuescreen" id="screenCues"><div class="pg" id="pageCues"></div></section>
+  <section class="screen pagescreen" id="screenDev"><div class="pg" id="pageDev"></div></section>
 </div>

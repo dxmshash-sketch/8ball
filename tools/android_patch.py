@@ -27,7 +27,7 @@ for p in res.rglob('splash.png'):
 
 # 3) orientasi landscape
 mf = app / 'AndroidManifest.xml'; t = mf.read_text()
-if 'screenOrientation' not in t: t = re.sub(r'(<activity\b)', r'\1 android:screenOrientation="sensorLandscape"', t, count=1)
+if 'screenOrientation' not in t: t = re.sub(r'(<activity\b)', r'\1 android:screenOrientation="fullSensor"', t, count=1)
 mf.write_text(t)
 
 # 4) layar penuh (tanpa status bar)

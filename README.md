@@ -8,6 +8,24 @@ Buka `www/index.html` di browser (atau lewat GitHub Pages setelah rilis).
 Mouse: arahkan untuk membidik, seret power bar di kanan lalu lepas untuk menembak.
 Keyboard: ←/→ bidik (Shift = halus), Space tahan/lepas = power, Enter = tembak, Esc = jeda.
 
+## Fitur
+- **Gameplay:** 8-ball lengkap, physics spin (top/back/side), 3 tingkat bot, dua pemain satu layar, mode online (simulasi lokal, siap disambung server).
+- **Layout:** landscape lebar, landscape ponsel, dan **portrait** (meja diputar 90° agar mengisi layar). Kamera zoom halus ke area bidik (Setelan → Zoom saat membidik).
+- **Ekonomi BCPOOL:** akun baru 30.000 koin; taruhan 100 hingga 5.000.000; menang = 2× taruhan dikurangi biaya 5%; keluar di tengah = kalah. Hadiah harian 7 hari, bantuan koin saat hampir bangkrut.
+- **Level & hadiah:** kurva XP, animasi naik level, klaim hadiah (koin, cue, tema meja, avatar, bingkai).
+- **Profil:** avatar, warna, bingkai, dan badge pencapaian. **Peringkat:** simulasi lokal (antarmuka `MockLeaderboard` siap diganti server).
+- **Toko meja:** 8 tema bawaan (kayu, neon, ornamen, logam) dibeli dengan koin. **12 cue** dengan level & statistik yang memengaruhi permainan.
+- **Developer (Setelan → Halaman Developer):** buat skin cue dan meja dari gambar sendiri, pratinjau langsung, template panduan, ekspor/impor JSON. Skin hanya kosmetik dan tersimpan di perangkat.
+
+## Spesifikasi gambar skin
+| Aset | Ukuran | Catatan |
+|---|---|---|
+| Cue | PNG transparan, horizontal | pangkal kiri, ujung kanan; dipangkas & diskalakan ke 1200×120 |
+| Kain meja | 1648×776 | di-crop *cover*; playfield 1600×728 + area cushion 24 px |
+| Frame/rail meja | 1760×888 | bagian tengah tertutup kain; rail terlihat 80 px |
+
+Gunakan hanya gambar milik sendiri atau yang berlisensi; repo ini tidak menyertakan aset pihak lain.
+
 ## Install di Android
 **Cara 1 — APK (dibangun otomatis oleh GitHub Actions)**
 1. Push repo ini ke GitHub, lalu push tag: `git push origin main --tags`.

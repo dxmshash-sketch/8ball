@@ -1,6 +1,6 @@
 {
   "name": "pantul",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "description": "Pantul — game billiard 8-ball (Canvas 2D, tanpa dependensi runtime)",
   "scripts": {

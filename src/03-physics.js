@@ -82,19 +82,23 @@ function buildTableGeometry(T) {
   for (const P of cushions) for (const [a, b] of [[0, 1], [1, 2], [3, 0]]) segs.push(P[a][0], P[a][1], P[b][0], P[b][1]);
   const n = segs.length / 4, segLen2 = new Float64Array(n);
   for (let i = 0; i < n; i++) { const ex = segs[4 * i + 2] - segs[4 * i], ey = segs[4 * i + 3] - segs[4 * i + 1]; segLen2[i] = ex * ex + ey * ey; }
-  const cc = T.cornerCaptureX, cr = T.cornerCaptureR, sy = T.sideCaptureY, sr = T.sideCaptureR;
   const shapes = [], pockets = [];
   const corner = (sx, sy_) => {
     const f = (p) => [sx < 0 ? W - p[0] : p[0], sy_ < 0 ? H - p[1] : p[1]];
     shapes.push({ tipA: f([tc, 0]), baseA: f([cb, -ct]), tipB: f([0, tc]), baseB: f([-ct, cb]), axis: [sx < 0 ? 1 : -1, sy_ < 0 ? 1 : -1].map((v) => v / S2), corner: true });
-    pockets.push({ x: sx < 0 ? W - cc : cc, y: sy_ < 0 ? H - cc : cc, r: cr, corner: true });
   };
   const side = (down) => {
     const f = (p) => [p[0], down ? H - p[1] : p[1]];
     shapes.push({ tipA: f([W / 2 - sn, 0]), baseA: f([W / 2 - sb, -ct]), tipB: f([W / 2 + sn, 0]), baseB: f([W / 2 + sb, -ct]), axis: [0, down ? 1 : -1], corner: false });
-    pockets.push({ x: W / 2, y: down ? H - sy : sy, r: sr, corner: false });
   };
   corner(1, 1); side(false); corner(-1, 1); corner(1, -1); side(true); corner(-1, -1);
+  // Kantong: bola jatuh saat pusatnya melewati GARIS MULUT (antara dua ujung nose). (x,y) = titik jatuh (animasi & bidikan bot),
+  // r = jari-jari larangan menaruh bola putih, hw = setengah lebar mulut.
+  const R = T.ballRadius;
+  for (const sh of shapes) {
+    const mx = (sh.tipA[0] + sh.tipB[0]) / 2, my = (sh.tipA[1] + sh.tipB[1]) / 2, ax = sh.axis[0], ay = sh.axis[1];
+    pockets.push({ x: mx + ax * 2.5 * R, y: my + ay * 2.5 * R, r: sh.corner ? 1.9 * R : 1.4 * R, corner: sh.corner, mx, my, ax, ay, hw: Math.hypot(sh.tipA[0] - sh.tipB[0], sh.tipA[1] - sh.tipB[1]) / 2 });
+  }
   return { W, H, cushions, segs: new Float64Array(segs), segLen2, segCount: n, pockets, pocketShapes: shapes };
 }
 
@@ -273,10 +277,12 @@ class PhysicsWorld {
     }
   }
 
+  /** Bola jatuh bila pusatnya melewati garis mulut kantong (sedikit lebih awal), atau bila melaju pelan tepat di bibir kantong — tidak ada bola yang "macet". */
   _checkPockets(b) {
+    const R = this.R, slow = b.vx * b.vx + b.vy * b.vy < 8100;
     for (let p = 0; p < 6; p++) {
-      const k = this.pockets[p], dx = b.x - k.x, dy = b.y - k.y;
-      if (dx * dx + dy * dy < k.r * k.r) { this._pocket(b, p); return; }
+      const k = this.pockets[p], dx = b.x - k.mx, dy = b.y - k.my, depth = dx * k.ax + dy * k.ay;
+      if ((depth > -0.15 * R || (slow && depth > -0.55 * R)) && Math.abs(-dx * k.ay + dy * k.ax) < k.hw) { this._pocket(b, p); return; }
     }
     const m = this.R * 4;
     if (b.x < -m || b.x > this.W + m || b.y < -m || b.y > this.H + m) {

@@ -10,6 +10,7 @@ Keyboard: ←/→ bidik (Shift = halus), Space tahan/lepas = power, Enter = temb
 
 ## Fitur
 - **Tiga permainan:** 8 Ball, **9 Ball standar**, dan **9 Ball · Pilih Kantong** (lihat aturan di bawah).
+- **Dua ukuran meja per pertandingan:** Standar (1600×728, seperti sebelumnya) dan **American** (800×400, bola lebih besar, kantong ≥ 2× diameter bola — lebih mudah dan lebih cepat). Dipilih di halaman Pilih permainan; berlaku untuk ketiga jenis permainan.
 - **Gameplay:** physics spin (top/back/side), 3 tingkat bot, dua pemain satu layar, mode online (simulasi lokal, siap disambung server).
 - **Layout:** landscape lebar, landscape ponsel, dan **portrait** (meja diputar 90° agar mengisi layar). Kamera zoom halus ke area bidik (Setelan → Zoom saat membidik).
 - **Ekonomi BCPOOL:** akun baru 30.000 koin; taruhan 100 hingga 5.000.000; menang = 2× taruhan dikurangi biaya 5%; keluar di tengah = kalah. Hadiah harian 7 hari, bantuan koin saat hampir bangkrut.
@@ -17,6 +18,18 @@ Keyboard: ←/→ bidik (Shift = halus), Space tahan/lepas = power, Enter = temb
 - **Profil:** avatar, warna, bingkai, dan badge pencapaian. **Peringkat:** simulasi lokal (antarmuka `MockLeaderboard` siap diganti server).
 - **Toko meja:** 8 tema bawaan (kayu, neon, ornamen, logam) dibeli dengan koin. **12 cue** dengan level & statistik yang memengaruhi permainan.
 - **Developer (Setelan → Halaman Developer):** buat skin cue dan meja dari gambar sendiri, pratinjau langsung, template panduan, ekspor/impor JSON. Skin hanya kosmetik dan tersimpan di perangkat.
+
+## Ukuran meja
+| | Standar | American |
+|---|---|---|
+| Playfield | 1600 × 728 | 800 × 400 |
+| Diameter bola | 30 | 28 |
+| Mulut kantong corner / side | 58 / 52 | 66 / 62 |
+| Leher kantong corner / side | 44 / 34 | 58 / 58 |
+
+Kantong American sengaja dibuat lebar (≥ 2× diameter bola, diuji otomatis di `tools/test.js`) agar bola tidak "macet" di bibir kantong.
+Fisika (kecepatan tembakan, gesekan) diskalakan mengikuti lebar meja lewat `applyTableProfile()` di `src/01-config.js`, sehingga power 100%
+menempuh proporsi meja yang sama di kedua ukuran. Tema meja (toko & Developer) otomatis dirender untuk kedua ukuran.
 
 ## Aturan 9 Ball
 - Bola 1–9 di rack diamond (bola 1 di apex, bola 9 di tengah). Wajib menyentuh **bola bernomor terkecil** lebih dulu; setelah kontak harus ada bola masuk atau ada bola menyentuh cushion.

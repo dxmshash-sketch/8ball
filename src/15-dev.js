@@ -61,7 +61,7 @@ Object.assign(UI.prototype, {
         '<label>Gambar frame/rail (opsional) <span class="filebtn btn small">Pilih…<input type="file" id="dvRailFile" accept="image/*"></span></label>' +
         '<div class="row"><button class="btn small" data-act="clearImgs">Hapus gambar</button><button class="btn small" data-act="tplCloth">Template kain</button><button class="btn small" data-act="tplFrame">Template frame</button></div>' +
         '<button class="btn green" data-act="saveTable">Simpan tema meja</button>' + this._devList('tables') + '</div>' +
-        '<div class="prev-box"><canvas id="dvTablePrev"></canvas><span class="note" style="margin:0">Pratinjau langsung. Gambar kain/frame menggantikan warna bila diisi.</span></div></div>';
+        '<div class="prev-box"><div class="seg" style="align-self:flex-start">' + Object.values(TABLE_PROFILES).map((p) => '<button data-act="prevTbl" data-v="' + p.id + '" aria-pressed="' + ((D.tableKind || 'standard') === p.id) + '">' + p.name + '</button>').join('') + '</div><canvas id="dvTablePrev"></canvas><span class="note" style="margin:0">Pratinjau langsung. Gambar kain/frame menggantikan warna bila diisi.</span></div></div>';
     } else {
       body = '<div class="form" style="margin-top:12px;max-width:640px"><h3 class="sec" style="margin:0">Ekspor</h3><textarea id="dvExport" readonly></textarea><div class="row"><button class="btn small" data-act="copy">Salin</button><button class="btn small" data-act="download">Unduh .json</button></div>' +
         '<h3 class="sec" style="margin:8px 0 0">Impor</h3><textarea id="dvImport" placeholder="Tempel JSON skin di sini"></textarea><div class="row"><span class="filebtn btn small">Pilih berkas .json<input type="file" id="dvImpFile" accept=".json,application/json"></span><button class="btn small green" data-act="import">Impor</button></div>' +
@@ -95,6 +95,7 @@ Object.assign(UI.prototype, {
       del: (d) => { st.removeCustom(d.k, d.v); redo(); },
       clearImgs: () => { D.clothImg = D.railImg = D.clothData = D.railData = null; this._devTablePreview(); },
       tplCloth: () => this._downloadTemplate('cloth'), tplFrame: () => this._downloadTemplate('frame'),
+      prevTbl: (d) => { D.tableKind = d.v; this._devTablePreview(); redo(); },
       copy: () => { const t = $('dvExport'); t.select(); try { navigator.clipboard.writeText(t.value); this.toast('Disalin', 'ok'); } catch (e) { document.execCommand('copy'); } },
       download: () => downloadBlob(new Blob([st.exportCustom()], { type: 'application/json' }), 'pantul-skins.json'),
       import: () => { const r = st.importCustom($('dvImport').value); this.toast(r.ok ? r.count + ' skin diimpor' : r.error, r.ok ? 'ok' : 'foul'); if (r.ok) redo(); },
@@ -144,7 +145,7 @@ Object.assign(UI.prototype, {
   },
   _devTablePreview() {
     const D = this.dev, cv = $('dvTablePrev'); if (!cv) return;
-    const base = renderTablePreview(this._devTheme(), 900, { cloth: D.clothImg, rail: D.railImg }); cv.width = base.width; cv.height = base.height; cv.getContext('2d').drawImage(base, 0, 0);
+    const base = renderTablePreview(this._devTheme(), 900, { cloth: D.clothImg, rail: D.railImg }, D.tableKind || 'standard'); cv.width = base.width; cv.height = base.height; cv.getContext('2d').drawImage(base, 0, 0);
   },
   /** Template panduan (PNG) menampilkan zona yang tertutup/terlihat, dengan geometri meja yang sama. */
   _downloadTemplate(kind) {

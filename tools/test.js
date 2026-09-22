@@ -5,9 +5,10 @@ const mem = {}; const window = { localStorage: { getItem: (k) => (k in mem ? mem
 const ctx = vm.createContext({ console, setTimeout, clearTimeout, Math, Set, Map, Float32Array, Float64Array, Uint8Array, Proxy, Error, Object, Array, Number, JSON, isFinite, Date, window, String, parseFloat, Image: function () {} });
 const code = ['01-config', '02-core', '03-physics', '04-rules', '05-net', '06-bot', '07-game'].map(src).join('\n') +
   "\nconst CUE_IMAGES = new Proxy({}, { get: () => 'data:image/png;base64,AAAA' });\n" + ['09-content', '10-store', '11-leaderboard'].map(src).join('\n') +
-  '\nthis.__x={NineBallRules,CONFIG,buildTableGeometry,PhysicsWorld,Rng,Game,MatchRules,ShotValidator,Store,levelInfo,xpForLevel,rewardsForLevel,BETS,HOUSE_FEE,START_COINS,TABLE_THEMES,CUE_CATALOG,MockLeaderboard,botAvatar,AVATAR_COLORS,fmtShort,BADGE_DEFS,DAILY_REWARDS};';
+  '\nthis.__x={NineBallRules,CONFIG,buildTableGeometry,PhysicsWorld,Rng,Game,MatchRules,ShotValidator,Store,levelInfo,xpForLevel,rewardsForLevel,BETS,HOUSE_FEE,START_COINS,TABLE_THEMES,CUE_CATALOG,MockLeaderboard,botAvatar,AVATAR_COLORS,fmtShort,BADGE_DEFS,DAILY_REWARDS,TABLE_PROFILES,applyTableProfile};';
 vm.runInContext(code, ctx);
-const X = ctx.__x; const { NineBallRules, CONFIG, buildTableGeometry, PhysicsWorld, Rng, Game, MatchRules, ShotValidator, Store, levelInfo, rewardsForLevel } = X;
+const X = ctx.__x; const { NineBallRules, CONFIG, buildTableGeometry, PhysicsWorld, Rng, Game, MatchRules, ShotValidator, Store, levelInfo, rewardsForLevel, TABLE_PROFILES, applyTableProfile } = X;
+const PHYSICS_BASE_TEST = CONFIG.physics.maxShotSpeed;
 let failed = 0;
 const ok = (name, cond, info) => { console.log((cond ? 'PASS ' : 'FAIL ') + name + (info !== undefined ? '  ' + info : '')); if (!cond) failed++; };
 const freshStore = () => { for (const k of Object.keys(mem)) delete mem[k]; return new Store(); };
@@ -163,4 +164,50 @@ for (const [type, label] of [['9ball', '9-ball standar'], ['9call', '9-ball kant
   }
 }
 { const st = freshStore(); st.recordMatch({ youWon: true, bet: 100, game: '9ball', golden: true }); ok('statistik & badge 9-ball (menang, golden break)', st.data.stats.wins9 === 1 && st.data.stats.golden === 1 && st.data.unlocks.badges.includes('nine_1') && st.data.unlocks.badges.includes('golden')); }
+/* ---- meja American: geometri, skala fisika, kantong tidak macet ---- */
+{
+  applyTableProfile('american'); const TA = CONFIG.table;
+  ok('American: playfield 800×400', TA.width === 800 && TA.height === 400);
+  ok('American: bola lebih besar secara relatif (rasio Ø/lebar meja)', (TA.ballRadius * 2) / TA.width > (30 / 1600) * 1.3, ((TA.ballRadius * 2) / TA.width).toFixed(4));
+  const GA = buildTableGeometry(TA), dA = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]);
+  const cA = GA.pocketShapes[0], sA = GA.pocketShapes[1], D = TA.ballRadius * 2;
+  ok('American: mulut kantong corner ≥ 2× diameter bola', dA(cA.tipA, cA.tipB) >= 2 * D, dA(cA.tipA, cA.tipB).toFixed(1) + ' vs min ' + (2 * D));
+  ok('American: leher kantong corner ≥ 2× diameter bola', dA(cA.baseA, cA.baseB) >= 2 * D, dA(cA.baseA, cA.baseB).toFixed(1));
+  ok('American: mulut kantong side ≥ 2× diameter bola', dA(sA.tipA, sA.tipB) >= 2 * D, dA(sA.tipA, sA.tipB).toFixed(1));
+  ok('American: leher kantong side ≥ 2× diameter bola', dA(sA.baseA, sA.baseB) >= 2 * D, dA(sA.baseA, sA.baseB).toFixed(1));
+  applyTableProfile('standard'); const TS = CONFIG.table;
+  const GS = buildTableGeometry(TS), cS = GS.pocketShapes[0];
+  ok('Standar: TETAP tidak diubah (kompatibilitas mundur)', TS.width === 1600 && TS.height === 728 && TS.ballRadius === 15 && Math.abs(dA(cS.tipA, cS.tipB) - 58) < 0.1);
+
+  const freshT = (id) => { applyTableProfile(id); const w = new PhysicsWorld(CONFIG); for (const b of w.balls) { b.state = 1; b.stop(); } return w; };
+  const putT = (w, i, x, y) => { const b = w.balls[i]; b.state = 0; b.x = x; b.y = y; b.stop(); };
+  const runT = (w, s) => { for (let t = 0; t < s; t += 1 / 60) w.update(1 / 60); };
+  { const w = freshT('american'); putT(w, 0, 200, 200); w.strike(1, 0, 1, 0, 0); runT(w, 1.5);
+    ok('American: tembakan power penuh tidak menembus cushion', w.balls[0].state === 0 && w.balls[0].x > 0 && w.balls[0].x < 800 && w.balls[0].y > 0 && w.balls[0].y < 400); }
+  { const w = freshT('american'); putT(w, 0, 400, 200); putT(w, 1, 430, 200); w.strike(1, 0, 0.15, 0, -0.3); runT(w, 3);
+    ok('American: draw shot tetap bekerja (bola putih mundur)', w.balls[0].x < 400); }
+  { let stuck = 0; for (let k = 0; k < 40; k++) {
+      const w = freshT('american'), sh = GA.pocketShapes[k % 6], mx = (sh.tipA[0] + sh.tipB[0]) / 2, my = (sh.tipA[1] + sh.tipB[1]) / 2;
+      const dx = sh.axis[0], dy = sh.axis[1], back = 55 + (k * 3) % 40, speed = (0.05 + (k % 5) * 0.03) * CONFIG.physics.maxShotSpeed;
+      const b = w.balls[1]; b.state = 0; b.x = mx - dx * back; b.y = my - dy * back; b.vx = b.rvx = dx * speed; b.vy = b.rvy = dy * speed;
+      runT(w, 3);
+      if (b.state === 0) stuck++;
+    } ok('American: bola pelan menuju kantong tidak "macet" di bibir (tetap masuk)', stuck === 0, stuck + '/40 macet'); }
+  { const w = freshT('standard'); ok('Fisika standar tetap identik setelah bolak-balik profil', Math.abs(w.cfg.physics.maxShotSpeed - PHYSICS_BASE_TEST) < 1); }
+  applyTableProfile('standard');
+}
+/* ---- Game: pilih meja per match, respot & aturan tetap benar di meja kecil ---- */
+{
+  const st = freshStore(), g = new Game({ ui: nul, audio: nul, store: st });
+  ok('startMatch tanpa table = standard', g.startMatch({ mode: 'local' }) && g.tableId === 'standard' && CONFIG.table.width === 1600);
+  g.quitToMenu();
+  const g2 = new Game({ ui: nul, audio: nul, store: freshStore() });
+  ok('startMatch table:"american" mengganti profil & dunia fisika', g2.startMatch({ mode: 'local', table: 'american' }) && g2.tableId === 'american' && CONFIG.table.width === 800 && g2.world.W === 800);
+  const cue = g2.cue; ok('bola putih di meja American berada di dalam batas kecil', cue.x > 0 && cue.x < 800 && cue.y > 0 && cue.y < 400);
+  g2.quitToMenu();
+  const g3 = new Game({ ui: nul, audio: nul, store: freshStore() }); g3.startMatch({ mode: 'bot', game: '9ball', table: 'american', bet: 100 }); g3._rack(new Rng(9));
+  const on9 = g3.world.balls.filter((b) => b.state === 0 && b.id > 0 && b.id <= 9);
+  ok('rack 9-ball di meja American: 9 bola, tidak tumpang tindih, di dalam batas', on9.length === 9 && on9.every((b) => b.x > 0 && b.x < 800 && b.y > 0 && b.y < 400));
+  applyTableProfile('standard');
+}
 console.log(failed ? '\n' + failed + ' tes gagal' : '\nSemua tes lulus'); process.exit(failed ? 1 : 0);

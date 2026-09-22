@@ -11,7 +11,6 @@ const CONFIG = {
     // Catatan: brief menulis outer 1760×800, tetapi 728 + 2×(56+24) = 888. Ubah `rail`/`cushion` di sini bila ingin lain.
     width: 1600, height: 728, rail: 56, cushion: 24, ballRadius: 15,
     cornerMouth: 58, cornerThroat: 44, sideMouth: 52, sideThroat: 34,
-    cornerCaptureX: -6, cornerCaptureR: 28, sideCaptureY: -10, sideCaptureR: 20,
     headStringX: 400, footSpotX: 1200,
   },
   physics: {
@@ -42,6 +41,27 @@ const CONFIG = {
     balls: [null, '#f2c21c', '#1f56c4', '#d92d2d', '#6a2fa0', '#ee7a1c', '#1f8f4e', '#7a1f2a', '#15131a'],
   },
 };
+
+/* ---------------- profil meja ----------------
+   Dua ukuran meja per pertandingan. `applyTableProfile` mengganti CONFIG.table/physics/aim di tempat; fisika (kecepatan,
+   percepatan gesek) diskalakan mengikuti panjang meja sehingga power 100% menempuh proporsi meja yang sama. */
+const TABLE_PROFILES = {
+  standard: { id: 'standard', name: 'Standar', desc: 'Meja penuh 1600×728. Ukuran saat ini.',
+    table: { width: 1600, height: 728, rail: 56, cushion: 24, ballRadius: 15, cornerMouth: 58, cornerThroat: 44, sideMouth: 52, sideThroat: 34, headStringX: 400, footSpotX: 1200 } },
+  american: { id: 'american', name: 'American', desc: 'Meja sedang 800×400, bola lebih besar, kantong ≥ 2× diameter bola — lebih mudah.',
+    table: { width: 800, height: 400, rail: 28, cushion: 13, ballRadius: 14, cornerMouth: 66, cornerThroat: 58, sideMouth: 62, sideThroat: 58, headStringX: 200, footSpotX: 600 } },
+};
+const PHYSICS_BASE = Object.assign({}, CONFIG.physics), AIM_BASE = Object.assign({}, CONFIG.aim);
+function applyTableProfile(id) {
+  const p = TABLE_PROFILES[id] || TABLE_PROFILES.standard, k = p.table.width / TABLE_PROFILES.standard.table.width;
+  CONFIG.table = Object.assign({}, p.table); CONFIG.tableId = p.id;
+  const P = Object.assign({}, PHYSICS_BASE);
+  for (const key of ['maxShotSpeed', 'slidingAccel', 'rollingDecel', 'stopSpeed', 'slideEpsilon']) P[key] = PHYSICS_BASE[key] * k;
+  P.cushionSpeedLoss = PHYSICS_BASE.cushionSpeedLoss / k;
+  CONFIG.physics = P; CONFIG.aim = Object.assign({}, AIM_BASE, { pullMax: AIM_BASE.pullMax * k });
+  return CONFIG.table;
+}
+CONFIG.tableId = 'standard';
 
 const Util = {
   clamp: (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v),

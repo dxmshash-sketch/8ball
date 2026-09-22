@@ -241,6 +241,9 @@ h3.sec{font:700 20px var(--f-head);margin:16px 0 6px}
 .tb-card.equipped{border-color:var(--ok)}
 .tb-prev{background:radial-gradient(ellipse at 50% 40%,#2e3542,#1c2028);padding:10px 10px 4px;display:grid;place-items:center;min-height:130px}
 .tb-prev canvas{width:100%;height:auto;display:block}
+.tb-prev.two{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center}
+.tb-prev.two span{display:block;width:100%}
+.tbl-row{display:flex;align-items:center;gap:12px;margin-bottom:2px;color:var(--muted)}
 .tb-info{padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px}
 .tb-info h4{margin:0;font:700 21px var(--f-head);display:flex;justify-content:space-between;gap:8px;align-items:baseline}
 .rar{font:600 12px var(--f-body);padding:2px 8px;border-radius:8px;background:rgba(0,0,0,.35)}

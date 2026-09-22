@@ -48,7 +48,7 @@ class Game {
     this.transport = null; this.brain = null; this.botState = { t: 0, plan: null, placed: false };
     this.disconnected = false; this.attract = { t: 0, phase: 'wait' };
     this.cueStats = { force: 5, aim: 5, spin: 5, time: 5 };
-    this.bet = 0; this.pottedBySeat = [0, 0];
+    this.bet = 0; this.pottedBySeat = [0, 0]; this.tableId = 'standard';
     this.rng = new Rng((Math.random() * 4294967296) >>> 0);
     this._resetAttract();
   }
@@ -143,6 +143,7 @@ class Game {
     const bet = opts.mode === 'local' ? 0 : Math.max(0, opts.bet | 0);
     if (bet > 0 && !this.store.spend(bet)) return false;
     this.bet = bet; this.pottedBySeat = [0, 0];
+    this._setTable(opts.table === 'american' ? 'american' : 'standard');
     this.lastOptions = opts; this.mode = opts.mode;
     this.gameType = ['8ball', '9ball', '9call'].indexOf(opts.game) === -1 ? '8ball' : opts.game;
     this.rules = this.gameType === '8ball' ? new MatchRules() : new NineBallRules(this.gameType === '9call' ? 'call' : 'standard'); this.difficulty = opts.difficulty || 'medium';
@@ -166,6 +167,13 @@ class Game {
     this.mmTimer = this.cfg.rules.matchmakingSeconds[this.mode];
     this.ui.showMatchmaking(this);
     return true;
+  }
+
+  /** Ganti ukuran meja: profil config diterapkan, dunia fisika dibangun ulang, renderer diberi tahu. */
+  _setTable(id) {
+    if (this.tableId === id && CONFIG.tableId === id) return;
+    applyTableProfile(id); this.tableId = id; this.world = new PhysicsWorld(CONFIG);
+    this._resetAttract(); this.ui.tableChanged(this);
   }
 
   _bindTransport(t) {
@@ -476,7 +484,7 @@ class Game {
   serialize() {
     const r = this.rules;
     return {
-      matchId: this.matchId, gameType: this.gameType, state: this.sm.state, expectedSeq: this.expectedSeq, zone: this.ballInHandZone, rackCount: this.rackCount,
+      matchId: this.matchId, gameType: this.gameType, tableId: this.tableId, state: this.sm.state, expectedSeq: this.expectedSeq, zone: this.ballInHandZone, rackCount: this.rackCount,
       balls: this.world.balls.map((b) => ({ id: b.id, state: b.state, x: b.x, y: b.y })),
       rules: { groups: r.groups.slice(), tableOpen: r.tableOpen, currentSeat: r.currentSeat, isBreak: r.isBreak, pocketed: Array.from(r.pocketedIds) },
     };
@@ -503,5 +511,5 @@ class Game {
     return this.isTurnState() && this.cue.state === BallState.ON_TABLE;
   }
   aimLineVisible() { return this.canControl(); }
-  aimGuideLength() { return 260 + this.cueStats.aim * 60; }
+  aimGuideLength() { return (260 + this.cueStats.aim * 60) * (this.cfg.table.width / 1600); }
 }

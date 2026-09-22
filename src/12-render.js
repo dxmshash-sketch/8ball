@@ -77,7 +77,7 @@ function drawCover(c, img, x, y, w, h) {
 
 function renderTableLayer(theme, T, geo, s, rot, imgs) {
   imgs = imgs || {};
-  const W = T.width, H = T.height, ct = T.cushion, rail = T.rail, ext = ct + rail, pad = 46, tx = ext + pad;
+  const W = T.width, H = T.height, ct = T.cushion, rail = T.rail, ext = ct + rail, pad = 46, tx = ext + pad, u = rail / 56, wu = W / 1600;   // u, wu: skala hiasan untuk meja berukuran lain
   const cv = document.createElement('canvas'); cv.width = Math.ceil((W + 2 * tx) * s); cv.height = Math.ceil((H + 2 * tx) * s);
   const c = cv.getContext('2d'); c.scale(s, s); c.translate(tx, tx);
   const cr = Math.cos(-rot), sr = Math.sin(-rot), rv = (x, y) => [x * cr - y * sr, x * sr + y * cr];
@@ -86,42 +86,43 @@ function renderTableLayer(theme, T, geo, s, rot, imgs) {
   const half = Math.abs(GX) * (W / 2 + ext) + Math.abs(GY) * (H / 2 + ext);
   const rrect = (x, y, w, h, r) => { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
   const along = (stops) => { const g = c.createLinearGradient(cxw - GX * half, cyw - GY * half, cxw + GX * half, cyw + GY * half); for (const [o, col] of stops) g.addColorStop(o, col); return g; };
-  const outer = () => rrect(-ext, -ext, W + 2 * ext, H + 2 * ext, 30);
+  const outer = () => rrect(-ext, -ext, W + 2 * ext, H + 2 * ext, 30 * u);
   const ringClip = () => { c.beginPath(); c.rect(-ct, -ct, W + 2 * ct, H + 2 * ct); c.rect(-ext - 5, -ext - 5, W + 2 * ext + 10, H + 2 * ext + 10); c.clip('evenodd'); };
 
-  c.save(); c.shadowColor = 'rgba(0,0,0,0.6)'; c.shadowBlur = 30 * s; c.shadowOffsetX = GX * 12 * s; c.shadowOffsetY = GY * 12 * s; c.fillStyle = '#20080a'; outer(); c.fill(); c.restore();
+  c.save(); c.shadowColor = 'rgba(0,0,0,0.6)'; c.shadowBlur = 30 * u * s; c.shadowOffsetX = GX * 12 * u * s; c.shadowOffsetY = GY * 12 * u * s; c.fillStyle = '#20080a'; outer(); c.fill(); c.restore();
 
   if (imgs.rail) { c.save(); outer(); c.clip(); c.drawImage(imgs.rail, -ext, -ext, W + 2 * ext, H + 2 * ext); c.restore(); }
   else if (rt.style === 'neon') {
     c.fillStyle = along([[0, '#231733'], [1, rt.bg || '#160f1f']]); outer(); c.fill();
     c.save(); outer(); c.clip(); ringClip(); c.shadowColor = rt.glow; c.shadowBlur = 16 * s; c.strokeStyle = rt.glow; c.lineWidth = 3.4;
-    rrect(-ext + 12, -ext + 12, W + 2 * ext - 24, H + 2 * ext - 24, 20); c.stroke(); c.lineWidth = 2.2; c.strokeRect(-ct - 9, -ct - 9, W + 2 * ct + 18, H + 2 * ct + 18);
+    const o1 = 12 * u, o2 = 9 * u; rrect(-ext + o1, -ext + o1, W + 2 * ext - 2 * o1, H + 2 * ext - 2 * o1, 20 * u); c.stroke(); c.lineWidth = 2.2 * Math.max(u, 0.6); c.strokeRect(-ct - o2, -ct - o2, W + 2 * ct + 2 * o2, H + 2 * ct + 2 * o2);
     c.shadowBlur = 0; c.fillStyle = 'rgba(255,255,255,0.05)'; for (let i = 0; i < 90; i++) c.fillRect(rng.range(-ext, W + ext), rng.range(-ext, H + ext), 24, 1.3); c.restore();
   } else if (rt.style === 'ornate') {
     c.fillStyle = along([[0, rt.bg], [1, rt.bg]]); outer(); c.fill();
     const pc = document.createElement('canvas'); pc.width = pc.height = 28; const p = pc.getContext('2d');
     p.strokeStyle = rt.ink; p.lineWidth = 2; p.beginPath(); p.moveTo(14, 1); p.lineTo(27, 14); p.lineTo(14, 27); p.lineTo(1, 14); p.closePath(); p.stroke();
     p.fillStyle = rt.spot; p.beginPath(); p.arc(14, 14, 3.6, 0, 7); p.fill(); p.fillStyle = rt.ink; for (const [x, y] of [[0, 0], [28, 0], [0, 28], [28, 28]]) { p.beginPath(); p.arc(x, y, 3, 0, 7); p.fill(); }
-    c.save(); outer(); c.clip(); ringClip(); c.fillStyle = c.createPattern(pc, 'repeat'); c.fillRect(-ext, -ext, W + 2 * ext, H + 2 * ext);
-    c.strokeStyle = rt.edge || rt.ink; c.lineWidth = 4; rrect(-ext + 7, -ext + 7, W + 2 * ext - 14, H + 2 * ext - 14, 24); c.stroke(); c.strokeRect(-ct - 7, -ct - 7, W + 2 * ct + 14, H + 2 * ct + 14);
+    const pat = c.createPattern(pc, 'repeat'); if (pat.setTransform && typeof DOMMatrix !== 'undefined') pat.setTransform(new DOMMatrix([u, 0, 0, u, 0, 0]));
+    c.save(); outer(); c.clip(); ringClip(); c.fillStyle = pat; c.fillRect(-ext, -ext, W + 2 * ext, H + 2 * ext);
+    const o7 = 7 * u; c.strokeStyle = rt.edge || rt.ink; c.lineWidth = 4 * Math.max(u, 0.6); rrect(-ext + o7, -ext + o7, W + 2 * ext - 2 * o7, H + 2 * ext - 2 * o7, 24 * u); c.stroke(); c.strokeRect(-ct - o7, -ct - o7, W + 2 * ct + 2 * o7, H + 2 * ct + 2 * o7);
     c.fillStyle = along([[0, 'rgba(255,255,255,0.28)'], [0.5, 'rgba(255,255,255,0)'], [1, 'rgba(0,0,0,0.38)']]); c.fillRect(-ext, -ext, W + 2 * ext, H + 2 * ext); c.restore();
   } else if (rt.style === 'metal') {
     c.fillStyle = along([[0, rt.a], [0.5, rt.b], [1, rt.c]]); outer(); c.fill();
-    c.save(); outer(); c.clip(); ringClip(); for (let i = 0; i < 260; i++) { c.strokeStyle = rng.next() < 0.5 ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)'; c.lineWidth = rng.range(0.4, 1.2); c.beginPath(); const y = rng.range(-ext, H + ext), x = rng.range(-ext, W); c.moveTo(x, y); c.lineTo(x + rng.range(80, 500), y); c.stroke(); } c.restore();
+    c.save(); outer(); c.clip(); ringClip(); for (let i = 0; i < 260; i++) { c.strokeStyle = rng.next() < 0.5 ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)'; c.lineWidth = rng.range(0.4, 1.2); c.beginPath(); const y = rng.range(-ext, H + ext), x = rng.range(-ext, W); c.moveTo(x, y); c.lineTo(x + rng.range(80, 500) * wu, y); c.stroke(); } c.restore();
   } else {                                                                     // wood
     c.fillStyle = along([[0, rt.a], [0.07, rt.accent || rt.a], [0.16, rt.b], [0.55, rt.c], [1, rt.d]]); outer(); c.fill();
     c.save(); outer(); c.clip(); ringClip();
     for (let i = 0; i < 320; i++) {
       c.strokeStyle = rng.next() < 0.4 ? 'rgba(255,190,170,0.07)' : 'rgba(30,0,0,0.10)'; c.lineWidth = rng.range(0.4, 1.6); c.beginPath();
-      if (rng.next() < 0.6) { const y = rng.range(-ext, H + ext), x0 = rng.range(-ext, W), l = rng.range(60, 380); c.moveTo(x0, y); c.lineTo(x0 + l, y + rng.range(-2, 2)); }
-      else { const x = rng.range(-ext, W + ext), y0 = rng.range(-ext, H), l = rng.range(40, 200); c.moveTo(x, y0); c.lineTo(x + rng.range(-2, 2), y0 + l); }
+      if (rng.next() < 0.6) { const y = rng.range(-ext, H + ext), x0 = rng.range(-ext, W), l = rng.range(60, 380) * wu; c.moveTo(x0, y); c.lineTo(x0 + l, y + rng.range(-2, 2)); }
+      else { const x = rng.range(-ext, W + ext), y0 = rng.range(-ext, H), l = rng.range(40, 200) * wu; c.moveTo(x, y0); c.lineTo(x + rng.range(-2, 2), y0 + l); }
       c.stroke();
     }
     c.restore();
   }
   let g = c.createLinearGradient(cxw + LX * half, cyw + LY * half, cxw - LX * half, cyw - LY * half);   // bevel luar
   g.addColorStop(0, 'rgba(255,235,225,0.6)'); g.addColorStop(0.5, 'rgba(255,255,255,0.04)'); g.addColorStop(1, 'rgba(0,0,0,0.65)');
-  c.strokeStyle = g; c.lineWidth = 3; rrect(-ext + 1.5, -ext + 1.5, W + 2 * ext - 3, H + 2 * ext - 3, 29); c.stroke();
+  c.strokeStyle = g; c.lineWidth = 3 * u; rrect(-ext + 1.5 * u, -ext + 1.5 * u, W + 2 * ext - 3 * u, H + 2 * ext - 3 * u, 29 * u); c.stroke();
 
   // kain: gradient dari tengah + vignette; gambar kustom di-cover lalu diberi pencahayaan
   if (imgs.cloth) {
@@ -130,21 +131,21 @@ function renderTableLayer(theme, T, geo, s, rot, imgs) {
   } else {
     g = c.createRadialGradient(W / 2, H / 2, 40, W / 2, H / 2, W * 0.62); g.addColorStop(0, cl.a); g.addColorStop(0.5, cl.b); g.addColorStop(1, cl.c);
     c.fillStyle = g; c.fillRect(-ct, -ct, W + 2 * ct, H + 2 * ct);
-    for (let i = 0; i < 9000; i++) { c.fillStyle = rng.next() < 0.5 ? 'rgba(255,255,255,0.035)' : 'rgba(0,30,60,0.05)'; c.fillRect(rng.range(0, W), rng.range(0, H), 1.1, 1.1); }
+    for (let i = 0, n = Math.round(9000 * wu * (H / 728)); i < n; i++) { c.fillStyle = rng.next() < 0.5 ? 'rgba(255,255,255,0.035)' : 'rgba(0,30,60,0.05)'; c.fillRect(rng.range(0, W), rng.range(0, H), 1.1, 1.1); }
   }
   const glow = (x0, y0, x1, y1, rx, ry, rw, rh) => { const gr = c.createLinearGradient(x0, y0, x1, y1); gr.addColorStop(0, 'rgba(255,255,255,0.15)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = gr; c.fillRect(rx, ry, rw, rh); };
-  glow(0, 0, 0, 70, 0, 0, W, 70); glow(0, H, 0, H - 70, 0, H - 70, W, 70); glow(0, 0, 70, 0, 0, 0, 70, H); glow(W, 0, W - 70, 0, W - 70, 0, 70, H);
+  const gl = 70 * u; glow(0, 0, 0, gl, 0, 0, W, gl); glow(0, H, 0, H - gl, 0, H - gl, W, gl); glow(0, 0, gl, 0, 0, 0, gl, H); glow(W, 0, W - gl, 0, W - gl, 0, gl, H);
   for (const P of geo.cushions) {
     const ex = P[1][0] - P[0][0], ey = P[1][1] - P[0][1], el = Math.hypot(ex, ey); let nx = -ey / el, ny = ex / el; if (nx * (W / 2 - P[0][0]) + ny * (H / 2 - P[0][1]) < 0) { nx = -nx; ny = -ny; }
-    const gr = c.createLinearGradient(P[0][0], P[0][1], P[0][0] + nx * 16, P[0][1] + ny * 16); gr.addColorStop(0, 'rgba(0,25,50,0.38)'); gr.addColorStop(1, 'rgba(0,25,50,0)');
-    c.fillStyle = gr; c.beginPath(); c.moveTo(P[0][0], P[0][1]); c.lineTo(P[1][0], P[1][1]); c.lineTo(P[1][0] + nx * 16, P[1][1] + ny * 16); c.lineTo(P[0][0] + nx * 16, P[0][1] + ny * 16); c.closePath(); c.fill();
+    const sw = 16 * u, gr = c.createLinearGradient(P[0][0], P[0][1], P[0][0] + nx * sw, P[0][1] + ny * sw); gr.addColorStop(0, 'rgba(0,25,50,0.38)'); gr.addColorStop(1, 'rgba(0,25,50,0)');
+    c.fillStyle = gr; c.beginPath(); c.moveTo(P[0][0], P[0][1]); c.lineTo(P[1][0], P[1][1]); c.lineTo(P[1][0] + nx * sw, P[1][1] + ny * sw); c.lineTo(P[0][0] + nx * sw, P[0][1] + ny * sw); c.closePath(); c.fill();
   }
   c.strokeStyle = 'rgba(255,255,255,0.28)'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(T.headStringX, 2); c.lineTo(T.headStringX, H - 2); c.stroke();
   c.fillStyle = 'rgba(255,255,255,0.32)'; for (const x of [T.headStringX, W / 2, T.footSpotX]) { c.beginPath(); c.arc(x, H / 2, 3.2, 0, 7); c.fill(); }
 
   // pocket: corong (mulut lebar → leher sempit → ujung membulat), menyatu dengan rahang cushion
   for (const sh of geo.pocketShapes) {
-    const len = sh.corner ? 40 : 36, p = pocketGeom(sh, len), mouth = [(sh.tipA[0] + sh.tipB[0]) / 2, (sh.tipA[1] + sh.tipB[1]) / 2];
+    const len = rail * (sh.corner ? 0.72 : 0.64), p = pocketGeom(sh, len), mouth = [(sh.tipA[0] + sh.tipB[0]) / 2, (sh.tipA[1] + sh.tipB[1]) / 2];
     c.beginPath(); c.moveTo(sh.tipA[0], sh.tipA[1]); c.lineTo(sh.baseA[0], sh.baseA[1]); c.bezierCurveTo(p.c1[0], p.c1[1], p.c2[0], p.c2[1], p.end[0], p.end[1]);
     c.bezierCurveTo(p.c3[0], p.c3[1], p.c4[0], p.c4[1], sh.baseB[0], sh.baseB[1]); c.lineTo(sh.tipB[0], sh.tipB[1]); c.closePath();
     g = c.createLinearGradient(mouth[0], mouth[1], p.end[0], p.end[1]); g.addColorStop(0, 'rgba(4,10,20,0)'); g.addColorStop(0.18, 'rgba(4,10,20,0.72)'); g.addColorStop(0.42, '#05070c'); g.addColorStop(1, '#000'); c.fillStyle = g; c.fill();
@@ -164,9 +165,9 @@ function renderTableLayer(theme, T, geo, s, rot, imgs) {
   g = c.createLinearGradient(cxw + LX * half, cyw + LY * half, cxw - LX * half, cyw - LY * half); g.addColorStop(0, 'rgba(15,0,0,0.6)'); g.addColorStop(1, 'rgba(255,225,210,0.35)');
   c.strokeStyle = g; c.lineWidth = 2.4; c.strokeRect(-ct - 1, -ct - 1, W + 2 * ct + 2, H + 2 * ct + 2);
   for (const sh of geo.pocketShapes) {                                        // rim pocket
-    const p = pocketGeom(sh, sh.corner ? 40 : 36), path = () => { c.beginPath(); c.moveTo(sh.baseA[0], sh.baseA[1]); c.bezierCurveTo(p.c1[0], p.c1[1], p.c2[0], p.c2[1], p.end[0], p.end[1]); c.bezierCurveTo(p.c3[0], p.c3[1], p.c4[0], p.c4[1], sh.baseB[0], sh.baseB[1]); };
-    c.lineJoin = 'round'; path(); c.strokeStyle = theme.rim || '#2b0709'; c.lineWidth = 5; c.stroke();
-    c.save(); c.translate(-sh.axis[0] * 0.9, -sh.axis[1] * 0.9); path(); c.strokeStyle = 'rgba(255,225,205,0.22)'; c.lineWidth = 1.4; c.stroke(); c.restore();
+    const p = pocketGeom(sh, rail * (sh.corner ? 0.72 : 0.64)), path = () => { c.beginPath(); c.moveTo(sh.baseA[0], sh.baseA[1]); c.bezierCurveTo(p.c1[0], p.c1[1], p.c2[0], p.c2[1], p.end[0], p.end[1]); c.bezierCurveTo(p.c3[0], p.c3[1], p.c4[0], p.c4[1], sh.baseB[0], sh.baseB[1]); };
+    c.lineJoin = 'round'; path(); c.strokeStyle = theme.rim || '#2b0709'; c.lineWidth = 5 * Math.max(u, 0.6); c.stroke();
+    c.save(); c.translate(-sh.axis[0] * 0.9, -sh.axis[1] * 0.9); path(); c.strokeStyle = 'rgba(255,225,205,0.22)'; c.lineWidth = 1.4 * Math.max(u, 0.6); c.stroke(); c.restore();
   }
   // sight logam / neon dengan jarak konsisten
   const sight = (x, y) => {
@@ -181,12 +182,12 @@ function renderTableLayer(theme, T, geo, s, rot, imgs) {
   return { canvas: cv, pad: tx, s };
 }
 
-let PREVIEW_GEO = null;
-/** Pratinjau meja (toko & halaman Developer). */
-function renderTablePreview(theme, widthPx, imgs) {
-  const T = CONFIG.table; PREVIEW_GEO = PREVIEW_GEO || buildTableGeometry(T);
+const PREVIEW_GEO = {};
+/** Pratinjau meja (toko & halaman Developer); `kind` = 'standard' | 'american'. */
+function renderTablePreview(theme, widthPx, imgs, kind) {
+  const T = TABLE_PROFILES[kind || 'standard'].table; PREVIEW_GEO[T.width] = PREVIEW_GEO[T.width] || buildTableGeometry(T);
   const tx = T.rail + T.cushion + 46;
-  return renderTableLayer(theme, T, PREVIEW_GEO, widthPx / (T.width + 2 * tx), 0, imgs).canvas;
+  return renderTableLayer(theme, T, PREVIEW_GEO[T.width], widthPx / (T.width + 2 * tx), 0, imgs).canvas;
 }
 
 /* ---------------- renderer ---------------- */
@@ -206,8 +207,13 @@ class Renderer {
     if (vh < 520) return { mode: 'compact', top: 50, bottom: 6, left: 74, right: 62, rot: 0 };
     return { mode: 'wide', top: 62, bottom: 62, left: 10, right: 62, rot: 0 };
   }
+  /** Dipanggil Game saat ukuran meja berganti: geometri, kamera, layer meja, dan sprite bola dibangun ulang. */
+  onTableChanged() {
+    this.geo = this.game.world.geo; const T = CONFIG.table; this.cam.zoom = 1; this.cam.cx = T.width / 2; this.cam.cy = T.height / 2; this.resize();
+  }
   applyTheme(skipBuild) {
     this.theme = this.store.themeDef(this.store.data.tables.equipped);
+
     this.themeImgs = loadThemeImages(this.theme, (imgs) => { this.themeImgs = imgs; if (this.vw) this._buildTable(); });
     if (!skipBuild && this.vw) this._buildTable();
   }
@@ -305,7 +311,7 @@ class Renderer {
   _drawCall(c) {
     const g = this.game, px = 1 / this.k, pulse = 0.5 + 0.5 * Math.sin(this.time * 5), pick = g.canControl();
     for (let i = 0; i < 6; i++) {
-      const sh = this.geo.pocketShapes[i], mx = (sh.tipA[0] + sh.tipB[0]) / 2, my = (sh.tipA[1] + sh.tipB[1]) / 2, r = sh.corner ? 27 : 23, sel = i === g.aim.call;
+      const sh = this.geo.pocketShapes[i], mx = (sh.tipA[0] + sh.tipB[0]) / 2, my = (sh.tipA[1] + sh.tipB[1]) / 2, r = CONFIG.table.ballRadius * (sh.corner ? 1.8 : 1.55), sel = i === g.aim.call;
       if (sel) {
         c.fillStyle = 'rgba(244,197,66,' + (0.16 + 0.14 * pulse).toFixed(2) + ')'; c.strokeStyle = '#F4C542'; c.lineWidth = 3 * px; c.beginPath(); c.arc(mx, my, r + pulse * 3, 0, 7); c.fill(); c.stroke();
         c.fillStyle = '#F4C542'; c.beginPath(); c.arc(mx, my, 3.2, 0, 7); c.fill();

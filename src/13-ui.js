@@ -159,6 +159,7 @@ class UI {
     const low = game.rules.lowest(); el.hidden = false;
     el.innerHTML = Array.from({ length: 9 }, (_, i) => i + 1).map((id) => '<span class="mb' + (id > 8 ? ' stripe' : '') + (game.rules.pocketedIds.has(id) ? ' off' : '') + (id === low ? ' next' : '') + '" style="--c:' + CONFIG.colors.balls[id <= 8 ? id : id - 8] + '"></span>').join('');
   }
+  tableChanged(game) { this.renderer.onTableChanged(); if (this.current === 'screenTables') this.render_tables(); }
   connectionChanged(game, ok) { $('conn').classList.toggle('off', !ok); }
   updateBanner(game) {
     const chip = $('turnChip'), S = GameState, seat = game.seats[game.rules.currentSeat], me = seat && seat.control === 'local' && game.mode !== 'local';

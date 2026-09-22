@@ -15,8 +15,8 @@ Object.assign(UI.prototype, {
   /** Isi pratinjau meja ke elemen [data-theme]. */
   fillPreviews(root, width) {
     root.querySelectorAll('[data-theme]').forEach((slot) => {
-      const th = this.store.themeDef(slot.dataset.theme);
-      loadThemeImages(th, (imgs) => { slot.innerHTML = ''; slot.appendChild(renderTablePreview(th, width || 300, imgs)); });
+      const th = this.store.themeDef(slot.dataset.theme), kind = slot.dataset.tableKind || 'standard';
+      loadThemeImages(th, (imgs) => { slot.innerHTML = ''; slot.appendChild(renderTablePreview(th, width || 300, imgs, kind)); });
     });
   },
   mergeItems(items) {
@@ -37,12 +37,14 @@ Object.assign(UI.prototype, {
   render_modes() {
     const st = this.store, el = $('pageModes'), coins = st.coins, local = this.selectedMode === 'local';
     if (BETS.indexOf(this.selectedBet) === -1 || this.selectedBet > coins) this.selectedBet = [...BETS].reverse().find((b) => b <= Math.min(coins, 5000)) || BETS[0];
-    const bet = this.selectedBet, canPlay = local || coins >= bet, game = this.selectedGame || '8ball';
+    const bet = this.selectedBet, canPlay = local || coins >= bet, game = this.selectedGame || '8ball', tbl = this.selectedTable || 'standard';
     const GAMES = { '8ball': ['8 Ball', 'Klasik: bola penuh (1–7) atau strip (9–15), bola 8 menentukan kemenangan.'], '9ball': ['9 Ball', 'Bola 1–9, selalu kena bola bernomor terkecil lebih dulu. Masukkan bola 9 untuk menang.'], '9call': ['9 Ball · Pilih Kantong', 'Aturan 9 Ball, tetapi sebelum menembak Anda memilih kantong tujuan. Bola masuk kantong lain = foul.'] };
     el.innerHTML =
       '<h2>Pilih permainan</h2><div class="seg" style="margin:4px 0 6px">' + Object.keys(GAMES).map((k) => '<button data-act="game" data-v="' + k + '" aria-pressed="' + (game === k) + '">' + GAMES[k][0] + '</button>').join('') + '</div><p class="sub" style="margin-bottom:12px">' + GAMES[game][1] + '</p>' +
       '<div class="mode-grid">' + [['bot', 'Lawan bot', 'Latihan melawan komputer, tiga tingkat kesulitan.'], ['online', 'Online', 'Cari lawan lewat matchmaking. Saat ini simulasi lokal; server sungguhan tinggal disambungkan.'], ['local', 'Dua pemain', 'Gantian di satu layar. Tanpa taruhan dan tanpa hadiah.']]
         .map((m) => '<button class="mode-card" data-act="mode" data-v="' + m[0] + '" aria-pressed="' + (this.selectedMode === m[0]) + '"><b>' + m[1] + '</b><span>' + m[2] + '</span></button>').join('') + '</div>' +
+      '<div class="tbl-row"><span>Ukuran meja</span><div class="seg">' + Object.values(TABLE_PROFILES).map((p) => '<button data-act="table" data-v="' + p.id + '" aria-pressed="' + (tbl === p.id) + '">' + p.name + '</button>').join('') + '</div></div>' +
+      '<p class="sub" style="margin:2px 0 12px">' + TABLE_PROFILES[tbl].desc + '</p>' +
       (this.selectedMode === 'bot' ? '<div class="diff-row"><span>Tingkat kesulitan</span><div class="seg">' + [['easy', 'Mudah'], ['medium', 'Sedang'], ['hard', 'Sulit']].map((d) => '<button data-act="diff" data-v="' + d[0] + '" aria-pressed="' + (this.selectedDiff === d[0]) + '">' + d[1] + '</button>').join('') + '</div></div>' : '') +
       (local ? '' :
         '<div class="bet-head"><span>Taruhan</span><span class="muted" style="font-size:16px">Saldo ' + COIN_SVG + ' <b class="gold">' + fmtCoins(coins) + '</b></span></div>' +
@@ -53,9 +55,10 @@ Object.assign(UI.prototype, {
       game: (d) => { this.selectedGame = d.v; this.render_modes(); },
       mode: (d) => { this.selectedMode = d.v; this.render_modes(); },
       diff: (d) => { this.selectedDiff = d.v; this.render_modes(); },
+      table: (d) => { this.selectedTable = d.v; this.render_modes(); },
       bet: (d) => { this.selectedBet = +d.v; this.render_modes(); },
       start: () => {
-        if (!this.game.startMatch({ game: this.selectedGame || '8ball', mode: this.selectedMode, difficulty: this.selectedDiff, bet: this.selectedBet })) this.toast('Saldo tidak cukup untuk taruhan ini', 'foul');
+        if (!this.game.startMatch({ game: this.selectedGame || '8ball', table: this.selectedTable || 'standard', mode: this.selectedMode, difficulty: this.selectedDiff, bet: this.selectedBet })) this.toast('Saldo tidak cukup untuk taruhan ini', 'foul');
         else this.stack = [];
       },
     });
@@ -161,16 +164,16 @@ Object.assign(UI.prototype, {
   /* ------------------------------ toko meja ------------------------------ */
   render_tables() {
     const st = this.store, el = $('pageTables'), eq = st.data.tables.equipped;
-    el.innerHTML = this._head('Meja', this._wallet()) + '<div class="pg-body"><div class="tb-grid">' + st.allThemes().map((t) => {
+    el.innerHTML = this._head('Meja', this._wallet()) + '<div class="pg-body"><p class="note" style="margin-top:0">Tema meja berlaku untuk kedua ukuran meja. Pilih ukuran meja saat memulai pertandingan (halaman Pilih permainan).</p><div class="tb-grid">' + st.allThemes().map((t) => {
       const owned = st.themeOwned(t.id), on = eq === t.id;
-      return '<div class="tb-card' + (on ? ' equipped' : '') + '"><div class="tb-prev"><span data-theme="' + t.id + '" style="display:block;width:100%"></span></div><div class="tb-info"><h4>' + esc(t.name) + '<span class="rar ' + t.rarity + '">' + t.rarity + '</span></h4>' +
+      return '<div class="tb-card' + (on ? ' equipped' : '') + '"><div class="tb-prev two"><span data-theme="' + t.id + '" data-table-kind="standard"></span><span data-theme="' + t.id + '" data-table-kind="american"></span></div><div class="tb-info"><h4>' + esc(t.name) + '<span class="rar ' + t.rarity + '">' + t.rarity + '</span></h4>' +
         (owned ? '<button class="btn small ' + (on ? '' : 'primary') + '" data-act="equip" data-v="' + t.id + '"' + (on ? ' disabled' : '') + '>' + (on ? 'Dipakai' : 'Pakai') + '</button>' : '<button class="btn small green" data-act="buy" data-v="' + t.id + '"' + (st.coins < t.price ? ' disabled' : '') + '>Beli · ' + COIN_SVG + ' ' + fmtShort(t.price) + '</button>') + '</div></div>';
     }).join('') + '</div><p class="note">Meja kustom (dari halaman Developer) muncul di sini dengan label Kustom.</p></div>';
     this._bind(el, {
       equip: (d) => { st.equipTable(d.v); this.render_tables(); },
       buy: (d) => { if (st.buyTable(d.v)) { this.toast('Meja dibeli', 'ok'); this.fx.burst(innerWidth / 2, innerHeight / 2, 70); } else this.toast('Koin tidak cukup', 'foul'); this.render_tables(); },
     });
-    this.fillPreviews(el, 300);
+    this.fillPreviews(el, 145);
   },
 
   /* ------------------------------ Cue Collection ------------------------------ */

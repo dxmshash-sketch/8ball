@@ -134,11 +134,10 @@ input,select,textarea{font:inherit;color:#fff;-webkit-user-select:text;user-sele
 #turnChip.mine{background:rgba(29,120,48,.85)}#turnChip.foul{background:rgba(160,40,44,.9)}
 #tracker{position:absolute;top:calc(var(--hud-h) + 10px);left:12px;display:flex;gap:4px;padding:6px 9px;border-radius:14px;background:rgba(20,24,30,.78);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.08);pointer-events:none}
 #tracker .mb{width:17px;height:17px}.mb.off{opacity:.16}.mb.next{box-shadow:0 0 0 2px var(--gold),0 0 8px rgba(244,197,66,.6)}
-body[data-layout=compact] #tracker{left:76px}
 body[data-layout=portrait] #tracker{left:50%;transform:translateX(-50%);top:calc(var(--hud-h) + 46px)}body[data-layout=portrait] #tracker .mb{width:14px;height:14px}body[data-layout=portrait] #toast{top:calc(var(--hud-h) + 86px)}
 #toast{position:absolute;top:calc(var(--hud-h) + 52px);left:50%;transform:translate(-50%,-8px);padding:9px 18px;border-radius:12px;background:rgba(20,24,30,.94);border:1px solid rgba(255,255,255,.1);font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:88vw;text-align:center}
 #toast.show{opacity:1;transform:translate(-50%,0)}#toast.foul{border-color:var(--bad);color:#ffd5d6}#toast.ok{border-color:var(--ok)}
-#power{position:absolute;right:max(8px,env(safe-area-inset-right));top:50%;transform:translateY(-46%);height:64vh;max-height:560px;min-height:180px;width:44px;display:flex;flex-direction:column;align-items:center;gap:8px}
+#power{position:absolute;left:max(8px,env(safe-area-inset-left));top:50%;transform:translateY(-46%);height:64vh;max-height:560px;min-height:180px;width:44px;display:flex;flex-direction:column;align-items:center;gap:8px}
 #powerTrack{position:relative;flex:1;width:32px;border-radius:16px;background:linear-gradient(#0d2340,#12305a);border:2px solid #0a1a30;box-shadow:inset 0 3px 8px rgba(0,0,0,.6),0 2px 0 rgba(255,255,255,.06);touch-action:none;overflow:hidden}
 #powerFill{position:absolute;inset:0;background:linear-gradient(180deg,var(--ok) 0%,var(--gold) 55%,var(--bad) 100%);clip-path:inset(0 0 100% 0);opacity:.95}
 #powerTrack::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(180deg,transparent 0 22px,rgba(255,255,255,.07) 22px 23px);z-index:2;pointer-events:none}
@@ -156,14 +155,14 @@ body[data-layout=wide] #fine{left:50%;bottom:9px;transform:translateX(-50%)}
 body[data-layout=compact]{--hud-h:50px}
 body[data-layout=compact] #hudTop{padding-right:12px}
 body[data-layout=compact] .avwrap{width:42px;height:42px}body[data-layout=compact] .avwrap svg.ring{width:42px;height:42px}
-body[data-layout=compact] #spin{left:10px;top:64px;width:54px;height:54px}
-body[data-layout=compact] #fine{left:14px;bottom:12px;flex-direction:column;gap:8px}body[data-layout=compact] #fine button{width:48px;height:38px}
-body[data-layout=compact] #power{height:72vh;right:6px}
+body[data-layout=compact] #spin{right:10px;top:64px;width:54px;height:54px}
+body[data-layout=compact] #fine{right:14px;bottom:12px;flex-direction:column;gap:8px}body[data-layout=compact] #fine button{width:48px;height:38px}
+body[data-layout=compact] #power{height:72vh;left:6px}
 body[data-layout=portrait]{--hud-h:58px}
 body[data-layout=portrait] #hudTop{gap:6px;padding:0 8px}
-body[data-layout=portrait] #spin{left:12px;bottom:12px;width:76px;height:76px}
-body[data-layout=portrait] #fine{left:110px;bottom:26px}
-body[data-layout=portrait] #power{right:5px;height:58vh;width:40px}body[data-layout=portrait] #powerTrack{width:30px}
+body[data-layout=portrait] #spin{right:12px;bottom:12px;width:76px;height:76px}
+body[data-layout=portrait] #fine{right:110px;bottom:26px}
+body[data-layout=portrait] #power{left:5px;height:58vh;width:40px}body[data-layout=portrait] #powerTrack{width:30px}
 body[data-layout=portrait] .hud-menu{width:38px;height:38px}
 body[data-layout=portrait] .avwrap,body[data-layout=portrait] .avwrap svg.ring{width:40px;height:40px}body[data-layout=portrait] .avwrap .avslot{inset:5px}
 body[data-layout=portrait] .pname{font-size:14px;max-width:62px}body[data-layout=portrait] .hud-meta{gap:3px}

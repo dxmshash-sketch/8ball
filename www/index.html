@@ -149,11 +149,10 @@ input,select,textarea{font:inherit;color:#fff;-webkit-user-select:text;user-sele
 #turnChip.mine{background:rgba(29,120,48,.85)}#turnChip.foul{background:rgba(160,40,44,.9)}
 #tracker{position:absolute;top:calc(var(--hud-h) + 10px);left:12px;display:flex;gap:4px;padding:6px 9px;border-radius:14px;background:rgba(20,24,30,.78);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.08);pointer-events:none}
 #tracker .mb{width:17px;height:17px}.mb.off{opacity:.16}.mb.next{box-shadow:0 0 0 2px var(--gold),0 0 8px rgba(244,197,66,.6)}
-body[data-layout=compact] #tracker{left:76px}
 body[data-layout=portrait] #tracker{left:50%;transform:translateX(-50%);top:calc(var(--hud-h) + 46px)}body[data-layout=portrait] #tracker .mb{width:14px;height:14px}body[data-layout=portrait] #toast{top:calc(var(--hud-h) + 86px)}
 #toast{position:absolute;top:calc(var(--hud-h) + 52px);left:50%;transform:translate(-50%,-8px);padding:9px 18px;border-radius:12px;background:rgba(20,24,30,.94);border:1px solid rgba(255,255,255,.1);font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:88vw;text-align:center}
 #toast.show{opacity:1;transform:translate(-50%,0)}#toast.foul{border-color:var(--bad);color:#ffd5d6}#toast.ok{border-color:var(--ok)}
-#power{position:absolute;right:max(8px,env(safe-area-inset-right));top:50%;transform:translateY(-46%);height:64vh;max-height:560px;min-height:180px;width:44px;display:flex;flex-direction:column;align-items:center;gap:8px}
+#power{position:absolute;left:max(8px,env(safe-area-inset-left));top:50%;transform:translateY(-46%);height:64vh;max-height:560px;min-height:180px;width:44px;display:flex;flex-direction:column;align-items:center;gap:8px}
 #powerTrack{position:relative;flex:1;width:32px;border-radius:16px;background:linear-gradient(#0d2340,#12305a);border:2px solid #0a1a30;box-shadow:inset 0 3px 8px rgba(0,0,0,.6),0 2px 0 rgba(255,255,255,.06);touch-action:none;overflow:hidden}
 #powerFill{position:absolute;inset:0;background:linear-gradient(180deg,var(--ok) 0%,var(--gold) 55%,var(--bad) 100%);clip-path:inset(0 0 100% 0);opacity:.95}
 #powerTrack::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(180deg,transparent 0 22px,rgba(255,255,255,.07) 22px 23px);z-index:2;pointer-events:none}
@@ -171,14 +170,14 @@ body[data-layout=wide] #fine{left:50%;bottom:9px;transform:translateX(-50%)}
 body[data-layout=compact]{--hud-h:50px}
 body[data-layout=compact] #hudTop{padding-right:12px}
 body[data-layout=compact] .avwrap{width:42px;height:42px}body[data-layout=compact] .avwrap svg.ring{width:42px;height:42px}
-body[data-layout=compact] #spin{left:10px;top:64px;width:54px;height:54px}
-body[data-layout=compact] #fine{left:14px;bottom:12px;flex-direction:column;gap:8px}body[data-layout=compact] #fine button{width:48px;height:38px}
-body[data-layout=compact] #power{height:72vh;right:6px}
+body[data-layout=compact] #spin{right:10px;top:64px;width:54px;height:54px}
+body[data-layout=compact] #fine{right:14px;bottom:12px;flex-direction:column;gap:8px}body[data-layout=compact] #fine button{width:48px;height:38px}
+body[data-layout=compact] #power{height:72vh;left:6px}
 body[data-layout=portrait]{--hud-h:58px}
 body[data-layout=portrait] #hudTop{gap:6px;padding:0 8px}
-body[data-layout=portrait] #spin{left:12px;bottom:12px;width:76px;height:76px}
-body[data-layout=portrait] #fine{left:110px;bottom:26px}
-body[data-layout=portrait] #power{right:5px;height:58vh;width:40px}body[data-layout=portrait] #powerTrack{width:30px}
+body[data-layout=portrait] #spin{right:12px;bottom:12px;width:76px;height:76px}
+body[data-layout=portrait] #fine{right:110px;bottom:26px}
+body[data-layout=portrait] #power{left:5px;height:58vh;width:40px}body[data-layout=portrait] #powerTrack{width:30px}
 body[data-layout=portrait] .hud-menu{width:38px;height:38px}
 body[data-layout=portrait] .avwrap,body[data-layout=portrait] .avwrap svg.ring{width:40px;height:40px}body[data-layout=portrait] .avwrap .avslot{inset:5px}
 body[data-layout=portrait] .pname{font-size:14px;max-width:62px}body[data-layout=portrait] .hud-meta{gap:3px}
@@ -468,8 +467,8 @@ const CONFIG = {
 const TABLE_PROFILES = {
   standard: { id: 'standard', name: 'Standar', desc: 'Meja penuh 1600×728. Ukuran saat ini.',
     table: { width: 1600, height: 728, rail: 56, cushion: 24, ballRadius: 15, cornerMouth: 58, cornerThroat: 44, sideMouth: 52, sideThroat: 34, headStringX: 400, footSpotX: 1200 } },
-  american: { id: 'american', name: 'American', desc: 'Meja sedang 800×400, bola lebih besar, kantong ≥ 2× diameter bola — lebih mudah.',
-    table: { width: 800, height: 400, rail: 28, cushion: 13, ballRadius: 14, cornerMouth: 66, cornerThroat: 58, sideMouth: 62, sideThroat: 58, headStringX: 200, footSpotX: 600 } },
+  american: { id: 'american', name: 'American', desc: 'Meja sedang 880×400, kantong bundar lebar (≥ 2× diameter bola) — lebih mudah dan lebih cepat.',
+    table: { width: 880, height: 400, rail: 31, cushion: 13, ballRadius: 13, cornerMouth: 74, cornerThroat: 54, sideMouth: 68, sideThroat: 54, headStringX: 220, footSpotX: 660 } },
 };
 const PHYSICS_BASE = Object.assign({}, CONFIG.physics), AIM_BASE = Object.assign({}, CONFIG.aim);
 function applyTableProfile(id) {
@@ -2242,7 +2241,7 @@ function loadThemeImages(theme, onLoad) {
   return imgs;
 }
 function pocketGeom(sh, len) {
-  const mid = [(sh.baseA[0] + sh.baseB[0]) / 2, (sh.baseA[1] + sh.baseB[1]) / 2], ax = sh.axis, k = 0.9;
+  const mid = [(sh.baseA[0] + sh.baseB[0]) / 2, (sh.baseA[1] + sh.baseB[1]) / 2], ax = sh.axis, k = 1.08;   // >1 = corong membulat penuh (bukan meruncing)
   const end = [mid[0] + ax[0] * len, mid[1] + ax[1] * len];
   return { mid, end,
     c1: [sh.baseA[0] + ax[0] * len * 0.9 + (mid[0] - sh.baseA[0]) * 0.1, sh.baseA[1] + ax[1] * len * 0.9 + (mid[1] - sh.baseA[1]) * 0.1],
@@ -2324,7 +2323,7 @@ function renderTableLayer(theme, T, geo, s, rot, imgs) {
 
   // pocket: corong (mulut lebar → leher sempit → ujung membulat), menyatu dengan rahang cushion
   for (const sh of geo.pocketShapes) {
-    const len = rail * (sh.corner ? 0.72 : 0.64), p = pocketGeom(sh, len), mouth = [(sh.tipA[0] + sh.tipB[0]) / 2, (sh.tipA[1] + sh.tipB[1]) / 2];
+    const len = rail * (sh.corner ? 0.8 : 0.7), p = pocketGeom(sh, len), mouth = [(sh.tipA[0] + sh.tipB[0]) / 2, (sh.tipA[1] + sh.tipB[1]) / 2];
     c.beginPath(); c.moveTo(sh.tipA[0], sh.tipA[1]); c.lineTo(sh.baseA[0], sh.baseA[1]); c.bezierCurveTo(p.c1[0], p.c1[1], p.c2[0], p.c2[1], p.end[0], p.end[1]);
     c.bezierCurveTo(p.c3[0], p.c3[1], p.c4[0], p.c4[1], sh.baseB[0], sh.baseB[1]); c.lineTo(sh.tipB[0], sh.tipB[1]); c.closePath();
     g = c.createLinearGradient(mouth[0], mouth[1], p.end[0], p.end[1]); g.addColorStop(0, 'rgba(4,10,20,0)'); g.addColorStop(0.18, 'rgba(4,10,20,0.72)'); g.addColorStop(0.42, '#05070c'); g.addColorStop(1, '#000'); c.fillStyle = g; c.fill();
@@ -2344,7 +2343,7 @@ function renderTableLayer(theme, T, geo, s, rot, imgs) {
   g = c.createLinearGradient(cxw + LX * half, cyw + LY * half, cxw - LX * half, cyw - LY * half); g.addColorStop(0, 'rgba(15,0,0,0.6)'); g.addColorStop(1, 'rgba(255,225,210,0.35)');
   c.strokeStyle = g; c.lineWidth = 2.4; c.strokeRect(-ct - 1, -ct - 1, W + 2 * ct + 2, H + 2 * ct + 2);
   for (const sh of geo.pocketShapes) {                                        // rim pocket
-    const p = pocketGeom(sh, rail * (sh.corner ? 0.72 : 0.64)), path = () => { c.beginPath(); c.moveTo(sh.baseA[0], sh.baseA[1]); c.bezierCurveTo(p.c1[0], p.c1[1], p.c2[0], p.c2[1], p.end[0], p.end[1]); c.bezierCurveTo(p.c3[0], p.c3[1], p.c4[0], p.c4[1], sh.baseB[0], sh.baseB[1]); };
+    const p = pocketGeom(sh, rail * (sh.corner ? 0.8 : 0.7)), path = () => { c.beginPath(); c.moveTo(sh.baseA[0], sh.baseA[1]); c.bezierCurveTo(p.c1[0], p.c1[1], p.c2[0], p.c2[1], p.end[0], p.end[1]); c.bezierCurveTo(p.c3[0], p.c3[1], p.c4[0], p.c4[1], sh.baseB[0], sh.baseB[1]); };
     c.lineJoin = 'round'; path(); c.strokeStyle = theme.rim || '#2b0709'; c.lineWidth = 5 * Math.max(u, 0.6); c.stroke();
     c.save(); c.translate(-sh.axis[0] * 0.9, -sh.axis[1] * 0.9); path(); c.strokeStyle = 'rgba(255,225,205,0.22)'; c.lineWidth = 1.4 * Math.max(u, 0.6); c.stroke(); c.restore();
   }
@@ -2382,9 +2381,10 @@ class Renderer {
   }
   /** Margin (px) yang dicadangkan HUD per layout; disamakan dengan CSS. */
   static layoutFor(vw, vh) {
-    if (vh > vw * 1.05) return { mode: 'portrait', top: 58, bottom: 100, left: 6, right: 58, rot: -Math.PI / 2 };
-    if (vh < 520) return { mode: 'compact', top: 50, bottom: 6, left: 74, right: 62, rot: 0 };
-    return { mode: 'wide', top: 62, bottom: 62, left: 10, right: 62, rot: 0 };
+    // Kiri: power bar. Kanan: roda spin (+ tombol bidik halus di compact/portrait).
+    if (vh > vw * 1.05) return { mode: 'portrait', top: 58, bottom: 100, left: 58, right: 6, rot: -Math.PI / 2 };
+    if (vh < 520) return { mode: 'compact', top: 50, bottom: 6, left: 62, right: 74, rot: 0 };
+    return { mode: 'wide', top: 62, bottom: 62, left: 64, right: 62, rot: 0 };
   }
   /** Dipanggil Game saat ukuran meja berganti: geometri, kamera, layer meja, dan sprite bola dibangun ulang. */
   onTableChanged() {

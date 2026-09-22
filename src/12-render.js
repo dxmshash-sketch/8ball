@@ -63,7 +63,7 @@ function loadThemeImages(theme, onLoad) {
   return imgs;
 }
 function pocketGeom(sh, len) {
-  const mid = [(sh.baseA[0] + sh.baseB[0]) / 2, (sh.baseA[1] + sh.baseB[1]) / 2], ax = sh.axis, k = 0.9;
+  const mid = [(sh.baseA[0] + sh.baseB[0]) / 2, (sh.baseA[1] + sh.baseB[1]) / 2], ax = sh.axis, k = 1.08;   // >1 = corong membulat penuh (bukan meruncing)
   const end = [mid[0] + ax[0] * len, mid[1] + ax[1] * len];
   return { mid, end,
     c1: [sh.baseA[0] + ax[0] * len * 0.9 + (mid[0] - sh.baseA[0]) * 0.1, sh.baseA[1] + ax[1] * len * 0.9 + (mid[1] - sh.baseA[1]) * 0.1],
@@ -145,7 +145,7 @@ function renderTableLayer(theme, T, geo, s, rot, imgs) {
 
   // pocket: corong (mulut lebar → leher sempit → ujung membulat), menyatu dengan rahang cushion
   for (const sh of geo.pocketShapes) {
-    const len = rail * (sh.corner ? 0.72 : 0.64), p = pocketGeom(sh, len), mouth = [(sh.tipA[0] + sh.tipB[0]) / 2, (sh.tipA[1] + sh.tipB[1]) / 2];
+    const len = rail * (sh.corner ? 0.8 : 0.7), p = pocketGeom(sh, len), mouth = [(sh.tipA[0] + sh.tipB[0]) / 2, (sh.tipA[1] + sh.tipB[1]) / 2];
     c.beginPath(); c.moveTo(sh.tipA[0], sh.tipA[1]); c.lineTo(sh.baseA[0], sh.baseA[1]); c.bezierCurveTo(p.c1[0], p.c1[1], p.c2[0], p.c2[1], p.end[0], p.end[1]);
     c.bezierCurveTo(p.c3[0], p.c3[1], p.c4[0], p.c4[1], sh.baseB[0], sh.baseB[1]); c.lineTo(sh.tipB[0], sh.tipB[1]); c.closePath();
     g = c.createLinearGradient(mouth[0], mouth[1], p.end[0], p.end[1]); g.addColorStop(0, 'rgba(4,10,20,0)'); g.addColorStop(0.18, 'rgba(4,10,20,0.72)'); g.addColorStop(0.42, '#05070c'); g.addColorStop(1, '#000'); c.fillStyle = g; c.fill();
@@ -165,7 +165,7 @@ function renderTableLayer(theme, T, geo, s, rot, imgs) {
   g = c.createLinearGradient(cxw + LX * half, cyw + LY * half, cxw - LX * half, cyw - LY * half); g.addColorStop(0, 'rgba(15,0,0,0.6)'); g.addColorStop(1, 'rgba(255,225,210,0.35)');
   c.strokeStyle = g; c.lineWidth = 2.4; c.strokeRect(-ct - 1, -ct - 1, W + 2 * ct + 2, H + 2 * ct + 2);
   for (const sh of geo.pocketShapes) {                                        // rim pocket
-    const p = pocketGeom(sh, rail * (sh.corner ? 0.72 : 0.64)), path = () => { c.beginPath(); c.moveTo(sh.baseA[0], sh.baseA[1]); c.bezierCurveTo(p.c1[0], p.c1[1], p.c2[0], p.c2[1], p.end[0], p.end[1]); c.bezierCurveTo(p.c3[0], p.c3[1], p.c4[0], p.c4[1], sh.baseB[0], sh.baseB[1]); };
+    const p = pocketGeom(sh, rail * (sh.corner ? 0.8 : 0.7)), path = () => { c.beginPath(); c.moveTo(sh.baseA[0], sh.baseA[1]); c.bezierCurveTo(p.c1[0], p.c1[1], p.c2[0], p.c2[1], p.end[0], p.end[1]); c.bezierCurveTo(p.c3[0], p.c3[1], p.c4[0], p.c4[1], sh.baseB[0], sh.baseB[1]); };
     c.lineJoin = 'round'; path(); c.strokeStyle = theme.rim || '#2b0709'; c.lineWidth = 5 * Math.max(u, 0.6); c.stroke();
     c.save(); c.translate(-sh.axis[0] * 0.9, -sh.axis[1] * 0.9); path(); c.strokeStyle = 'rgba(255,225,205,0.22)'; c.lineWidth = 1.4 * Math.max(u, 0.6); c.stroke(); c.restore();
   }
@@ -203,9 +203,10 @@ class Renderer {
   }
   /** Margin (px) yang dicadangkan HUD per layout; disamakan dengan CSS. */
   static layoutFor(vw, vh) {
-    if (vh > vw * 1.05) return { mode: 'portrait', top: 58, bottom: 100, left: 6, right: 58, rot: -Math.PI / 2 };
-    if (vh < 520) return { mode: 'compact', top: 50, bottom: 6, left: 74, right: 62, rot: 0 };
-    return { mode: 'wide', top: 62, bottom: 62, left: 10, right: 62, rot: 0 };
+    // Kiri: power bar. Kanan: roda spin (+ tombol bidik halus di compact/portrait).
+    if (vh > vw * 1.05) return { mode: 'portrait', top: 58, bottom: 100, left: 58, right: 6, rot: -Math.PI / 2 };
+    if (vh < 520) return { mode: 'compact', top: 50, bottom: 6, left: 62, right: 74, rot: 0 };
+    return { mode: 'wide', top: 62, bottom: 62, left: 64, right: 62, rot: 0 };
   }
   /** Dipanggil Game saat ukuran meja berganti: geometri, kamera, layer meja, dan sprite bola dibangun ulang. */
   onTableChanged() {

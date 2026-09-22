@@ -19,13 +19,19 @@ Keyboard: ←/→ bidik (Shift = halus), Space tahan/lepas = power, Enter = temb
 - **Toko meja:** 8 tema bawaan (kayu, neon, ornamen, logam) dibeli dengan koin. **12 cue** dengan level & statistik yang memengaruhi permainan.
 - **Developer (Setelan → Halaman Developer):** buat skin cue dan meja dari gambar sendiri, pratinjau langsung, template panduan, ekspor/impor JSON. Skin hanya kosmetik dan tersimpan di perangkat.
 
+## Tata letak HUD
+Power bar vertikal ada di **kiri** layar; roda spin dan tombol bidik halus ada di **kanan** (di semua breakpoint: wide, compact, portrait — portrait memutar meja, bukan mengubah sisi kontrol). Bisa disesuaikan di `Renderer.layoutFor()` (margin meja) dan aturan `body[data-layout=...]` di `src/style.css`.
+
 ## Ukuran meja
 | | Standar | American |
 |---|---|---|
-| Playfield | 1600 × 728 | 800 × 400 |
-| Diameter bola | 30 | 28 |
-| Mulut kantong corner / side | 58 / 52 | 66 / 62 |
-| Leher kantong corner / side | 44 / 34 | 58 / 58 |
+| Playfield | 1600 × 728 | 880 × 400 |
+| Diameter bola | 30 | 26 |
+| Mulut kantong corner / side | 58 / 52 | 74 / 68 |
+| Leher kantong corner / side | 44 / 34 | 54 / 54 |
+
+Leher kantong American (54) sengaja dijaga tetap ≥ 2× diameter bola (52) sambil mulutnya jauh lebih lebar, sehingga corong kantong
+membulat (taper) alih-alih lurus seperti slot sempit — diuji otomatis di `tools/test.js`.
 
 Kantong American sengaja dibuat lebar (≥ 2× diameter bola, diuji otomatis di `tools/test.js`) agar bola tidak "macet" di bibir kantong.
 Fisika (kecepatan tembakan, gesekan) diskalakan mengikuti lebar meja lewat `applyTableProfile()` di `src/01-config.js`, sehingga power 100%

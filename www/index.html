@@ -467,8 +467,8 @@ const CONFIG = {
 const TABLE_PROFILES = {
   standard: { id: 'standard', name: 'Standar', desc: 'Meja penuh 1600×728. Ukuran saat ini.',
     table: { width: 1600, height: 728, rail: 56, cushion: 24, ballRadius: 15, cornerMouth: 58, cornerThroat: 44, sideMouth: 52, sideThroat: 34, headStringX: 400, footSpotX: 1200 } },
-  american: { id: 'american', name: 'American', desc: 'Meja sedang 880×400, kantong bundar lebar (≥ 2× diameter bola) — lebih mudah dan lebih cepat.',
-    table: { width: 880, height: 400, rail: 31, cushion: 13, ballRadius: 13, cornerMouth: 74, cornerThroat: 54, sideMouth: 68, sideThroat: 54, headStringX: 220, footSpotX: 660 } },
+  american: { id: 'american', name: 'American', desc: 'Meja sedang 880×400, kantong bundar (≥ 2× diameter bola, pas — tidak kebesaran) — dinamis dan tetap menantang.',
+    table: { width: 880, height: 400, rail: 31, cushion: 13, ballRadius: 13, cornerMouth: 64, cornerThroat: 56, sideMouth: 60, sideThroat: 56, headStringX: 220, footSpotX: 660 } },
 };
 const PHYSICS_BASE = Object.assign({}, CONFIG.physics), AIM_BASE = Object.assign({}, CONFIG.aim);
 function applyTableProfile(id) {
@@ -647,12 +647,18 @@ function buildTableGeometry(T) {
     shapes.push({ tipA: f([W / 2 - sn, 0]), baseA: f([W / 2 - sb, -ct]), tipB: f([W / 2 + sn, 0]), baseB: f([W / 2 + sb, -ct]), axis: [0, down ? 1 : -1], corner: false });
   };
   corner(1, 1); side(false); corner(-1, 1); corner(1, -1); side(true); corner(-1, -1);
-  // Kantong: bola jatuh saat pusatnya melewati GARIS MULUT (antara dua ujung nose). (x,y) = titik jatuh (animasi & bidikan bot),
-  // r = jari-jari larangan menaruh bola putih, hw = setengah lebar mulut.
-  const R = T.ballRadius;
+  // Kantong dirender & ditangkap sebagai LINGKARAN sejati: pusat = titik tengah baseA–baseB (leher cushion),
+  // radius = setengah jarak baseA–baseB — karena baseA & baseB simetris terhadap axis, keduanya otomatis
+  // tepat berada di lingkaran ini (diametrically opposite), sehingga corong terlihat benar-benar bulat.
   for (const sh of shapes) {
-    const mx = (sh.tipA[0] + sh.tipB[0]) / 2, my = (sh.tipA[1] + sh.tipB[1]) / 2, ax = sh.axis[0], ay = sh.axis[1];
-    pockets.push({ x: mx + ax * 2.5 * R, y: my + ay * 2.5 * R, r: sh.corner ? 1.9 * R : 1.4 * R, corner: sh.corner, mx, my, ax, ay, hw: Math.hypot(sh.tipA[0] - sh.tipB[0], sh.tipA[1] - sh.tipB[1]) / 2 });
+    const bax = sh.baseA[0], bay = sh.baseA[1], bbx = sh.baseB[0], bby = sh.baseB[1];
+    const ccx = (bax + bbx) / 2, ccy = (bay + bby) / 2, radius = Math.hypot(bax - bbx, bay - bby) / 2;
+    const a1 = Math.atan2(bay - ccy, bax - ccx), a2 = Math.atan2(bby - ccy, bbx - ccx), aOut = Math.atan2(sh.axis[1], sh.axis[0]);
+    const norm = (a) => { let d = a; while (d <= -Math.PI) d += 2 * Math.PI; while (d > Math.PI) d -= 2 * Math.PI; return d; };
+    const ccwSpan = norm(a2 - a1) >= 0 ? norm(a2 - a1) : norm(a2 - a1) + 2 * Math.PI, ccwMid = norm(a1 + ccwSpan / 2);
+    const anticlockwise = Math.abs(norm(ccwMid - aOut)) > Math.PI / 2;    // pilih arah sapuan yang melalui sisi luar (arah axis)
+    Object.assign(sh, { cx: ccx, cy: ccy, radius, a1, a2, anticlockwise });
+    pockets.push({ x: ccx, y: ccy, r: radius, corner: sh.corner, cx: ccx, cy: ccy, radius });
   }
   return { W, H, cushions, segs: new Float64Array(segs), segLen2, segCount: n, pockets, pocketShapes: shapes };
 }
@@ -833,11 +839,13 @@ class PhysicsWorld {
   }
 
   /** Bola jatuh bila pusatnya melewati garis mulut kantong (sedikit lebih awal), atau bila melaju pelan tepat di bibir kantong — tidak ada bola yang "macet". */
+  /** Bola jatuh saat pusatnya cukup dekat lingkaran kantong sejati; bola pelan diberi toleransi lebih agar tak "macet" di bibir. */
   _checkPockets(b) {
     const R = this.R, slow = b.vx * b.vx + b.vy * b.vy < 8100;
     for (let p = 0; p < 6; p++) {
-      const k = this.pockets[p], dx = b.x - k.mx, dy = b.y - k.my, depth = dx * k.ax + dy * k.ay;
-      if ((depth > -0.15 * R || (slow && depth > -0.55 * R)) && Math.abs(-dx * k.ay + dy * k.ax) < k.hw) { this._pocket(b, p); return; }
+      const k = this.pockets[p], dx = b.x - k.cx, dy = b.y - k.cy, d2 = dx * dx + dy * dy;
+      const cap = k.radius + (slow ? 0.68 : 0.14) * R;
+      if (d2 < cap * cap) { this._pocket(b, p); return; }
     }
     const m = this.R * 4;
     if (b.x < -m || b.x > this.W + m || b.y < -m || b.y > this.H + m) {
@@ -1984,9 +1992,10 @@ class Store {
       unlocks: { avatars: FREE_AVATAR_ITEMS.slice(), badges: [] },
       cues: { equipped: 'maple', owned: { maple: 1 } },
       tables: { equipped: 'klasik', owned: ['klasik'] },
+      cueball: { equipped: 'none' },
       settings: { sfx: true, music: false, aimAssist: true, showBounce: true, aimZoom: 1 },
     };
-    this.custom = { cues: [], tables: [] };
+    this.custom = { cues: [], tables: [], cueballs: [] };
     try {
       const raw = window.localStorage.getItem(this.key);
       if (raw) { const d = JSON.parse(raw); for (const k of Object.keys(this.data)) this.data[k] = Object.assign(this.data[k], d[k] || {}); }
@@ -2127,20 +2136,27 @@ class Store {
   /* ------------ konten kustom (halaman Developer) ------------ */
   addCustomCue(c) { this.custom.cues.push(c); if (!this.saveCustom()) { this.custom.cues.pop(); return false; } return true; }
   addCustomTable(t) { this.custom.tables.push(t); if (!this.saveCustom()) { this.custom.tables.pop(); return false; } return true; }
+  addCustomCueball(o) { this.custom.cueballs.push(o); if (!this.saveCustom()) { this.custom.cueballs.pop(); return false; } return true; }
+  /* ------------ skin bola putih (DIY) ------------ */
+  allCueballs() { return [{ id: 'none', name: 'Bawaan', tint: null, image: null, fx: 'none', builtin: true }].concat(this.custom.cueballs); }
+  cueballDef(id) { return this.allCueballs().find((c) => c.id === id) || this.allCueballs()[0]; }
+  equipCueball(id) { if (this.allCueballs().some((c) => c.id === id)) { this.data.cueball.equipped = id; this.save(); this._emit('cueball'); return true; } return false; }
   removeCustom(kind, id) {
     const arr = this.custom[kind]; const i = arr.findIndex((x) => x.id === id); if (i < 0) return;
     arr.splice(i, 1); this.saveCustom();
     if (kind === 'cues' && this.data.cues.equipped === id) this.data.cues.equipped = 'maple';
     if (kind === 'tables' && this.data.tables.equipped === id) this.data.tables.equipped = 'klasik';
-    this.save(); this._emit('table');
+    if (kind === 'cueballs' && this.data.cueball.equipped === id) this.data.cueball.equipped = 'none';
+    this.save(); this._emit('table'); this._emit('cueball');
   }
-  exportCustom() { return JSON.stringify({ format: 'pantul-skins', version: 1, cues: this.custom.cues, tables: this.custom.tables }); }
+  exportCustom() { return JSON.stringify({ format: 'pantul-skins', version: 1, cues: this.custom.cues, tables: this.custom.tables, cueballs: this.custom.cueballs }); }
   importCustom(text) {
     let d; try { d = JSON.parse(text); } catch (e) { return { ok: false, error: 'JSON tidak valid' }; }
     if (!d || d.format !== 'pantul-skins') return { ok: false, error: 'Bukan berkas skin Pantul' };
     let n = 0;
     for (const c of d.cues || []) if (c.image && String(c.image).startsWith('data:image/') && !this.custom.cues.some((x) => x.id === c.id)) { this.custom.cues.push({ id: String(c.id), name: String(c.name || 'Cue'), rarity: c.rarity || 'Epic', base: c.base || 'maple', image: c.image }); n++; }
     for (const t of d.tables || []) if (t.cloth && t.cushion && t.rail && !this.custom.tables.some((x) => x.id === t.id)) { this.custom.tables.push(t); n++; }
+    for (const o of d.cueballs || []) if (CUEBALL_FX[o.fx] && (!o.image || String(o.image).startsWith('data:image/')) && !this.custom.cueballs.some((x) => x.id === o.id)) { this.custom.cueballs.push({ id: String(o.id), name: String(o.name || 'Bola'), tint: o.tint || null, image: o.image || null, fx: o.fx }); n++; }
     if (!this.saveCustom()) return { ok: false, error: 'Penyimpanan penuh' };
     return { ok: true, count: n };
   }
@@ -2182,7 +2198,14 @@ class MockLeaderboard {
    mendekat (zoom) ke area bola putih → target. Geometri meja = geometri collision.
    ===================================================================== */
 class BallSprites {
-  constructor() { this.sprites = []; this.size = 0; this.ppu = 1; this.digits = []; this.colors = []; this.Lx = -0.46; this.Ly = -0.56; }
+  constructor() { this.sprites = []; this.size = 0; this.ppu = 1; this.digits = []; this.colors = []; this.Lx = -0.46; this.Ly = -0.56; this.cueTint = null; this.cueDecal = null; }
+  /** Skin bola putih (DIY): tint = '#rrggbb'|null, decalImg = HTMLImageElement|null (disamplekan sebagai stiker statis menghadap kamera). */
+  setCueSkin(tint, decalImg) {
+    this.cueTint = tint ? Util.hexToRgb(tint) : null;
+    if (!decalImg || !decalImg.complete || !decalImg.naturalWidth) { this.cueDecal = null; return; }
+    const N = 96, cv = document.createElement('canvas'); cv.width = cv.height = N; const dc = cv.getContext('2d');
+    drawCover(dc, decalImg, 0, 0, N, N); this.cueDecal = { data: dc.getImageData(0, 0, N, N).data, n: N };
+  }
   build(ppu, rot) {
     const R = CONFIG.table.ballRadius; this.ppu = ppu; this.size = Math.ceil(2 * R * ppu) + 2; this.sprites = [];
     const c = Math.cos(rot), s = Math.sin(rot);                          // cahaya layar (kiri-atas) → koordinat dunia
@@ -2208,7 +2231,11 @@ class BallSprites {
       const nz = -Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
       const bx = m[0] * nx + m[3] * ny + m[6] * nz, by = m[1] * nx + m[4] * ny + m[7] * nz, bz = m[2] * nx + m[5] * ny + m[8] * nz;
       let r, g, b;
-      if (cueBall) { r = 246; g = 246; b = 240; const dot = Math.max(Math.abs(bx), Math.abs(by)); if (dot > 0.965) { const k = Util.smooth((dot - 0.965) / 0.02); r += (196 - r) * k; g += (52 - g) * k; b += (48 - b) * k; } }
+      if (cueBall) {
+        if (this.cueTint) { r = this.cueTint[0]; g = this.cueTint[1]; b = this.cueTint[2]; } else { r = 246; g = 246; b = 240; }
+        if (this.cueDecal) { const D = this.cueDecal, dx = Math.min(D.n - 1, Math.max(0, Math.floor((nx0 * 0.5 + 0.5) * D.n))), dy = Math.min(D.n - 1, Math.max(0, Math.floor((ny0 * 0.5 + 0.5) * D.n))), o2 = (dy * D.n + dx) * 4, da = D.data[o2 + 3] / 255; if (da > 0) { r = r * (1 - da) + D.data[o2] * da; g = g * (1 - da) + D.data[o2 + 1] * da; b = b * (1 - da) + D.data[o2 + 2] * da; } }
+        else { const dot = Math.max(Math.abs(bx), Math.abs(by)); if (dot > 0.965) { const k = Util.smooth((dot - 0.965) / 0.02); r += (196 - r) * k; g += (52 - g) * k; b += (48 - b) * k; } }
+      }
       else {
         const white = 246;
         if (stripe) { const k = Util.smooth((0.52 - Math.abs(by)) / 0.05); r = white + (base[0] - white) * k; g = white + (base[1] - white) * k; b = white + (base[2] - white) * k; }
@@ -2239,14 +2266,6 @@ function loadThemeImages(theme, onLoad) {
   }
   if (!pending && onLoad) onLoad(imgs);
   return imgs;
-}
-function pocketGeom(sh, len) {
-  const mid = [(sh.baseA[0] + sh.baseB[0]) / 2, (sh.baseA[1] + sh.baseB[1]) / 2], ax = sh.axis, k = 1.08;   // >1 = corong membulat penuh (bukan meruncing)
-  const end = [mid[0] + ax[0] * len, mid[1] + ax[1] * len];
-  return { mid, end,
-    c1: [sh.baseA[0] + ax[0] * len * 0.9 + (mid[0] - sh.baseA[0]) * 0.1, sh.baseA[1] + ax[1] * len * 0.9 + (mid[1] - sh.baseA[1]) * 0.1],
-    c2: [end[0] + (sh.baseA[0] - mid[0]) * k, end[1] + (sh.baseA[1] - mid[1]) * k], c3: [end[0] + (sh.baseB[0] - mid[0]) * k, end[1] + (sh.baseB[1] - mid[1]) * k],
-    c4: [sh.baseB[0] + ax[0] * len * 0.9 + (mid[0] - sh.baseB[0]) * 0.1, sh.baseB[1] + ax[1] * len * 0.9 + (mid[1] - sh.baseB[1]) * 0.1] };
 }
 function drawCover(c, img, x, y, w, h) {
   const r = Math.max(w / img.width, h / img.height), iw = w / r, ih = h / r;
@@ -2321,12 +2340,11 @@ function renderTableLayer(theme, T, geo, s, rot, imgs) {
   c.strokeStyle = 'rgba(255,255,255,0.28)'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(T.headStringX, 2); c.lineTo(T.headStringX, H - 2); c.stroke();
   c.fillStyle = 'rgba(255,255,255,0.32)'; for (const x of [T.headStringX, W / 2, T.footSpotX]) { c.beginPath(); c.arc(x, H / 2, 3.2, 0, 7); c.fill(); }
 
-  // pocket: corong (mulut lebar → leher sempit → ujung membulat), menyatu dengan rahang cushion
+  // pocket: lingkaran bundar sejati (pusat & radius dari geometri leher cushion), menyatu dengan rahang cushion via garis lurus
   for (const sh of geo.pocketShapes) {
-    const len = rail * (sh.corner ? 0.8 : 0.7), p = pocketGeom(sh, len), mouth = [(sh.tipA[0] + sh.tipB[0]) / 2, (sh.tipA[1] + sh.tipB[1]) / 2];
-    c.beginPath(); c.moveTo(sh.tipA[0], sh.tipA[1]); c.lineTo(sh.baseA[0], sh.baseA[1]); c.bezierCurveTo(p.c1[0], p.c1[1], p.c2[0], p.c2[1], p.end[0], p.end[1]);
-    c.bezierCurveTo(p.c3[0], p.c3[1], p.c4[0], p.c4[1], sh.baseB[0], sh.baseB[1]); c.lineTo(sh.tipB[0], sh.tipB[1]); c.closePath();
-    g = c.createLinearGradient(mouth[0], mouth[1], p.end[0], p.end[1]); g.addColorStop(0, 'rgba(4,10,20,0)'); g.addColorStop(0.18, 'rgba(4,10,20,0.72)'); g.addColorStop(0.42, '#05070c'); g.addColorStop(1, '#000'); c.fillStyle = g; c.fill();
+    const mouth = [(sh.tipA[0] + sh.tipB[0]) / 2, (sh.tipA[1] + sh.tipB[1]) / 2], far = [sh.cx + sh.axis[0] * sh.radius, sh.cy + sh.axis[1] * sh.radius];
+    c.beginPath(); c.moveTo(sh.tipA[0], sh.tipA[1]); c.lineTo(sh.baseA[0], sh.baseA[1]); c.arc(sh.cx, sh.cy, sh.radius, sh.a1, sh.a2, sh.anticlockwise); c.lineTo(sh.tipB[0], sh.tipB[1]); c.closePath();
+    g = c.createRadialGradient(mouth[0], mouth[1], sh.radius * 0.15, far[0], far[1], sh.radius * 1.15); g.addColorStop(0, 'rgba(4,10,20,0)'); g.addColorStop(0.4, 'rgba(4,10,20,0.72)'); g.addColorStop(0.7, '#05070c'); g.addColorStop(1, '#000'); c.fillStyle = g; c.fill();
   }
   // cushion trapesium bertepi 3D; cahaya dari kiri-atas layar
   for (const P of geo.cushions) {
@@ -2343,7 +2361,7 @@ function renderTableLayer(theme, T, geo, s, rot, imgs) {
   g = c.createLinearGradient(cxw + LX * half, cyw + LY * half, cxw - LX * half, cyw - LY * half); g.addColorStop(0, 'rgba(15,0,0,0.6)'); g.addColorStop(1, 'rgba(255,225,210,0.35)');
   c.strokeStyle = g; c.lineWidth = 2.4; c.strokeRect(-ct - 1, -ct - 1, W + 2 * ct + 2, H + 2 * ct + 2);
   for (const sh of geo.pocketShapes) {                                        // rim pocket
-    const p = pocketGeom(sh, rail * (sh.corner ? 0.8 : 0.7)), path = () => { c.beginPath(); c.moveTo(sh.baseA[0], sh.baseA[1]); c.bezierCurveTo(p.c1[0], p.c1[1], p.c2[0], p.c2[1], p.end[0], p.end[1]); c.bezierCurveTo(p.c3[0], p.c3[1], p.c4[0], p.c4[1], sh.baseB[0], sh.baseB[1]); };
+    const path = () => { c.beginPath(); c.moveTo(sh.baseA[0], sh.baseA[1]); c.arc(sh.cx, sh.cy, sh.radius, sh.a1, sh.a2, sh.anticlockwise); };
     c.lineJoin = 'round'; path(); c.strokeStyle = theme.rim || '#2b0709'; c.lineWidth = 5 * Math.max(u, 0.6); c.stroke();
     c.save(); c.translate(-sh.axis[0] * 0.9, -sh.axis[1] * 0.9); path(); c.strokeStyle = 'rgba(255,225,205,0.22)'; c.lineWidth = 1.4 * Math.max(u, 0.6); c.stroke(); c.restore();
   }
@@ -2377,7 +2395,8 @@ class Renderer {
     this.pred = { kind: 0, t: 0, hitId: -1, x: 0, y: 0, objX: 0, objY: 0, cueX: 0, cueY: 0, cueLen: 0 };
     this.pred2 = { kind: 0, t: 0, hitId: -1, x: 0, y: 0, objX: 0, objY: 0, cueX: 0, cueY: 0, cueLen: 0 };
     this.tmp = { x: 0, y: 0 }; this.time = 0; this.themeImgs = {}; this.theme = null;
-    this.applyTheme(true); this.resize();
+    this.cueFX = new CueballFX();
+    this.applyTheme(true); this.applyCueSkin(); this.resize();
   }
   /** Margin (px) yang dicadangkan HUD per layout; disamakan dengan CSS. */
   static layoutFor(vw, vh) {
@@ -2395,6 +2414,14 @@ class Renderer {
 
     this.themeImgs = loadThemeImages(this.theme, (imgs) => { this.themeImgs = imgs; if (this.vw) this._buildTable(); });
     if (!skipBuild && this.vw) this._buildTable();
+  }
+  /** Skin bola putih (DIY): tint/dekal ke sprite, jenis FX ke sistem partikel. */
+  applyCueSkin() {
+    const def = this.store.cueballDef(this.store.data.cueball.equipped);
+    this.cueFX.setType(def.fx || 'none');
+    if (def.image) { const im = new Image(); im.onload = () => this.sprites.setCueSkin(def.tint, im); im.src = def.image; }
+    else this.sprites.setCueSkin(def.tint, null);
+    this.game.world.balls[0].dirty = true;
   }
   resize() {
     this.dpr = Math.min(window.devicePixelRatio || 1, 2.5); this.vw = window.innerWidth; this.vh = window.innerHeight;
@@ -2458,6 +2485,8 @@ class Renderer {
     for (let i = 0; i < 16; i++) { const b = world.balls[i]; if (b.state !== BallState.ON_TABLE) continue; c.beginPath(); c.ellipse(b.x + ox, b.y + oy, R * 1.02, R * 0.92, this.rot, 0, 7); c.fill(); }
     if (inMatch && g.aimLineVisible() && !g.paused) this._drawAim(c);
     if (inMatch && g.gameType === '9call' && g.rules.callRequired() && (g.isTurnState() || g.state === GameState.SHOT_RESOLVING)) this._drawCall(c);
+    const cueBall0 = world.balls[0];
+    if (cueBall0.state === BallState.ON_TABLE) { this.cueFX.update(dt, cueBall0.x, cueBall0.y, R, Math.hypot(cueBall0.vx, cueBall0.vy)); this.cueFX.renderGlow(c, cueBall0.x, cueBall0.y, R); }
     for (let i = 15; i >= 0; i--) {
       const b = world.balls[i];
       if (b.state === BallState.ON_TABLE) { if (b.dirty) sp.render(b); c.drawImage(sp.sprites[i].cv, b.x - half, b.y - half, 2 * half, 2 * half); }
@@ -2466,6 +2495,7 @@ class Renderer {
         c.globalAlpha = 1 - t; c.drawImage(sp.sprites[i].cv, b.fallX + (p.x - b.fallX) * t - half * k, b.fallY + (p.y - b.fallY) * t - half * k, 2 * half * k, 2 * half * k); c.globalAlpha = 1;
       }
     }
+    if (cueBall0.state === BallState.ON_TABLE) this.cueFX.render(c);
     if (inMatch && g.cueVisible() && !g.paused) this._drawCue(c);
     if (g.canPlace()) { const cue = world.balls[0], pulse = 0.5 + 0.5 * Math.sin(this.time * 6); c.strokeStyle = 'rgba(244,197,66,' + (0.55 + 0.35 * pulse).toFixed(2) + ')'; c.lineWidth = 2 / this.k; c.beginPath(); c.arc(cue.x, cue.y, R + 4 + pulse * 2, 0, 7); c.stroke(); }
     const P = g.particles;
@@ -2596,7 +2626,7 @@ class UI {
     }));
     $('zoomSeg').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; this.store.data.settings.aimZoom = +b.dataset.z; this.store.save(); this.syncSettings(); });
     let armed = 0; $('btnReset').addEventListener('click', () => { if (Date.now() - armed > 4000) { armed = Date.now(); this.toast('Ketuk sekali lagi untuk menghapus SEMUA data', 'foul'); return; } this.store.resetAll(); location.reload(); });
-    this.store.onChange((what) => { if (what === 'table') this.renderer.applyTheme(); if (what === 'coins' || what === 'avatar') this.refreshMenu(); });
+    this.store.onChange((what) => { if (what === 'table') this.renderer.applyTheme(); if (what === 'cueball') this.renderer.applyCueSkin(); if (what === 'coins' || what === 'avatar') this.refreshMenu(); });
     this._bindPower(); this._bindSpin(); this._bindFine(); this.syncSettings(); this.refreshMenu();
   }
   click() { this.audio.unlock(); this.audio.play('ui', 0.5); }
@@ -2621,6 +2651,7 @@ class UI {
     this.show(id, true);
   }
   _renderPage(name) {
+    if (this.current === 'screenDev' && name !== 'dev' && this.dev && this.dev.preview) this.dev.preview.stop();
     if (name === 'menu') this.refreshMenu();
     else if (name === 'settings') this.syncSettings();
     else if (this['render_' + name]) this['render_' + name]();
@@ -3079,15 +3110,19 @@ function buildCueCanvas(img, flip) {
 function fitDataURL(img, w, h, q) {
   const cv = document.createElement('canvas'); cv.width = w; cv.height = h; drawCover(cv.getContext('2d'), img, 0, 0, w, h); return cv.toDataURL('image/jpeg', q);
 }
+function fitDataURLPNG(img, w, h) {
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h; drawCover(cv.getContext('2d'), img, 0, 0, w, h); return cv.toDataURL('image/png');
+}
 function downloadBlob(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
 
 Object.assign(UI.prototype, {
   render_dev() {
-    const el = $('pageDev'), D = this.dev = this.dev || { tab: 'cue', flip: false, cueCanvas: null, clothImg: null, railImg: null, clothData: null, railData: null };
+    const el = $('pageDev'), D = this.dev = this.dev || { tab: 'cue', flip: false, cueCanvas: null, clothImg: null, railImg: null, clothData: null, railData: null, ballTint: '#f6f6f0', ballFx: 'none', ballImg: null, ballDecalData: null };
     const st = this.store;
     const spec = '<div class="spec"><b>Pakai gambar milik sendiri atau yang berlisensi.</b> Skin tersimpan di perangkat ini saja dan hanya kosmetik (statistik cue mengikuti cue dasar yang dipilih).<br>' +
       '<b>Cue:</b> PNG transparan, horizontal, pangkal di kiri, ujung (tip) di kanan (bila terbalik centang "balik"). Tepi transparan dipangkas otomatis lalu diskalakan ke 1200×120.<br>' +
-      '<b>Meja:</b> gambar <b>kain</b> 1648×776 (playfield + area cushion; di-crop cover) dan gambar <b>frame</b> 1760×888 (rail kayu; bagian tengah tertutup kain). Unduh template panduan di tab Meja.</div>';
+      '<b>Meja:</b> gambar <b>kain</b> 1648×776 (playfield + area cushion; di-crop cover) dan gambar <b>frame</b> 1760×888 (rail kayu; bagian tengah tertutup kain). Unduh template panduan di tab Meja.<br>' +
+      '<b>Bola putih:</b> pilih warna dasar dan/atau gambar dekal (PNG transparan disarankan), lalu tambahkan efek animasi (api, es, aurora, listrik, kilau emas).</div>';
     let body = '';
     if (D.tab === 'cue') {
       const owned = CUE_CATALOG.filter((c) => st.ownedLevel(c.id) > 0);
@@ -3113,21 +3148,38 @@ Object.assign(UI.prototype, {
         '<div class="row"><button class="btn small" data-act="clearImgs">Hapus gambar</button><button class="btn small" data-act="tplCloth">Template kain</button><button class="btn small" data-act="tplFrame">Template frame</button></div>' +
         '<button class="btn green" data-act="saveTable">Simpan tema meja</button>' + this._devList('tables') + '</div>' +
         '<div class="prev-box"><div class="seg" style="align-self:flex-start">' + Object.values(TABLE_PROFILES).map((p) => '<button data-act="prevTbl" data-v="' + p.id + '" aria-pressed="' + ((D.tableKind || 'standard') === p.id) + '">' + p.name + '</button>').join('') + '</div><canvas id="dvTablePrev"></canvas><span class="note" style="margin:0">Pratinjau langsung. Gambar kain/frame menggantikan warna bila diisi.</span></div></div>';
+    } else if (D.tab === 'ball') {
+      body = '<div class="dev-grid" style="margin-top:12px"><div class="form">' +
+        '<label>Nama skin<input type="text" id="dvBallName" maxlength="24" placeholder="mis. Bola Api"></label>' +
+        '<div class="two"><label>Warna dasar<input type="color" id="dvBallTint" value="' + D.ballTint + '"></label>' +
+        '<label>Efek animasi<select id="dvBallFx">' + Object.keys(CUEBALL_FX).map((k) => '<option value="' + k + '"' + (k === D.ballFx ? ' selected' : '') + '>' + CUEBALL_FX[k].name + '</option>').join('') + '</select></label></div>' +
+        '<p class="note" id="dvFxDesc" style="margin:-4px 0 0">' + CUEBALL_FX[D.ballFx].desc + '</p>' +
+        '<label>Gambar dekal (opsional) <span class="filebtn btn small">Pilih…<input type="file" id="dvBallFile" accept="image/*"></span></label>' +
+        '<div class="row"><button class="btn small" data-act="clearBallImg">Hapus gambar</button></div>' +
+        '<button class="btn green" data-act="saveBall">Simpan skin bola putih</button>' + this._devList('cueballs') + '</div>' +
+        '<div class="prev-box"><canvas id="dvBallPrev" width="240" height="240" style="width:240px;height:240px;margin:0 auto"></canvas><span class="note" style="margin:0">Pratinjau langsung dengan animasi berjalan.</span></div></div>';
     } else {
       body = '<div class="form" style="margin-top:12px;max-width:640px"><h3 class="sec" style="margin:0">Ekspor</h3><textarea id="dvExport" readonly></textarea><div class="row"><button class="btn small" data-act="copy">Salin</button><button class="btn small" data-act="download">Unduh .json</button></div>' +
         '<h3 class="sec" style="margin:8px 0 0">Impor</h3><textarea id="dvImport" placeholder="Tempel JSON skin di sini"></textarea><div class="row"><span class="filebtn btn small">Pilih berkas .json<input type="file" id="dvImpFile" accept=".json,application/json"></span><button class="btn small green" data-act="import">Impor</button></div>' +
         '<button class="btn small danger" data-act="wipe">Hapus semua skin kustom</button></div>';
     }
     el.innerHTML = this._head('Developer · Skin DIY', this._wallet()) + '<div class="pg-body">' + spec +
-      '<div class="seg" style="margin-top:12px">' + [['cue', 'Cue'], ['table', 'Meja'], ['share', 'Bagikan']].map((t) => '<button data-act="tab" data-v="' + t[0] + '" aria-pressed="' + (D.tab === t[0]) + '">' + t[1] + '</button>').join('') + '</div>' + body + '</div>';
+      '<div class="seg" style="margin-top:12px">' + [['cue', 'Cue'], ['table', 'Meja'], ['ball', 'Bola Putih'], ['share', 'Bagikan']].map((t) => '<button data-act="tab" data-v="' + t[0] + '" aria-pressed="' + (D.tab === t[0]) + '">' + t[1] + '</button>').join('') + '</div>' + body + '</div>';
     this._bindDev(el, D);
   },
   _devList(kind) {
-    const items = this.store.custom[kind]; if (!items.length) return '<p class="note">Belum ada skin kustom.</p>';
-    return '<div class="dev-list">' + items.map((x) => '<div class="dev-item">' + (kind === 'cues' ? '<img alt="" src="' + x.image + '">' : '<span class="tprev" style="width:90px;height:28px;display:block;background:linear-gradient(90deg,' + x.cloth.a + ',' + x.cloth.c + ');border-radius:4px"></span>') + '<span>' + esc(x.name) + '</span><button class="btn small" data-act="use" data-k="' + kind + '" data-v="' + x.id + '">Pakai</button><button class="btn small danger" data-act="del" data-k="' + kind + '" data-v="' + x.id + '">Hapus</button></div>').join('') + '</div>';
+    const items = kind === 'cueballs' ? this.store.allCueballs() : this.store.custom[kind];
+    if (!items.length) return '<p class="note">Belum ada skin kustom.</p>';
+    const thumb = (x) => {
+      if (kind === 'cues') return '<img alt="" src="' + x.image + '">';
+      if (kind === 'cueballs') return '<span style="width:28px;height:28px;border-radius:50%;display:block;background:' + (x.tint || '#f6f6f0') + (x.image ? ';background-image:url(' + x.image + ');background-size:cover' : '') + ';box-shadow:inset -3px -3px 6px rgba(0,0,0,.35),inset 2px 2px 4px rgba(255,255,255,.4)"></span>';
+      return '<span class="tprev" style="width:90px;height:28px;display:block;background:linear-gradient(90deg,' + x.cloth.a + ',' + x.cloth.c + ');border-radius:4px"></span>';
+    };
+    return '<div class="dev-list">' + items.map((x) => '<div class="dev-item">' + thumb(x) + '<span>' + esc(x.name) + (kind === 'cueballs' && x.fx !== 'none' ? ' · ' + CUEBALL_FX[x.fx].name : '') + '</span><button class="btn small" data-act="use" data-k="' + kind + '" data-v="' + x.id + '">Pakai</button>' + (x.builtin ? '' : '<button class="btn small danger" data-act="del" data-k="' + kind + '" data-v="' + x.id + '">Hapus</button>') + '</div>').join('') + '</div>';
   },
   _bindDev(el, D) {
     const st = this.store, redo = () => this.render_dev();
+    if (D.preview && D.tab !== 'ball') { D.preview.stop(); D.preview = null; }
     this._bind(el, {
       tab: (d) => { D.tab = d.v; redo(); },
       saveCue: () => {
@@ -3142,15 +3194,21 @@ Object.assign(UI.prototype, {
         if (D.clothData) th.clothImage = D.clothData; if (D.railData) th.railImage = D.railData;
         const ok = st.addCustomTable(th); this.toast(ok ? 'Tema meja disimpan' : 'Penyimpanan penuh — hapus skin lama', ok ? 'ok' : 'foul'); if (ok) redo();
       },
-      use: (d) => { if (d.k === 'cues') st.equipCue(d.v); else st.equipTable(d.v); this.toast('Skin dipakai', 'ok'); },
+      use: (d) => { if (d.k === 'cues') st.equipCue(d.v); else if (d.k === 'tables') st.equipTable(d.v); else st.equipCueball(d.v); this.toast('Skin dipakai', 'ok'); },
       del: (d) => { st.removeCustom(d.k, d.v); redo(); },
       clearImgs: () => { D.clothImg = D.railImg = D.clothData = D.railData = null; this._devTablePreview(); },
+      clearBallImg: () => { D.ballImg = null; D.ballDecalData = null; if (D.preview) D.preview.set(D.ballTint, null, D.ballFx); },
+      saveBall: () => {
+        const name = ($('dvBallName').value.trim() || 'Bola Kustom').slice(0, 24);
+        const ok = st.addCustomCueball({ id: 'b_' + Date.now().toString(36), name, tint: D.ballTint, image: D.ballDecalData || null, fx: D.ballFx });
+        this.toast(ok ? 'Skin bola putih disimpan' : 'Penyimpanan penuh — hapus skin lama', ok ? 'ok' : 'foul'); if (ok) redo();
+      },
       tplCloth: () => this._downloadTemplate('cloth'), tplFrame: () => this._downloadTemplate('frame'),
       prevTbl: (d) => { D.tableKind = d.v; this._devTablePreview(); redo(); },
       copy: () => { const t = $('dvExport'); t.select(); try { navigator.clipboard.writeText(t.value); this.toast('Disalin', 'ok'); } catch (e) { document.execCommand('copy'); } },
       download: () => downloadBlob(new Blob([st.exportCustom()], { type: 'application/json' }), 'pantul-skins.json'),
       import: () => { const r = st.importCustom($('dvImport').value); this.toast(r.ok ? r.count + ' skin diimpor' : r.error, r.ok ? 'ok' : 'foul'); if (r.ok) redo(); },
-      wipe: () => { st.custom.cues = []; st.custom.tables = []; st.saveCustom(); st.data.cues.equipped = st.ownedLevel(st.data.cues.equipped) ? st.data.cues.equipped : 'maple'; st.data.tables.equipped = st.themeOwned(st.data.tables.equipped) ? st.data.tables.equipped : 'klasik'; st.save(); this.toast('Skin kustom dihapus', 'ok'); redo(); },
+      wipe: () => { st.custom.cues = []; st.custom.tables = []; st.custom.cueballs = []; st.saveCustom(); st.data.cues.equipped = st.ownedLevel(st.data.cues.equipped) ? st.data.cues.equipped : 'maple'; st.data.tables.equipped = st.themeOwned(st.data.tables.equipped) ? st.data.tables.equipped : 'klasik'; st.data.cueball.equipped = 'none'; st.save(); this.toast('Skin kustom dihapus', 'ok'); redo(); },
     });
     const onFile = (id, fn) => { const f = $(id); if (f) f.addEventListener('change', async () => { if (!f.files[0]) return; try { await fn(await readImageFile(f.files[0]), f.files[0]); } catch (e) { this.toast(e.message, 'foul'); } }); };
     if (D.tab === 'cue') {
@@ -3165,6 +3223,12 @@ Object.assign(UI.prototype, {
       onFile('dvClothFile', (img) => { D.clothImg = img; D.clothData = fitDataURL(img, 1024, 482, 0.82); upd(); });
       onFile('dvRailFile', (img) => { D.railImg = img; D.railData = fitDataURL(img, 1024, 517, 0.82); upd(); });
       upd();
+    } else if (D.tab === 'ball') {
+      if (D.preview) D.preview.stop();
+      D.preview = new DevBallPreview($('dvBallPrev')); D.preview.set(D.ballTint, D.ballImg, D.ballFx); D.preview.start();
+      $('dvBallTint').addEventListener('input', (e) => { D.ballTint = e.target.value; D.preview.set(D.ballTint, D.ballImg, D.ballFx); });
+      $('dvBallFx').addEventListener('change', (e) => { D.ballFx = e.target.value; $('dvFxDesc').textContent = CUEBALL_FX[D.ballFx].desc; D.preview.set(D.ballTint, D.ballImg, D.ballFx); });
+      onFile('dvBallFile', (img) => { D.ballImg = img; D.ballDecalData = fitDataURLPNG(img, 256, 256); D.preview.set(D.ballTint, D.ballImg, D.ballFx); });
     } else {
       $('dvExport').value = st.exportCustom();
       const f = $('dvImpFile'); f.addEventListener('change', () => { if (f.files[0]) f.files[0].text().then((t) => { $('dvImport').value = t; }); });
@@ -3213,6 +3277,123 @@ Object.assign(UI.prototype, {
     cv.toBlob((b) => downloadBlob(b, 'template-' + kind + '-' + w + 'x' + h + '.png'));
   },
 });
+
+/* =====================================================================
+   16 · CUEBALL FX — skin bola putih: tint/gambar dekal + partikel animasi
+   (api, es, aurora, listrik, emas). Dipakai saat main (CueballFXSystem,
+   terikat posisi bola putih) dan di pratinjau halaman Developer (DevBallPreview).
+   ===================================================================== */
+const CUEBALL_FX = {
+  none: { name: 'Tanpa efek', desc: 'Bola putih polos, tanpa animasi.' },
+  fire: { name: 'Api', desc: 'Kobaran api & bara yang menari di sekeliling bola.' },
+  ice: { name: 'Es', desc: 'Kristal es dingin melayang pelan, aura biru pucat.' },
+  aurora: { name: 'Aurora', desc: 'Pita cahaya warna-warni berputar lembut, seperti aurora.' },
+  electric: { name: 'Listrik', desc: 'Percikan petir kecil berkedip di sekitar bola.' },
+  gold: { name: 'Kilau Emas', desc: 'Kelip-kelip partikel emas mewah.' },
+};
+
+class CueballFX {
+  constructor() { this.type = 'none'; this.p = []; this.t = 0; this.spawnAcc = 0; }
+  setType(t) { if (t !== this.type) { this.type = t; this.p.length = 0; } }
+  /** cx,cy,R = posisi & radius bola (satuan dunia/meja). speed = kelajuan bola saat ini. */
+  update(dt, cx, cy, R, speed) {
+    if (this.type === 'none') return;
+    this.t += dt;
+    const moving = speed > 40, rateBoost = moving ? 2.2 : 1;
+    this.spawnAcc += dt * rateBoost;
+    const rates = { fire: 46, ice: 20, aurora: 14, electric: 9, gold: 26 }, step = 1 / (rates[this.type] || 20);
+    while (this.spawnAcc > step) { this.spawnAcc -= step; this._spawn(cx, cy, R, moving); }
+    for (const q of this.p) {
+      q.life -= dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vx *= q.drag || 1; q.vy *= q.drag || 1;
+      if (q.grav) q.vy += q.grav * dt; if (q.spin !== undefined) q.rot += q.spin * dt;
+    }
+    if (this.p.length > 140) this.p.splice(0, this.p.length - 140);
+    this.p = this.p.filter((q) => q.life > 0);
+  }
+  _rand(a, b) { return a + Math.random() * (b - a); }
+  _spawn(cx, cy, R, moving) {
+    const a = Math.random() * Math.PI * 2, rr = Math.random() * R * 0.6;
+    const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
+    if (this.type === 'fire') {
+      const ang = -Math.PI / 2 + this._rand(-1, 1) * 1.1, sp = this._rand(R * 0.8, R * 2.2);
+      this.p.push({ x, y, vx: Math.cos(ang) * sp * 0.3, vy: Math.sin(ang) * sp, life: this._rand(0.3, 0.55), max: 0.55, size: this._rand(R * 0.32, R * 0.58), drag: 0.94, grav: -R * 0.6, hue: this._rand(18, 48), kind: 'glow' });
+    } else if (this.type === 'ice') {
+      const sp = this._rand(R * 0.15, R * 0.5);
+      this.p.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - R * 0.1, life: this._rand(0.7, 1.3), max: 1.3, size: this._rand(R * 0.16, R * 0.3), drag: 0.99, rot: this._rand(0, 7), spin: this._rand(-2, 2), kind: Math.random() < 0.4 ? 'star' : 'dot', hue: this._rand(190, 210) });
+    } else if (this.type === 'aurora') {
+      this.p.push({ x, y, vx: Math.cos(a) * R * 0.12, vy: Math.sin(a) * R * 0.12 - R * 0.25, life: this._rand(0.9, 1.5), max: 1.5, size: this._rand(R * 0.7, R * 1.15), drag: 1, hue: this._rand(140, 300), kind: 'soft' });
+    } else if (this.type === 'electric') {
+      const ang2 = Math.random() * Math.PI * 2, len = this._rand(R * 1.1, R * 1.9);
+      this.p.push({ x: cx + Math.cos(ang2) * R * 0.9, y: cy + Math.sin(ang2) * R * 0.9, ang: ang2, len, life: this._rand(0.07, 0.14), max: 0.14, vx: 0, vy: 0, kind: 'bolt', hue: this._rand(185, 200) });
+      if (Math.random() < 0.5) this.p.push({ x, y, vx: this._rand(-R, R), vy: this._rand(-R, R), life: this._rand(0.12, 0.22), max: 0.22, size: R * 0.09, drag: 0.9, kind: 'dot', hue: 195 });
+    } else if (this.type === 'gold') {
+      const sp = this._rand(R * 0.1, R * 0.45);
+      this.p.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - R * 0.15, life: this._rand(0.5, 1), max: 1, size: this._rand(R * 0.14, R * 0.28), drag: 0.98, rot: this._rand(0, 7), spin: this._rand(-3, 3), kind: 'star', hue: 46 });
+    }
+  }
+  /** Aura tipis di bawah bola (dipanggil sebelum bola digambar). */
+  renderGlow(c, cx, cy, R) {
+    if (this.type === 'none') return;
+    const glowHue = { fire: [255, 130, 40], ice: [140, 210, 255], aurora: [170, 140, 255], electric: [120, 220, 255], gold: [255, 205, 80] }[this.type];
+    const pulse = 0.8 + 0.2 * Math.sin(this.t * (this.type === 'electric' ? 14 : 3.2));
+    const g = c.createRadialGradient(cx, cy, R * 0.2, cx, cy, R * 3 * pulse);
+    g.addColorStop(0, 'rgba(' + glowHue.join(',') + ',0.5)'); g.addColorStop(0.55, 'rgba(' + glowHue.join(',') + ',0.16)'); g.addColorStop(1, 'rgba(' + glowHue.join(',') + ',0)');
+    c.fillStyle = g; c.beginPath(); c.arc(cx, cy, R * 3 * pulse, 0, 7); c.fill();
+  }
+  /** Partikel (dipanggil setelah semua bola digambar, supaya melayang di atas). */
+  render(c) {
+    if (this.type === 'none') return;
+    c.save(); c.globalCompositeOperation = 'lighter';
+    for (const q of this.p) {
+      const a = Math.max(0, q.life / q.max);
+      if (q.kind === 'bolt') { this._drawBolt(c, q, a); continue; }
+      const col = 'hsla(' + q.hue + ',95%,' + (this.type === 'ice' ? 88 : 62) + '%,' + (a * 0.9).toFixed(2) + ')';
+      if (q.kind === 'star') this._drawStar(c, q.x, q.y, q.size * a * 1.4, q.rot, col);
+      else if (q.kind === 'soft') { const g = c.createRadialGradient(q.x, q.y, 0, q.x, q.y, q.size * a); g.addColorStop(0, col); g.addColorStop(1, 'hsla(' + q.hue + ',95%,60%,0)'); c.fillStyle = g; c.beginPath(); c.arc(q.x, q.y, q.size * a, 0, 7); c.fill(); }
+      else if (q.kind === 'glow') { const g = c.createRadialGradient(q.x, q.y, 0, q.x, q.y, q.size * a); g.addColorStop(0, 'hsla(' + q.hue + ',100%,70%,' + (a * 0.95).toFixed(2) + ')'); g.addColorStop(1, 'hsla(' + q.hue + ',100%,50%,0)'); c.fillStyle = g; c.beginPath(); c.arc(q.x, q.y, q.size * a, 0, 7); c.fill(); }
+      else { c.fillStyle = col; c.beginPath(); c.arc(q.x, q.y, Math.max(0.4, (q.size || 1.6) * a), 0, 7); c.fill(); }
+    }
+    c.restore();
+  }
+  _drawStar(c, x, y, r, rot, col) {
+    if (r <= 0.1) return;
+    c.save(); c.translate(x, y); c.rotate(rot || 0); c.fillStyle = col; c.beginPath();
+    for (let i = 0; i < 4; i++) { const a1 = (i / 4) * Math.PI * 2; c.lineTo(Math.cos(a1) * r, Math.sin(a1) * r); c.lineTo(Math.cos(a1 + Math.PI / 4) * r * 0.32, Math.sin(a1 + Math.PI / 4) * r * 0.32); }
+    c.closePath(); c.fill(); c.restore();
+  }
+  _drawBolt(c, q, a) {
+    const segs = 4, ex = Math.cos(q.ang) * q.len, ey = Math.sin(q.ang) * q.len;
+    c.strokeStyle = 'hsla(' + q.hue + ',100%,80%,' + (a * 0.95).toFixed(2) + ')'; c.lineWidth = Math.max(0.6, q.len * 0.045); c.shadowColor = 'hsl(' + q.hue + ',100%,70%)'; c.shadowBlur = q.len * 0.5;
+    c.beginPath(); c.moveTo(q.x, q.y);
+    for (let i = 1; i <= segs; i++) { const t = i / segs, jig = (i === segs ? 0 : (Math.random() - 0.5) * q.len * 0.35); c.lineTo(q.x + ex * t - ey * 0 + (-Math.sin(q.ang)) * jig, q.y + ey * t + Math.cos(q.ang) * jig); }
+    c.stroke(); c.shadowBlur = 0;
+  }
+}
+
+/* ---------------- pratinjau animasi (halaman Developer) ---------------- */
+class DevBallPreview {
+  constructor(canvas) { this.cv = canvas; this.ctx = canvas.getContext('2d'); this.fx = new CueballFX(); this.tint = null; this.decal = null; this.running = false; this.raf = 0; this.last = 0; }
+  set(tint, decalImg, fxType) { this.tint = tint; this.decal = decalImg; this.fx.setType(fxType); }
+  start() { if (this.running) return; this.running = true; this.last = performance.now(); const loop = (t) => { if (!this.running) return; this._frame((t - this.last) / 1000); this.last = t; this.raf = requestAnimationFrame(loop); }; this.raf = requestAnimationFrame(loop); }
+  stop() { this.running = false; cancelAnimationFrame(this.raf); }
+  _frame(dt) {
+    dt = Math.min(0.05, dt || 0.016);
+    const c = this.ctx, W = this.cv.width, H = this.cv.height, cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.28;
+    c.clearRect(0, 0, W, H);
+    this.fx.update(dt, cx, cy, R, this.fx.type === 'none' ? 0 : 80);
+    this.fx.renderGlow(c, cx, cy, R);
+    // bola: shading radial sederhana + tint + dekal opsional
+    c.save(); c.beginPath(); c.arc(cx, cy, R, 0, 7); c.clip();
+    const base = this.tint || '#f6f6f0';
+    c.fillStyle = base; c.fillRect(cx - R, cy - R, R * 2, R * 2);
+    if (this.decal) { const s = R * 1.7; c.globalAlpha = 0.92; c.drawImage(this.decal, cx - s / 2, cy - s / 2, s, s); c.globalAlpha = 1; }
+    const sh = c.createRadialGradient(cx - R * 0.4, cy - R * 0.5, R * 0.1, cx, cy, R * 1.15);
+    sh.addColorStop(0, 'rgba(255,255,255,0.55)'); sh.addColorStop(0.5, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(0,20,40,0.55)');
+    c.fillStyle = sh; c.fillRect(cx - R, cy - R, R * 2, R * 2); c.restore();
+    c.strokeStyle = 'rgba(0,15,30,0.35)'; c.lineWidth = 1; c.beginPath(); c.arc(cx, cy, R, 0, 7); c.stroke();
+    this.fx.render(c);
+  }
+}
 
 /* =====================================================================
    16 · MAIN — bootstrap & game loop

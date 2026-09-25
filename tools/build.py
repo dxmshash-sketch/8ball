@@ -2,7 +2,7 @@
 import base64, json, pathlib, shutil
 root = pathlib.Path(__file__).resolve().parent.parent
 src = root / 'src'
-order = ['01-config','02-core','03-physics','04-rules','05-net','06-bot','07-game','__AUDIO__','08-audio','__CUES__','09-content','10-store','11-leaderboard','12-render','13-ui','14-pages','15-dev','16-main']
+order = ['01-config','02-core','03-physics','04-rules','05-net','06-bot','07-game','__AUDIO__','08-audio','__CUES__','09-content','10-store','11-leaderboard','12-render','13-ui','14-pages','15-dev','16-cueballfx','17-main']
 imgs = {p.stem: 'data:image/png;base64,' + base64.b64encode(p.read_bytes()).decode() for p in sorted((root/'assets'/'cues').glob('*.png'))}
 aud_dir = root / 'assets' / 'audio'
 audio = {p.stem: 'data:audio/mpeg;base64,' + base64.b64encode(p.read_bytes()).decode() for p in sorted(aud_dir.glob('*.mp3'))} if aud_dir.exists() else {}

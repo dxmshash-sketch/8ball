@@ -92,12 +92,18 @@ function buildTableGeometry(T) {
     shapes.push({ tipA: f([W / 2 - sn, 0]), baseA: f([W / 2 - sb, -ct]), tipB: f([W / 2 + sn, 0]), baseB: f([W / 2 + sb, -ct]), axis: [0, down ? 1 : -1], corner: false });
   };
   corner(1, 1); side(false); corner(-1, 1); corner(1, -1); side(true); corner(-1, -1);
-  // Kantong: bola jatuh saat pusatnya melewati GARIS MULUT (antara dua ujung nose). (x,y) = titik jatuh (animasi & bidikan bot),
-  // r = jari-jari larangan menaruh bola putih, hw = setengah lebar mulut.
-  const R = T.ballRadius;
+  // Kantong dirender & ditangkap sebagai LINGKARAN sejati: pusat = titik tengah baseA–baseB (leher cushion),
+  // radius = setengah jarak baseA–baseB — karena baseA & baseB simetris terhadap axis, keduanya otomatis
+  // tepat berada di lingkaran ini (diametrically opposite), sehingga corong terlihat benar-benar bulat.
   for (const sh of shapes) {
-    const mx = (sh.tipA[0] + sh.tipB[0]) / 2, my = (sh.tipA[1] + sh.tipB[1]) / 2, ax = sh.axis[0], ay = sh.axis[1];
-    pockets.push({ x: mx + ax * 2.5 * R, y: my + ay * 2.5 * R, r: sh.corner ? 1.9 * R : 1.4 * R, corner: sh.corner, mx, my, ax, ay, hw: Math.hypot(sh.tipA[0] - sh.tipB[0], sh.tipA[1] - sh.tipB[1]) / 2 });
+    const bax = sh.baseA[0], bay = sh.baseA[1], bbx = sh.baseB[0], bby = sh.baseB[1];
+    const ccx = (bax + bbx) / 2, ccy = (bay + bby) / 2, radius = Math.hypot(bax - bbx, bay - bby) / 2;
+    const a1 = Math.atan2(bay - ccy, bax - ccx), a2 = Math.atan2(bby - ccy, bbx - ccx), aOut = Math.atan2(sh.axis[1], sh.axis[0]);
+    const norm = (a) => { let d = a; while (d <= -Math.PI) d += 2 * Math.PI; while (d > Math.PI) d -= 2 * Math.PI; return d; };
+    const ccwSpan = norm(a2 - a1) >= 0 ? norm(a2 - a1) : norm(a2 - a1) + 2 * Math.PI, ccwMid = norm(a1 + ccwSpan / 2);
+    const anticlockwise = Math.abs(norm(ccwMid - aOut)) > Math.PI / 2;    // pilih arah sapuan yang melalui sisi luar (arah axis)
+    Object.assign(sh, { cx: ccx, cy: ccy, radius, a1, a2, anticlockwise });
+    pockets.push({ x: ccx, y: ccy, r: radius, corner: sh.corner, cx: ccx, cy: ccy, radius });
   }
   return { W, H, cushions, segs: new Float64Array(segs), segLen2, segCount: n, pockets, pocketShapes: shapes };
 }
@@ -278,11 +284,13 @@ class PhysicsWorld {
   }
 
   /** Bola jatuh bila pusatnya melewati garis mulut kantong (sedikit lebih awal), atau bila melaju pelan tepat di bibir kantong — tidak ada bola yang "macet". */
+  /** Bola jatuh saat pusatnya cukup dekat lingkaran kantong sejati; bola pelan diberi toleransi lebih agar tak "macet" di bibir. */
   _checkPockets(b) {
     const R = this.R, slow = b.vx * b.vx + b.vy * b.vy < 8100;
     for (let p = 0; p < 6; p++) {
-      const k = this.pockets[p], dx = b.x - k.mx, dy = b.y - k.my, depth = dx * k.ax + dy * k.ay;
-      if ((depth > -0.15 * R || (slow && depth > -0.55 * R)) && Math.abs(-dx * k.ay + dy * k.ax) < k.hw) { this._pocket(b, p); return; }
+      const k = this.pockets[p], dx = b.x - k.cx, dy = b.y - k.cy, d2 = dx * dx + dy * dy;
+      const cap = k.radius + (slow ? 0.68 : 0.14) * R;
+      if (d2 < cap * cap) { this._pocket(b, p); return; }
     }
     const m = this.R * 4;
     if (b.x < -m || b.x > this.W + m || b.y < -m || b.y > this.H + m) {

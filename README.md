@@ -30,8 +30,16 @@ Power bar vertikal ada di **kiri** layar; roda spin dan tombol bidik halus ada d
 | Mulut kantong corner / side | 58 / 52 | 74 / 68 |
 | Leher kantong corner / side | 44 / 34 | 54 / 54 |
 
-Leher kantong American (54) sengaja dijaga tetap ≥ 2× diameter bola (52) sambil mulutnya jauh lebih lebar, sehingga corong kantong
-membulat (taper) alih-alih lurus seperti slot sempit — diuji otomatis di `tools/test.js`.
+Kantong dirender & ditangkap sebagai **lingkaran sejati** (pusat & radius dihitung dari geometri leher cushion, bukan corong
+bezier), sehingga terlihat benar-benar bundar di kedua ukuran meja tanpa perlu memperlebar mulut kantong secara berlebihan.
+Leher kantong American (56) dijaga tetap ≥ 2× diameter bola (52) dengan margin kecil, pas dan tetap menantang — diuji otomatis
+di `tools/test.js` (termasuk uji "tidak macet": 40 tembakan pelan ke segala arah kantong, semua masuk).
+
+## Skin bola putih (Developer → tab "Bola Putih")
+Ganti warna dasar dan/atau tempel gambar dekal (PNG transparan disarankan) pada bola putih, lalu tambahkan efek animasi:
+**Api**, **Es**, **Aurora**, **Listrik**, atau **Kilau Emas** (lihat `CUEBALL_FX` di `src/16-cueballfx.js` untuk menambah preset baru).
+Pratinjau di halaman Developer beranimasi langsung; efeknya juga tampil saat main (glow di bawah bola + partikel melayang di
+atasnya, makin intens saat bola bergerak cepat). Skin tersimpan di perangkat (localStorage) dan ikut dalam ekspor/impor JSON.
 
 Kantong American sengaja dibuat lebar (≥ 2× diameter bola, diuji otomatis di `tools/test.js`) agar bola tidak "macet" di bibir kantong.
 Fisika (kecepatan tembakan, gesekan) diskalakan mengikuti lebar meja lewat `applyTableProfile()` di `src/01-config.js`, sehingga power 100%

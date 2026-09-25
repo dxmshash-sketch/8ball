@@ -28,15 +28,19 @@ function buildCueCanvas(img, flip) {
 function fitDataURL(img, w, h, q) {
   const cv = document.createElement('canvas'); cv.width = w; cv.height = h; drawCover(cv.getContext('2d'), img, 0, 0, w, h); return cv.toDataURL('image/jpeg', q);
 }
+function fitDataURLPNG(img, w, h) {
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h; drawCover(cv.getContext('2d'), img, 0, 0, w, h); return cv.toDataURL('image/png');
+}
 function downloadBlob(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
 
 Object.assign(UI.prototype, {
   render_dev() {
-    const el = $('pageDev'), D = this.dev = this.dev || { tab: 'cue', flip: false, cueCanvas: null, clothImg: null, railImg: null, clothData: null, railData: null };
+    const el = $('pageDev'), D = this.dev = this.dev || { tab: 'cue', flip: false, cueCanvas: null, clothImg: null, railImg: null, clothData: null, railData: null, ballTint: '#f6f6f0', ballFx: 'none', ballImg: null, ballDecalData: null };
     const st = this.store;
     const spec = '<div class="spec"><b>Pakai gambar milik sendiri atau yang berlisensi.</b> Skin tersimpan di perangkat ini saja dan hanya kosmetik (statistik cue mengikuti cue dasar yang dipilih).<br>' +
       '<b>Cue:</b> PNG transparan, horizontal, pangkal di kiri, ujung (tip) di kanan (bila terbalik centang "balik"). Tepi transparan dipangkas otomatis lalu diskalakan ke 1200×120.<br>' +
-      '<b>Meja:</b> gambar <b>kain</b> 1648×776 (playfield + area cushion; di-crop cover) dan gambar <b>frame</b> 1760×888 (rail kayu; bagian tengah tertutup kain). Unduh template panduan di tab Meja.</div>';
+      '<b>Meja:</b> gambar <b>kain</b> 1648×776 (playfield + area cushion; di-crop cover) dan gambar <b>frame</b> 1760×888 (rail kayu; bagian tengah tertutup kain). Unduh template panduan di tab Meja.<br>' +
+      '<b>Bola putih:</b> pilih warna dasar dan/atau gambar dekal (PNG transparan disarankan), lalu tambahkan efek animasi (api, es, aurora, listrik, kilau emas).</div>';
     let body = '';
     if (D.tab === 'cue') {
       const owned = CUE_CATALOG.filter((c) => st.ownedLevel(c.id) > 0);
@@ -62,21 +66,38 @@ Object.assign(UI.prototype, {
         '<div class="row"><button class="btn small" data-act="clearImgs">Hapus gambar</button><button class="btn small" data-act="tplCloth">Template kain</button><button class="btn small" data-act="tplFrame">Template frame</button></div>' +
         '<button class="btn green" data-act="saveTable">Simpan tema meja</button>' + this._devList('tables') + '</div>' +
         '<div class="prev-box"><div class="seg" style="align-self:flex-start">' + Object.values(TABLE_PROFILES).map((p) => '<button data-act="prevTbl" data-v="' + p.id + '" aria-pressed="' + ((D.tableKind || 'standard') === p.id) + '">' + p.name + '</button>').join('') + '</div><canvas id="dvTablePrev"></canvas><span class="note" style="margin:0">Pratinjau langsung. Gambar kain/frame menggantikan warna bila diisi.</span></div></div>';
+    } else if (D.tab === 'ball') {
+      body = '<div class="dev-grid" style="margin-top:12px"><div class="form">' +
+        '<label>Nama skin<input type="text" id="dvBallName" maxlength="24" placeholder="mis. Bola Api"></label>' +
+        '<div class="two"><label>Warna dasar<input type="color" id="dvBallTint" value="' + D.ballTint + '"></label>' +
+        '<label>Efek animasi<select id="dvBallFx">' + Object.keys(CUEBALL_FX).map((k) => '<option value="' + k + '"' + (k === D.ballFx ? ' selected' : '') + '>' + CUEBALL_FX[k].name + '</option>').join('') + '</select></label></div>' +
+        '<p class="note" id="dvFxDesc" style="margin:-4px 0 0">' + CUEBALL_FX[D.ballFx].desc + '</p>' +
+        '<label>Gambar dekal (opsional) <span class="filebtn btn small">Pilih…<input type="file" id="dvBallFile" accept="image/*"></span></label>' +
+        '<div class="row"><button class="btn small" data-act="clearBallImg">Hapus gambar</button></div>' +
+        '<button class="btn green" data-act="saveBall">Simpan skin bola putih</button>' + this._devList('cueballs') + '</div>' +
+        '<div class="prev-box"><canvas id="dvBallPrev" width="240" height="240" style="width:240px;height:240px;margin:0 auto"></canvas><span class="note" style="margin:0">Pratinjau langsung dengan animasi berjalan.</span></div></div>';
     } else {
       body = '<div class="form" style="margin-top:12px;max-width:640px"><h3 class="sec" style="margin:0">Ekspor</h3><textarea id="dvExport" readonly></textarea><div class="row"><button class="btn small" data-act="copy">Salin</button><button class="btn small" data-act="download">Unduh .json</button></div>' +
         '<h3 class="sec" style="margin:8px 0 0">Impor</h3><textarea id="dvImport" placeholder="Tempel JSON skin di sini"></textarea><div class="row"><span class="filebtn btn small">Pilih berkas .json<input type="file" id="dvImpFile" accept=".json,application/json"></span><button class="btn small green" data-act="import">Impor</button></div>' +
         '<button class="btn small danger" data-act="wipe">Hapus semua skin kustom</button></div>';
     }
     el.innerHTML = this._head('Developer · Skin DIY', this._wallet()) + '<div class="pg-body">' + spec +
-      '<div class="seg" style="margin-top:12px">' + [['cue', 'Cue'], ['table', 'Meja'], ['share', 'Bagikan']].map((t) => '<button data-act="tab" data-v="' + t[0] + '" aria-pressed="' + (D.tab === t[0]) + '">' + t[1] + '</button>').join('') + '</div>' + body + '</div>';
+      '<div class="seg" style="margin-top:12px">' + [['cue', 'Cue'], ['table', 'Meja'], ['ball', 'Bola Putih'], ['share', 'Bagikan']].map((t) => '<button data-act="tab" data-v="' + t[0] + '" aria-pressed="' + (D.tab === t[0]) + '">' + t[1] + '</button>').join('') + '</div>' + body + '</div>';
     this._bindDev(el, D);
   },
   _devList(kind) {
-    const items = this.store.custom[kind]; if (!items.length) return '<p class="note">Belum ada skin kustom.</p>';
-    return '<div class="dev-list">' + items.map((x) => '<div class="dev-item">' + (kind === 'cues' ? '<img alt="" src="' + x.image + '">' : '<span class="tprev" style="width:90px;height:28px;display:block;background:linear-gradient(90deg,' + x.cloth.a + ',' + x.cloth.c + ');border-radius:4px"></span>') + '<span>' + esc(x.name) + '</span><button class="btn small" data-act="use" data-k="' + kind + '" data-v="' + x.id + '">Pakai</button><button class="btn small danger" data-act="del" data-k="' + kind + '" data-v="' + x.id + '">Hapus</button></div>').join('') + '</div>';
+    const items = kind === 'cueballs' ? this.store.allCueballs() : this.store.custom[kind];
+    if (!items.length) return '<p class="note">Belum ada skin kustom.</p>';
+    const thumb = (x) => {
+      if (kind === 'cues') return '<img alt="" src="' + x.image + '">';
+      if (kind === 'cueballs') return '<span style="width:28px;height:28px;border-radius:50%;display:block;background:' + (x.tint || '#f6f6f0') + (x.image ? ';background-image:url(' + x.image + ');background-size:cover' : '') + ';box-shadow:inset -3px -3px 6px rgba(0,0,0,.35),inset 2px 2px 4px rgba(255,255,255,.4)"></span>';
+      return '<span class="tprev" style="width:90px;height:28px;display:block;background:linear-gradient(90deg,' + x.cloth.a + ',' + x.cloth.c + ');border-radius:4px"></span>';
+    };
+    return '<div class="dev-list">' + items.map((x) => '<div class="dev-item">' + thumb(x) + '<span>' + esc(x.name) + (kind === 'cueballs' && x.fx !== 'none' ? ' · ' + CUEBALL_FX[x.fx].name : '') + '</span><button class="btn small" data-act="use" data-k="' + kind + '" data-v="' + x.id + '">Pakai</button>' + (x.builtin ? '' : '<button class="btn small danger" data-act="del" data-k="' + kind + '" data-v="' + x.id + '">Hapus</button>') + '</div>').join('') + '</div>';
   },
   _bindDev(el, D) {
     const st = this.store, redo = () => this.render_dev();
+    if (D.preview && D.tab !== 'ball') { D.preview.stop(); D.preview = null; }
     this._bind(el, {
       tab: (d) => { D.tab = d.v; redo(); },
       saveCue: () => {
@@ -91,15 +112,21 @@ Object.assign(UI.prototype, {
         if (D.clothData) th.clothImage = D.clothData; if (D.railData) th.railImage = D.railData;
         const ok = st.addCustomTable(th); this.toast(ok ? 'Tema meja disimpan' : 'Penyimpanan penuh — hapus skin lama', ok ? 'ok' : 'foul'); if (ok) redo();
       },
-      use: (d) => { if (d.k === 'cues') st.equipCue(d.v); else st.equipTable(d.v); this.toast('Skin dipakai', 'ok'); },
+      use: (d) => { if (d.k === 'cues') st.equipCue(d.v); else if (d.k === 'tables') st.equipTable(d.v); else st.equipCueball(d.v); this.toast('Skin dipakai', 'ok'); },
       del: (d) => { st.removeCustom(d.k, d.v); redo(); },
       clearImgs: () => { D.clothImg = D.railImg = D.clothData = D.railData = null; this._devTablePreview(); },
+      clearBallImg: () => { D.ballImg = null; D.ballDecalData = null; if (D.preview) D.preview.set(D.ballTint, null, D.ballFx); },
+      saveBall: () => {
+        const name = ($('dvBallName').value.trim() || 'Bola Kustom').slice(0, 24);
+        const ok = st.addCustomCueball({ id: 'b_' + Date.now().toString(36), name, tint: D.ballTint, image: D.ballDecalData || null, fx: D.ballFx });
+        this.toast(ok ? 'Skin bola putih disimpan' : 'Penyimpanan penuh — hapus skin lama', ok ? 'ok' : 'foul'); if (ok) redo();
+      },
       tplCloth: () => this._downloadTemplate('cloth'), tplFrame: () => this._downloadTemplate('frame'),
       prevTbl: (d) => { D.tableKind = d.v; this._devTablePreview(); redo(); },
       copy: () => { const t = $('dvExport'); t.select(); try { navigator.clipboard.writeText(t.value); this.toast('Disalin', 'ok'); } catch (e) { document.execCommand('copy'); } },
       download: () => downloadBlob(new Blob([st.exportCustom()], { type: 'application/json' }), 'pantul-skins.json'),
       import: () => { const r = st.importCustom($('dvImport').value); this.toast(r.ok ? r.count + ' skin diimpor' : r.error, r.ok ? 'ok' : 'foul'); if (r.ok) redo(); },
-      wipe: () => { st.custom.cues = []; st.custom.tables = []; st.saveCustom(); st.data.cues.equipped = st.ownedLevel(st.data.cues.equipped) ? st.data.cues.equipped : 'maple'; st.data.tables.equipped = st.themeOwned(st.data.tables.equipped) ? st.data.tables.equipped : 'klasik'; st.save(); this.toast('Skin kustom dihapus', 'ok'); redo(); },
+      wipe: () => { st.custom.cues = []; st.custom.tables = []; st.custom.cueballs = []; st.saveCustom(); st.data.cues.equipped = st.ownedLevel(st.data.cues.equipped) ? st.data.cues.equipped : 'maple'; st.data.tables.equipped = st.themeOwned(st.data.tables.equipped) ? st.data.tables.equipped : 'klasik'; st.data.cueball.equipped = 'none'; st.save(); this.toast('Skin kustom dihapus', 'ok'); redo(); },
     });
     const onFile = (id, fn) => { const f = $(id); if (f) f.addEventListener('change', async () => { if (!f.files[0]) return; try { await fn(await readImageFile(f.files[0]), f.files[0]); } catch (e) { this.toast(e.message, 'foul'); } }); };
     if (D.tab === 'cue') {
@@ -114,6 +141,12 @@ Object.assign(UI.prototype, {
       onFile('dvClothFile', (img) => { D.clothImg = img; D.clothData = fitDataURL(img, 1024, 482, 0.82); upd(); });
       onFile('dvRailFile', (img) => { D.railImg = img; D.railData = fitDataURL(img, 1024, 517, 0.82); upd(); });
       upd();
+    } else if (D.tab === 'ball') {
+      if (D.preview) D.preview.stop();
+      D.preview = new DevBallPreview($('dvBallPrev')); D.preview.set(D.ballTint, D.ballImg, D.ballFx); D.preview.start();
+      $('dvBallTint').addEventListener('input', (e) => { D.ballTint = e.target.value; D.preview.set(D.ballTint, D.ballImg, D.ballFx); });
+      $('dvBallFx').addEventListener('change', (e) => { D.ballFx = e.target.value; $('dvFxDesc').textContent = CUEBALL_FX[D.ballFx].desc; D.preview.set(D.ballTint, D.ballImg, D.ballFx); });
+      onFile('dvBallFile', (img) => { D.ballImg = img; D.ballDecalData = fitDataURLPNG(img, 256, 256); D.preview.set(D.ballTint, D.ballImg, D.ballFx); });
     } else {
       $('dvExport').value = st.exportCustom();
       const f = $('dvImpFile'); f.addEventListener('change', () => { if (f.files[0]) f.files[0].text().then((t) => { $('dvImport').value = t; }); });

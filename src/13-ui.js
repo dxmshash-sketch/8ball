@@ -72,7 +72,7 @@ class UI {
     }));
     $('zoomSeg').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; this.store.data.settings.aimZoom = +b.dataset.z; this.store.save(); this.syncSettings(); });
     let armed = 0; $('btnReset').addEventListener('click', () => { if (Date.now() - armed > 4000) { armed = Date.now(); this.toast('Ketuk sekali lagi untuk menghapus SEMUA data', 'foul'); return; } this.store.resetAll(); location.reload(); });
-    this.store.onChange((what) => { if (what === 'table') this.renderer.applyTheme(); if (what === 'coins' || what === 'avatar') this.refreshMenu(); });
+    this.store.onChange((what) => { if (what === 'table') this.renderer.applyTheme(); if (what === 'cueball') this.renderer.applyCueSkin(); if (what === 'coins' || what === 'avatar') this.refreshMenu(); });
     this._bindPower(); this._bindSpin(); this._bindFine(); this.syncSettings(); this.refreshMenu();
   }
   click() { this.audio.unlock(); this.audio.play('ui', 0.5); }
@@ -97,6 +97,7 @@ class UI {
     this.show(id, true);
   }
   _renderPage(name) {
+    if (this.current === 'screenDev' && name !== 'dev' && this.dev && this.dev.preview) this.dev.preview.stop();
     if (name === 'menu') this.refreshMenu();
     else if (name === 'settings') this.syncSettings();
     else if (this['render_' + name]) this['render_' + name]();

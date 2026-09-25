@@ -48,8 +48,8 @@ const CONFIG = {
 const TABLE_PROFILES = {
   standard: { id: 'standard', name: 'Standar', desc: 'Meja penuh 1600×728. Ukuran saat ini.',
     table: { width: 1600, height: 728, rail: 56, cushion: 24, ballRadius: 15, cornerMouth: 58, cornerThroat: 44, sideMouth: 52, sideThroat: 34, headStringX: 400, footSpotX: 1200 } },
-  american: { id: 'american', name: 'American', desc: 'Meja sedang 880×400, kantong bundar lebar (≥ 2× diameter bola) — lebih mudah dan lebih cepat.',
-    table: { width: 880, height: 400, rail: 31, cushion: 13, ballRadius: 13, cornerMouth: 74, cornerThroat: 54, sideMouth: 68, sideThroat: 54, headStringX: 220, footSpotX: 660 } },
+  american: { id: 'american', name: 'American', desc: 'Meja sedang 880×400, kantong bundar (≥ 2× diameter bola, pas — tidak kebesaran) — dinamis dan tetap menantang.',
+    table: { width: 880, height: 400, rail: 31, cushion: 13, ballRadius: 13, cornerMouth: 64, cornerThroat: 56, sideMouth: 60, sideThroat: 56, headStringX: 220, footSpotX: 660 } },
 };
 const PHYSICS_BASE = Object.assign({}, CONFIG.physics), AIM_BASE = Object.assign({}, CONFIG.aim);
 function applyTableProfile(id) {

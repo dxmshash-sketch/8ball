@@ -4,7 +4,14 @@
    mendekat (zoom) ke area bola putih → target. Geometri meja = geometri collision.
    ===================================================================== */
 class BallSprites {
-  constructor() { this.sprites = []; this.size = 0; this.ppu = 1; this.digits = []; this.colors = []; this.Lx = -0.46; this.Ly = -0.56; }
+  constructor() { this.sprites = []; this.size = 0; this.ppu = 1; this.digits = []; this.colors = []; this.Lx = -0.46; this.Ly = -0.56; this.cueTint = null; this.cueDecal = null; }
+  /** Skin bola putih (DIY): tint = '#rrggbb'|null, decalImg = HTMLImageElement|null (disamplekan sebagai stiker statis menghadap kamera). */
+  setCueSkin(tint, decalImg) {
+    this.cueTint = tint ? Util.hexToRgb(tint) : null;
+    if (!decalImg || !decalImg.complete || !decalImg.naturalWidth) { this.cueDecal = null; return; }
+    const N = 96, cv = document.createElement('canvas'); cv.width = cv.height = N; const dc = cv.getContext('2d');
+    drawCover(dc, decalImg, 0, 0, N, N); this.cueDecal = { data: dc.getImageData(0, 0, N, N).data, n: N };
+  }
   build(ppu, rot) {
     const R = CONFIG.table.ballRadius; this.ppu = ppu; this.size = Math.ceil(2 * R * ppu) + 2; this.sprites = [];
     const c = Math.cos(rot), s = Math.sin(rot);                          // cahaya layar (kiri-atas) → koordinat dunia
@@ -30,7 +37,11 @@ class BallSprites {
       const nz = -Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
       const bx = m[0] * nx + m[3] * ny + m[6] * nz, by = m[1] * nx + m[4] * ny + m[7] * nz, bz = m[2] * nx + m[5] * ny + m[8] * nz;
       let r, g, b;
-      if (cueBall) { r = 246; g = 246; b = 240; const dot = Math.max(Math.abs(bx), Math.abs(by)); if (dot > 0.965) { const k = Util.smooth((dot - 0.965) / 0.02); r += (196 - r) * k; g += (52 - g) * k; b += (48 - b) * k; } }
+      if (cueBall) {
+        if (this.cueTint) { r = this.cueTint[0]; g = this.cueTint[1]; b = this.cueTint[2]; } else { r = 246; g = 246; b = 240; }
+        if (this.cueDecal) { const D = this.cueDecal, dx = Math.min(D.n - 1, Math.max(0, Math.floor((nx0 * 0.5 + 0.5) * D.n))), dy = Math.min(D.n - 1, Math.max(0, Math.floor((ny0 * 0.5 + 0.5) * D.n))), o2 = (dy * D.n + dx) * 4, da = D.data[o2 + 3] / 255; if (da > 0) { r = r * (1 - da) + D.data[o2] * da; g = g * (1 - da) + D.data[o2 + 1] * da; b = b * (1 - da) + D.data[o2 + 2] * da; } }
+        else { const dot = Math.max(Math.abs(bx), Math.abs(by)); if (dot > 0.965) { const k = Util.smooth((dot - 0.965) / 0.02); r += (196 - r) * k; g += (52 - g) * k; b += (48 - b) * k; } }
+      }
       else {
         const white = 246;
         if (stripe) { const k = Util.smooth((0.52 - Math.abs(by)) / 0.05); r = white + (base[0] - white) * k; g = white + (base[1] - white) * k; b = white + (base[2] - white) * k; }
@@ -61,14 +72,6 @@ function loadThemeImages(theme, onLoad) {
   }
   if (!pending && onLoad) onLoad(imgs);
   return imgs;
-}
-function pocketGeom(sh, len) {
-  const mid = [(sh.baseA[0] + sh.baseB[0]) / 2, (sh.baseA[1] + sh.baseB[1]) / 2], ax = sh.axis, k = 1.08;   // >1 = corong membulat penuh (bukan meruncing)
-  const end = [mid[0] + ax[0] * len, mid[1] + ax[1] * len];
-  return { mid, end,
-    c1: [sh.baseA[0] + ax[0] * len * 0.9 + (mid[0] - sh.baseA[0]) * 0.1, sh.baseA[1] + ax[1] * len * 0.9 + (mid[1] - sh.baseA[1]) * 0.1],
-    c2: [end[0] + (sh.baseA[0] - mid[0]) * k, end[1] + (sh.baseA[1] - mid[1]) * k], c3: [end[0] + (sh.baseB[0] - mid[0]) * k, end[1] + (sh.baseB[1] - mid[1]) * k],
-    c4: [sh.baseB[0] + ax[0] * len * 0.9 + (mid[0] - sh.baseB[0]) * 0.1, sh.baseB[1] + ax[1] * len * 0.9 + (mid[1] - sh.baseB[1]) * 0.1] };
 }
 function drawCover(c, img, x, y, w, h) {
   const r = Math.max(w / img.width, h / img.height), iw = w / r, ih = h / r;
@@ -143,12 +146,11 @@ function renderTableLayer(theme, T, geo, s, rot, imgs) {
   c.strokeStyle = 'rgba(255,255,255,0.28)'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(T.headStringX, 2); c.lineTo(T.headStringX, H - 2); c.stroke();
   c.fillStyle = 'rgba(255,255,255,0.32)'; for (const x of [T.headStringX, W / 2, T.footSpotX]) { c.beginPath(); c.arc(x, H / 2, 3.2, 0, 7); c.fill(); }
 
-  // pocket: corong (mulut lebar → leher sempit → ujung membulat), menyatu dengan rahang cushion
+  // pocket: lingkaran bundar sejati (pusat & radius dari geometri leher cushion), menyatu dengan rahang cushion via garis lurus
   for (const sh of geo.pocketShapes) {
-    const len = rail * (sh.corner ? 0.8 : 0.7), p = pocketGeom(sh, len), mouth = [(sh.tipA[0] + sh.tipB[0]) / 2, (sh.tipA[1] + sh.tipB[1]) / 2];
-    c.beginPath(); c.moveTo(sh.tipA[0], sh.tipA[1]); c.lineTo(sh.baseA[0], sh.baseA[1]); c.bezierCurveTo(p.c1[0], p.c1[1], p.c2[0], p.c2[1], p.end[0], p.end[1]);
-    c.bezierCurveTo(p.c3[0], p.c3[1], p.c4[0], p.c4[1], sh.baseB[0], sh.baseB[1]); c.lineTo(sh.tipB[0], sh.tipB[1]); c.closePath();
-    g = c.createLinearGradient(mouth[0], mouth[1], p.end[0], p.end[1]); g.addColorStop(0, 'rgba(4,10,20,0)'); g.addColorStop(0.18, 'rgba(4,10,20,0.72)'); g.addColorStop(0.42, '#05070c'); g.addColorStop(1, '#000'); c.fillStyle = g; c.fill();
+    const mouth = [(sh.tipA[0] + sh.tipB[0]) / 2, (sh.tipA[1] + sh.tipB[1]) / 2], far = [sh.cx + sh.axis[0] * sh.radius, sh.cy + sh.axis[1] * sh.radius];
+    c.beginPath(); c.moveTo(sh.tipA[0], sh.tipA[1]); c.lineTo(sh.baseA[0], sh.baseA[1]); c.arc(sh.cx, sh.cy, sh.radius, sh.a1, sh.a2, sh.anticlockwise); c.lineTo(sh.tipB[0], sh.tipB[1]); c.closePath();
+    g = c.createRadialGradient(mouth[0], mouth[1], sh.radius * 0.15, far[0], far[1], sh.radius * 1.15); g.addColorStop(0, 'rgba(4,10,20,0)'); g.addColorStop(0.4, 'rgba(4,10,20,0.72)'); g.addColorStop(0.7, '#05070c'); g.addColorStop(1, '#000'); c.fillStyle = g; c.fill();
   }
   // cushion trapesium bertepi 3D; cahaya dari kiri-atas layar
   for (const P of geo.cushions) {
@@ -165,7 +167,7 @@ function renderTableLayer(theme, T, geo, s, rot, imgs) {
   g = c.createLinearGradient(cxw + LX * half, cyw + LY * half, cxw - LX * half, cyw - LY * half); g.addColorStop(0, 'rgba(15,0,0,0.6)'); g.addColorStop(1, 'rgba(255,225,210,0.35)');
   c.strokeStyle = g; c.lineWidth = 2.4; c.strokeRect(-ct - 1, -ct - 1, W + 2 * ct + 2, H + 2 * ct + 2);
   for (const sh of geo.pocketShapes) {                                        // rim pocket
-    const p = pocketGeom(sh, rail * (sh.corner ? 0.8 : 0.7)), path = () => { c.beginPath(); c.moveTo(sh.baseA[0], sh.baseA[1]); c.bezierCurveTo(p.c1[0], p.c1[1], p.c2[0], p.c2[1], p.end[0], p.end[1]); c.bezierCurveTo(p.c3[0], p.c3[1], p.c4[0], p.c4[1], sh.baseB[0], sh.baseB[1]); };
+    const path = () => { c.beginPath(); c.moveTo(sh.baseA[0], sh.baseA[1]); c.arc(sh.cx, sh.cy, sh.radius, sh.a1, sh.a2, sh.anticlockwise); };
     c.lineJoin = 'round'; path(); c.strokeStyle = theme.rim || '#2b0709'; c.lineWidth = 5 * Math.max(u, 0.6); c.stroke();
     c.save(); c.translate(-sh.axis[0] * 0.9, -sh.axis[1] * 0.9); path(); c.strokeStyle = 'rgba(255,225,205,0.22)'; c.lineWidth = 1.4 * Math.max(u, 0.6); c.stroke(); c.restore();
   }
@@ -199,7 +201,8 @@ class Renderer {
     this.pred = { kind: 0, t: 0, hitId: -1, x: 0, y: 0, objX: 0, objY: 0, cueX: 0, cueY: 0, cueLen: 0 };
     this.pred2 = { kind: 0, t: 0, hitId: -1, x: 0, y: 0, objX: 0, objY: 0, cueX: 0, cueY: 0, cueLen: 0 };
     this.tmp = { x: 0, y: 0 }; this.time = 0; this.themeImgs = {}; this.theme = null;
-    this.applyTheme(true); this.resize();
+    this.cueFX = new CueballFX();
+    this.applyTheme(true); this.applyCueSkin(); this.resize();
   }
   /** Margin (px) yang dicadangkan HUD per layout; disamakan dengan CSS. */
   static layoutFor(vw, vh) {
@@ -217,6 +220,14 @@ class Renderer {
 
     this.themeImgs = loadThemeImages(this.theme, (imgs) => { this.themeImgs = imgs; if (this.vw) this._buildTable(); });
     if (!skipBuild && this.vw) this._buildTable();
+  }
+  /** Skin bola putih (DIY): tint/dekal ke sprite, jenis FX ke sistem partikel. */
+  applyCueSkin() {
+    const def = this.store.cueballDef(this.store.data.cueball.equipped);
+    this.cueFX.setType(def.fx || 'none');
+    if (def.image) { const im = new Image(); im.onload = () => this.sprites.setCueSkin(def.tint, im); im.src = def.image; }
+    else this.sprites.setCueSkin(def.tint, null);
+    this.game.world.balls[0].dirty = true;
   }
   resize() {
     this.dpr = Math.min(window.devicePixelRatio || 1, 2.5); this.vw = window.innerWidth; this.vh = window.innerHeight;
@@ -280,6 +291,8 @@ class Renderer {
     for (let i = 0; i < 16; i++) { const b = world.balls[i]; if (b.state !== BallState.ON_TABLE) continue; c.beginPath(); c.ellipse(b.x + ox, b.y + oy, R * 1.02, R * 0.92, this.rot, 0, 7); c.fill(); }
     if (inMatch && g.aimLineVisible() && !g.paused) this._drawAim(c);
     if (inMatch && g.gameType === '9call' && g.rules.callRequired() && (g.isTurnState() || g.state === GameState.SHOT_RESOLVING)) this._drawCall(c);
+    const cueBall0 = world.balls[0];
+    if (cueBall0.state === BallState.ON_TABLE) { this.cueFX.update(dt, cueBall0.x, cueBall0.y, R, Math.hypot(cueBall0.vx, cueBall0.vy)); this.cueFX.renderGlow(c, cueBall0.x, cueBall0.y, R); }
     for (let i = 15; i >= 0; i--) {
       const b = world.balls[i];
       if (b.state === BallState.ON_TABLE) { if (b.dirty) sp.render(b); c.drawImage(sp.sprites[i].cv, b.x - half, b.y - half, 2 * half, 2 * half); }
@@ -288,6 +301,7 @@ class Renderer {
         c.globalAlpha = 1 - t; c.drawImage(sp.sprites[i].cv, b.fallX + (p.x - b.fallX) * t - half * k, b.fallY + (p.y - b.fallY) * t - half * k, 2 * half * k, 2 * half * k); c.globalAlpha = 1;
       }
     }
+    if (cueBall0.state === BallState.ON_TABLE) this.cueFX.render(c);
     if (inMatch && g.cueVisible() && !g.paused) this._drawCue(c);
     if (g.canPlace()) { const cue = world.balls[0], pulse = 0.5 + 0.5 * Math.sin(this.time * 6); c.strokeStyle = 'rgba(244,197,66,' + (0.55 + 0.35 * pulse).toFixed(2) + ')'; c.lineWidth = 2 / this.k; c.beginPath(); c.arc(cue.x, cue.y, R + 4 + pulse * 2, 0, 7); c.stroke(); }
     const P = g.particles;

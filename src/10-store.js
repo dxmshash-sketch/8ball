@@ -13,9 +13,10 @@ class Store {
       unlocks: { avatars: FREE_AVATAR_ITEMS.slice(), badges: [] },
       cues: { equipped: 'maple', owned: { maple: 1 } },
       tables: { equipped: 'klasik', owned: ['klasik'] },
+      cueball: { equipped: 'none' },
       settings: { sfx: true, music: false, aimAssist: true, showBounce: true, aimZoom: 1 },
     };
-    this.custom = { cues: [], tables: [] };
+    this.custom = { cues: [], tables: [], cueballs: [] };
     try {
       const raw = window.localStorage.getItem(this.key);
       if (raw) { const d = JSON.parse(raw); for (const k of Object.keys(this.data)) this.data[k] = Object.assign(this.data[k], d[k] || {}); }
@@ -156,20 +157,27 @@ class Store {
   /* ------------ konten kustom (halaman Developer) ------------ */
   addCustomCue(c) { this.custom.cues.push(c); if (!this.saveCustom()) { this.custom.cues.pop(); return false; } return true; }
   addCustomTable(t) { this.custom.tables.push(t); if (!this.saveCustom()) { this.custom.tables.pop(); return false; } return true; }
+  addCustomCueball(o) { this.custom.cueballs.push(o); if (!this.saveCustom()) { this.custom.cueballs.pop(); return false; } return true; }
+  /* ------------ skin bola putih (DIY) ------------ */
+  allCueballs() { return [{ id: 'none', name: 'Bawaan', tint: null, image: null, fx: 'none', builtin: true }].concat(this.custom.cueballs); }
+  cueballDef(id) { return this.allCueballs().find((c) => c.id === id) || this.allCueballs()[0]; }
+  equipCueball(id) { if (this.allCueballs().some((c) => c.id === id)) { this.data.cueball.equipped = id; this.save(); this._emit('cueball'); return true; } return false; }
   removeCustom(kind, id) {
     const arr = this.custom[kind]; const i = arr.findIndex((x) => x.id === id); if (i < 0) return;
     arr.splice(i, 1); this.saveCustom();
     if (kind === 'cues' && this.data.cues.equipped === id) this.data.cues.equipped = 'maple';
     if (kind === 'tables' && this.data.tables.equipped === id) this.data.tables.equipped = 'klasik';
-    this.save(); this._emit('table');
+    if (kind === 'cueballs' && this.data.cueball.equipped === id) this.data.cueball.equipped = 'none';
+    this.save(); this._emit('table'); this._emit('cueball');
   }
-  exportCustom() { return JSON.stringify({ format: 'pantul-skins', version: 1, cues: this.custom.cues, tables: this.custom.tables }); }
+  exportCustom() { return JSON.stringify({ format: 'pantul-skins', version: 1, cues: this.custom.cues, tables: this.custom.tables, cueballs: this.custom.cueballs }); }
   importCustom(text) {
     let d; try { d = JSON.parse(text); } catch (e) { return { ok: false, error: 'JSON tidak valid' }; }
     if (!d || d.format !== 'pantul-skins') return { ok: false, error: 'Bukan berkas skin Pantul' };
     let n = 0;
     for (const c of d.cues || []) if (c.image && String(c.image).startsWith('data:image/') && !this.custom.cues.some((x) => x.id === c.id)) { this.custom.cues.push({ id: String(c.id), name: String(c.name || 'Cue'), rarity: c.rarity || 'Epic', base: c.base || 'maple', image: c.image }); n++; }
     for (const t of d.tables || []) if (t.cloth && t.cushion && t.rail && !this.custom.tables.some((x) => x.id === t.id)) { this.custom.tables.push(t); n++; }
+    for (const o of d.cueballs || []) if (CUEBALL_FX[o.fx] && (!o.image || String(o.image).startsWith('data:image/')) && !this.custom.cueballs.some((x) => x.id === o.id)) { this.custom.cueballs.push({ id: String(o.id), name: String(o.name || 'Bola'), tint: o.tint || null, image: o.image || null, fx: o.fx }); n++; }
     if (!this.saveCustom()) return { ok: false, error: 'Penyimpanan penuh' };
     return { ok: true, count: n };
   }

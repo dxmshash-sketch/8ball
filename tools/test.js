@@ -4,10 +4,10 @@ const src = (f) => fs.readFileSync(path.join(__dirname, '..', 'src', f + '.js'),
 const mem = {}; const window = { localStorage: { getItem: (k) => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); }, removeItem: (k) => { delete mem[k]; } } };
 const ctx = vm.createContext({ console, setTimeout, clearTimeout, Math, Set, Map, Float32Array, Float64Array, Uint8Array, Proxy, Error, Object, Array, Number, JSON, isFinite, Date, window, String, parseFloat, Image: function () {} });
 const code = ['01-config', '02-core', '03-physics', '04-rules', '05-net', '06-bot', '07-game'].map(src).join('\n') +
-  "\nconst CUE_IMAGES = new Proxy({}, { get: () => 'data:image/png;base64,AAAA' });\n" + ['09-content', '10-store', '11-leaderboard'].map(src).join('\n') +
-  '\nthis.__x={NineBallRules,CONFIG,buildTableGeometry,PhysicsWorld,Rng,Game,MatchRules,ShotValidator,Store,levelInfo,xpForLevel,rewardsForLevel,BETS,HOUSE_FEE,START_COINS,TABLE_THEMES,CUE_CATALOG,MockLeaderboard,botAvatar,AVATAR_COLORS,fmtShort,BADGE_DEFS,DAILY_REWARDS,TABLE_PROFILES,applyTableProfile};';
+  "\nconst CUE_IMAGES = new Proxy({}, { get: () => 'data:image/png;base64,AAAA' });\n" + ['09-content', '10-store', '11-leaderboard', '16-cueballfx'].map(src).join('\n') +
+  '\nthis.__x={NineBallRules,CONFIG,buildTableGeometry,PhysicsWorld,Rng,Game,MatchRules,ShotValidator,Store,levelInfo,xpForLevel,rewardsForLevel,BETS,HOUSE_FEE,START_COINS,TABLE_THEMES,CUE_CATALOG,MockLeaderboard,botAvatar,AVATAR_COLORS,fmtShort,BADGE_DEFS,DAILY_REWARDS,TABLE_PROFILES,applyTableProfile,CUEBALL_FX,CueballFX};';
 vm.runInContext(code, ctx);
-const X = ctx.__x; const { NineBallRules, CONFIG, buildTableGeometry, PhysicsWorld, Rng, Game, MatchRules, ShotValidator, Store, levelInfo, rewardsForLevel, TABLE_PROFILES, applyTableProfile } = X;
+const X = ctx.__x; const { NineBallRules, CONFIG, buildTableGeometry, PhysicsWorld, Rng, Game, MatchRules, ShotValidator, Store, levelInfo, rewardsForLevel, TABLE_PROFILES, applyTableProfile, CUEBALL_FX, CueballFX } = X;
 const PHYSICS_BASE_TEST = CONFIG.physics.maxShotSpeed;
 let failed = 0;
 const ok = (name, cond, info) => { console.log((cond ? 'PASS ' : 'FAIL ') + name + (info !== undefined ? '  ' + info : '')); if (!cond) failed++; };
@@ -76,6 +76,44 @@ const run = (w, s) => { for (let t = 0; t < s; t += 1 / 60) w.update(1 / 60); };
   ok('impor menolak gambar bukan data URI', st.importCustom(JSON.stringify({ format: 'pantul-skins', cues: [{ id: 'evil', name: 'E', image: 'https://x.y/z.png' }], tables: [] })).count === 0);
   st.equipCue('c1'); st.removeCustom('cues', 'c1'); ok('hapus skin yang dipakai → kembali ke default', st.data.cues.equipped === 'maple');
   ok('ekspor → impor bolak-balik', freshStore().importCustom(st.exportCustom()).ok); }
+
+/* ---- skin bola putih (DIY) ---- */
+{
+  const st = freshStore();
+  ok('default skin bola putih = none, selalu tersedia', st.data.cueball.equipped === 'none' && st.allCueballs().length === 1 && st.allCueballs()[0].builtin === true);
+  ok('cueballDef fallback ke bawaan untuk id tak dikenal', st.cueballDef('tidak-ada').id === 'none');
+  const added = st.addCustomCueball({ id: 'b1', name: 'Bola Api', tint: '#ffcc00', image: null, fx: 'fire' });
+  ok('tambah skin bola putih kustom', added && st.custom.cueballs.length === 1 && st.allCueballs().length === 2);
+  ok('skin baru belum otomatis terpasang', st.data.cueball.equipped === 'none');
+  ok('pasang skin kustom', st.equipCueball('b1') && st.data.cueball.equipped === 'b1');
+  ok('pasang id tak dikenal ditolak, tetap di skin sebelumnya', !st.equipCueball('xxx') && st.data.cueball.equipped === 'b1');
+  ok('bisa kembali ke bawaan', st.equipCueball('none') && st.data.cueball.equipped === 'none');
+  st.equipCueball('b1'); st.removeCustom('cueballs', 'b1');
+  ok('hapus skin yang terpasang -> kembali ke bawaan otomatis', st.data.cueball.equipped === 'none' && st.custom.cueballs.length === 0);
+  const st2 = freshStore(), goodBall = JSON.stringify({ format: 'pantul-skins', version: 1, cues: [], tables: [], cueballs: [{ id: 'ib1', name: 'Impor Es', tint: '#cceeff', image: null, fx: 'ice' }] });
+  const rb = st2.importCustom(goodBall); ok('impor skin bola putih valid', rb.ok && rb.count === 1 && st2.allCueballs().some((c) => c.id === 'ib1'));
+  const st3 = freshStore(), badFx = JSON.stringify({ format: 'pantul-skins', cues: [], tables: [], cueballs: [{ id: 'bad', name: 'X', fx: 'tidak-ada-fx' }] });
+  ok('impor menolak fx yang tidak valid', st3.importCustom(badFx).count === 0);
+  const st4 = freshStore(), badImg = JSON.stringify({ format: 'pantul-skins', cues: [], tables: [], cueballs: [{ id: 'bad2', name: 'X', fx: 'gold', image: 'https://x.y/z.png' }] });
+  ok('impor menolak gambar dekal bukan data URI', st4.importCustom(badImg).count === 0);
+  ok('ekspor menyertakan cueballs, bisa diimpor ulang', freshStore().importCustom((() => { const s = freshStore(); s.addCustomCueball({ id: 'rt1', name: 'RT', tint: null, image: null, fx: 'aurora' }); return s.exportCustom(); })()).ok);
+}
+/* ---- CueballFX: sistem partikel (tanpa DOM) ---- */
+{
+  for (const type of Object.keys(CUEBALL_FX)) {
+    const fx = new CueballFX(); fx.setType(type);
+    for (let i = 0; i < 60; i++) fx.update(1 / 60, 400, 200, 15, 300);
+    if (type === 'none') ok('fx none: tidak menghasilkan partikel', fx.p.length === 0);
+    else ok('fx ' + type + ': menghasilkan partikel & tidak NaN', fx.p.length > 0 && fx.p.every((p) => isFinite(p.x) && isFinite(p.y) && isFinite(p.life)));
+  }
+  const fx2 = new CueballFX(); fx2.setType('fire'); for (let i = 0; i < 120; i++) fx2.update(1 / 60, 400, 200, 15, 0);
+  ok('fx: jumlah partikel dibatasi (tidak bocor memori)', fx2.p.length <= 140);
+  const fx3 = new CueballFX(); fx3.setType('ice'); fx3.update(1, 0, 0, 15, 0); const nIdle = fx3.p.length;
+  const fx4 = new CueballFX(); fx4.setType('ice'); fx4.update(1, 0, 0, 15, 300); const nMoving = fx4.p.length;
+  ok('fx: bola bergerak memicu lebih banyak partikel daripada diam', nMoving >= nIdle);
+  const fx5 = new CueballFX(); fx5.setType('fire'); fx5.update(0.5, 0, 0, 15, 0); fx5.setType('ice');
+  ok('ganti tipe fx mengosongkan partikel lama', fx5.p.length === 0);
+}
 
 /* ---- leaderboard ---- */
 { const st = freshStore(), lb = new X.MockLeaderboard(st);

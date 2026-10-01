@@ -2,14 +2,24 @@
 import base64, json, pathlib, shutil
 root = pathlib.Path(__file__).resolve().parent.parent
 src = root / 'src'
-order = ['01-config','02-core','03-physics','04-rules','05-net','06-bot','07-game','__AUDIO__','08-audio','__CUES__','09-content','10-store','11-leaderboard','12-render','13-ui','14-pages','15-dev','16-cueballfx','17-main']
+order = ['01-config','02-core','03-physics','04-rules','05-net','06-bot','07-game','__AUDIO__','08-audio','__CUES__','09-content','10-store','11-leaderboard','12-render','13-ui','14-pages','15-dev','16-cueballfx','18-backend','19-firebase-backend','21-online','22-main']
 imgs = {p.stem: 'data:image/png;base64,' + base64.b64encode(p.read_bytes()).decode() for p in sorted((root/'assets'/'cues').glob('*.png'))}
+fb_cfg = json.loads((src / 'firebase-config.json').read_text())
+fb_active = isinstance(fb_cfg, dict) and fb_cfg.get('apiKey')
+fb_scripts = '' if not fb_active else (
+    '<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>\n'
+    '<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>\n'
+    '<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>\n'
+    '<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-storage-compat.js"></script>\n'
+)
 aud_dir = root / 'assets' / 'audio'
 audio = {p.stem: 'data:audio/mpeg;base64,' + base64.b64encode(p.read_bytes()).decode() for p in sorted(aud_dir.glob('*.mp3'))} if aud_dir.exists() else {}
 def part(f):
     if f == '__CUES__': return 'const CUE_IMAGES = ' + json.dumps(imgs) + ';'
     if f == '__AUDIO__': return 'const AUDIO_DATA = ' + json.dumps(audio) + ';   // kosong → game memakai suara sintetis bawaan'
-    return (src/(f+'.js')).read_text()
+    txt = (src/(f+'.js')).read_text()
+    if f == '19-firebase-backend' and fb_active: txt = txt.replace('const FIREBASE_CONFIG = null;', 'const FIREBASE_CONFIG = ' + json.dumps(fb_cfg) + ';')
+    return txt
 js = '\n'.join(part(f) for f in order)
 html = f'''<!doctype html>
 <html lang="id">
@@ -28,7 +38,7 @@ html = f'''<!doctype html>
 <style>
 {(src/'style.css').read_text()}
 </style>
-</head>
+{fb_scripts}</head>
 <body>
 {(src/'body.html').read_text()}
 <script>

@@ -35,6 +35,7 @@ function downloadBlob(blob, name) { const a = document.createElement('a'); a.hre
 
 Object.assign(UI.prototype, {
   render_dev() {
+    if (!(this.backend && this.backend.isAdmin())) { $('pageDev').innerHTML = this._head('Developer') + '<div class="pg-body"><p class="muted">Halaman ini khusus admin.</p></div>'; return; }
     const el = $('pageDev'), D = this.dev = this.dev || { tab: 'cue', flip: false, cueCanvas: null, clothImg: null, railImg: null, clothData: null, railData: null, ballTint: '#f6f6f0', ballFx: 'none', ballImg: null, ballDecalData: null };
     const st = this.store;
     const spec = '<div class="spec"><b>Pakai gambar milik sendiri atau yang berlisensi.</b> Skin tersimpan di perangkat ini saja dan hanya kosmetik (statistik cue mengikuti cue dasar yang dipilih).<br>' +
@@ -93,7 +94,17 @@ Object.assign(UI.prototype, {
       if (kind === 'cueballs') return '<span style="width:28px;height:28px;border-radius:50%;display:block;background:' + (x.tint || '#f6f6f0') + (x.image ? ';background-image:url(' + x.image + ');background-size:cover' : '') + ';box-shadow:inset -3px -3px 6px rgba(0,0,0,.35),inset 2px 2px 4px rgba(255,255,255,.4)"></span>';
       return '<span class="tprev" style="width:90px;height:28px;display:block;background:linear-gradient(90deg,' + x.cloth.a + ',' + x.cloth.c + ');border-radius:4px"></span>';
     };
-    return '<div class="dev-list">' + items.map((x) => '<div class="dev-item">' + thumb(x) + '<span>' + esc(x.name) + (kind === 'cueballs' && x.fx !== 'none' ? ' · ' + CUEBALL_FX[x.fx].name : '') + '</span><button class="btn small" data-act="use" data-k="' + kind + '" data-v="' + x.id + '">Pakai</button>' + (x.builtin ? '' : '<button class="btn small danger" data-act="del" data-k="' + kind + '" data-v="' + x.id + '">Hapus</button>') + '</div>').join('') + '</div>';
+    return '<div class="dev-list">' + items.map((x) => '<div class="dev-item">' + thumb(x) + '<span>' + esc(x.name) + (kind === 'cueballs' && x.fx !== 'none' ? ' · ' + CUEBALL_FX[x.fx].name : '') + '</span><button class="btn small" data-act="use" data-k="' + kind + '" data-v="' + x.id + '">Pakai</button>' + (x.builtin ? '' : '<button class="btn small primary" data-act="sell" data-k="' + kind + '" data-v="' + x.id + '">Jual di Market</button><button class="btn small danger" data-act="del" data-k="' + kind + '" data-v="' + x.id + '">Hapus</button>') + '</div>').join('') + '</div>';
+  },
+  _sellToMarket(kind, id) {
+    const st = this.store, item = kind === 'cues' ? CUE_CATALOG.concat(st.custom.cues).find((x) => x.id === id) || st.custom.cues.find((x) => x.id === id) : kind === 'tables' ? st.custom.tables.find((x) => x.id === id) : st.custom.cueballs.find((x) => x.id === id);
+    if (!item) return;
+    const priceStr = window.prompt('Harga jual "' + item.name + '" (BCPOOL)?', '10000'); if (priceStr === null) return;
+    const price = Math.max(0, parseInt(priceStr, 10) || 0);
+    if (kind === 'cues') this.backend.publish({ kind: 'cue', name: item.name, price, image: item.image, payload: item });
+    else if (kind === 'tables') this.backend.publish({ kind: 'table', name: item.name, price, theme: item, payload: item });
+    else this.backend.publish({ kind: 'cueball', name: item.name, price, tint: item.tint, image: item.image, fx: item.fx, payload: item });
+    this.toast('"' + item.name + '" dipublikasikan ke Market seharga ' + fmtCoins(price), 'ok');
   },
   _bindDev(el, D) {
     const st = this.store, redo = () => this.render_dev();
@@ -114,6 +125,7 @@ Object.assign(UI.prototype, {
       },
       use: (d) => { if (d.k === 'cues') st.equipCue(d.v); else if (d.k === 'tables') st.equipTable(d.v); else st.equipCueball(d.v); this.toast('Skin dipakai', 'ok'); },
       del: (d) => { st.removeCustom(d.k, d.v); redo(); },
+      sell: (d) => this._sellToMarket(d.k, d.v),
       clearImgs: () => { D.clothImg = D.railImg = D.clothData = D.railData = null; this._devTablePreview(); },
       clearBallImg: () => { D.ballImg = null; D.ballDecalData = null; if (D.preview) D.preview.set(D.ballTint, null, D.ballFx); },
       saveBall: () => {

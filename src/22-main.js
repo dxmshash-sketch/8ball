@@ -1,18 +1,20 @@
 /* =====================================================================
-   16 · MAIN — bootstrap & game loop
+   22 · MAIN — bootstrap & game loop
    ===================================================================== */
 (function main() {
   const store = new Store(), audio = new AudioManager(store.data.settings), ui = new UI(store, audio);
   const game = new Game({ ui, audio, store });
   const renderer = new Renderer($('stage'), game, store);
   const board = new MockLeaderboard(store);
+  const backend = FIREBASE_CONFIG ? new FirebaseBackend() : new MockBackend();
   ui.attach(game, renderer, board);
+  ui.attachBackend(backend);
   const input = new InputController($('stage'), game, renderer, ui);
   let resizeT = 0;
   window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => renderer.resize(), 80); });
   window.addEventListener('orientationchange', () => setTimeout(() => renderer.resize(), 200));
   window.addEventListener('blur', () => { if (game.isActiveMatch() && !game.paused) game.setPaused(true); });
-  window.__pantul = { game, renderer, store, ui, audio, CONFIG };     // untuk debugging/tes
+  window.__pantul = { game, renderer, store, ui, audio, CONFIG, backend };     // untuk debugging/tes
   let last = performance.now();
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;

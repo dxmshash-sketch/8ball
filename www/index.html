@@ -360,10 +360,13 @@ h3.sec{font:700 20px var(--f-head);margin:16px 0 6px}
           <div class="menu-grid">
             <button class="tile" data-go="rewards"><span class="ico" data-ico="gift"></span>Hadiah<i class="dot" id="dotRewards" hidden></i></button>
             <button class="tile" data-go="board"><span class="ico" data-ico="rank"></span>Peringkat</button>
+            <button class="tile" data-go="friend"><span class="ico" data-ico="friend"></span>Main Teman</button>
+            <button class="tile" data-go="market"><span class="ico" data-ico="market"></span>Market</button>
             <button class="tile" data-go="tables"><span class="ico" data-ico="table"></span>Meja</button>
             <button class="tile" data-go="cues"><span class="ico" data-ico="cue"></span>Cue</button>
             <button class="tile" data-go="profile"><span class="ico" data-ico="user"></span>Profil</button>
             <button class="tile" data-go="settings"><span class="ico" data-ico="gear"></span>Setelan</button>
+            <button class="tile" id="tileDev" data-go="dev" hidden><span class="ico" data-ico="dev"></span>Developer</button>
           </div>
           <button class="btn small green" id="btnHelp" hidden>Ambil bantuan koin +3.000</button>
         </div>
@@ -383,7 +386,6 @@ h3.sec{font:700 20px var(--f-head);margin:16px 0 6px}
       <div class="set-row"><span>Prediksi pantulan cushion</span><button class="switch" role="switch" data-set="showBounce" aria-label="Prediksi pantulan"></button></div>
       <div class="set-row"><span>Zoom saat membidik</span><div class="seg" id="zoomSeg"><button data-z="0">Mati</button><button data-z="1">Sedang</button><button data-z="2">Dekat</button></div></div>
       <div class="stack">
-        <button class="btn" data-go="dev">Halaman Developer · skin DIY</button>
         <button class="btn danger" id="btnReset">Reset semua data</button>
         <button class="btn" id="btnSettingsBack">Selesai</button>
       </div>
@@ -414,6 +416,9 @@ h3.sec{font:700 20px var(--f-head);margin:16px 0 6px}
   <section class="screen pagescreen" id="screenTables"><div class="pg" id="pageTables"></div></section>
   <section class="screen pagescreen cuescreen" id="screenCues"><div class="pg" id="pageCues"></div></section>
   <section class="screen pagescreen" id="screenDev"><div class="pg" id="pageDev"></div></section>
+  <section class="screen pagescreen" id="screenAuth"></section>
+  <section class="screen pagescreen" id="screenMarket"></section>
+  <section class="screen pagescreen" id="screenFriend"></section>
 </div>
 
 <script>
@@ -1359,13 +1364,16 @@ class Game {
     if (bet > 0 && !this.store.spend(bet)) return false;
     this.bet = bet; this.pottedBySeat = [0, 0];
     this._setTable(opts.table === 'american' ? 'american' : 'standard');
-    this.lastOptions = opts; this.mode = opts.mode;
+    this.lastOptions = opts; this.mode = opts.mode; this.isRoomMatch = !!opts.room;
     this.gameType = ['8ball', '9ball', '9call'].indexOf(opts.game) === -1 ? '8ball' : opts.game;
     this.rules = this.gameType === '8ball' ? new MatchRules() : new NineBallRules(this.gameType === '9call' ? 'call' : 'standard'); this.difficulty = opts.difficulty || 'medium';
     const profile = this.store.data.profile, bot = this.cfg.bots[this.difficulty];
     const myLevel = 1 + Math.floor(profile.xp / 100);
-    this.seed = (Math.random() * 4294967296) >>> 0;
-    if (this.mode === 'bot') this.seats = [{ name: profile.name, control: 'local', level: myLevel }, { name: bot.name, control: 'bot', level: bot.level }];
+    this.seed = opts.room ? seedFromRoomCode(opts.room.code) : (Math.random() * 4294967296) >>> 0;
+    if (opts.room) {
+      const me = { name: opts.room.myName || profile.name, control: 'local', level: myLevel }, peer = { name: opts.room.peerName || 'Teman', control: 'remote', level: 1 };
+      this.seats = opts.room.isHost ? [me, peer] : [peer, me];
+    } else if (this.mode === 'bot') this.seats = [{ name: profile.name, control: 'local', level: myLevel }, { name: bot.name, control: 'bot', level: bot.level }];
     else if (this.mode === 'local') this.seats = [{ name: 'Pemain 1', control: 'local', level: 1 }, { name: 'Pemain 2', control: 'local', level: 1 }];
     else {
       const names = this.cfg.onlineOpponents;
@@ -1374,12 +1382,12 @@ class Game {
     this.brain = new BotBrain(this.cfg, this.mode === 'bot' ? this.difficulty : 'medium', new Rng(this.seed ^ 0x9e3779b9));
     this.matchId = 'M-' + this.seed.toString(36);
     this.cueStats = this.mode === 'local' ? { force: 5, aim: 5, spin: 5, time: 5 } : this.store.cueStats();
-    this.transport = new MockTransport({ latency: this.mode === 'online' ? 110 : 0, online: this.mode === 'online' });
+    this.transport = opts.room ? opts.room.transport : new MockTransport({ latency: this.mode === 'online' ? 110 : 0, online: this.mode === 'online' });
     this._bindTransport(this.transport);
     this.expectedSeq = 0; this.result = null; this.rackCount = 0; this.paused = false; this.disconnected = false;
     this.shotPending = false; this.cueAnim = null; this.report = null;
     this.sm.transition(GameState.MATCHMAKING);
-    this.mmTimer = this.cfg.rules.matchmakingSeconds[this.mode];
+    this.mmTimer = opts.room ? 0.3 : this.cfg.rules.matchmakingSeconds[this.mode];
     this.ui.showMatchmaking(this);
     return true;
   }
@@ -1528,6 +1536,7 @@ class Game {
   }
 
   _onShotAccepted(shot) {
+    if (this.sm.state === GameState.BALL_IN_HAND && this.isRoomMatch && this.seats[this.rules.currentSeat].control === 'remote') this.confirmPlacement();   // lawan menaruh bola putih di layarnya sendiri; posisi ikut di shot.cue
     if (!this.isTurnState()) return;
     this.shotPending = false; this.pendingShot = shot; this.expectedSeq++;
     this.cue.x = shot.cue.x; this.cue.y = shot.cue.y; this.cue.state = BallState.ON_TABLE;
@@ -2566,6 +2575,9 @@ const ICONS = {
   cue: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M3.5 20.5L19 5"/><path d="M19.5 4.5l1-1" stroke-width="3.4"/></svg>',
   user: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4.2"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z"/></svg>',
   gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1" stroke-linecap="round"/></svg>',
+  friend: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8" cy="8" r="3.4"/><path d="M2 20c0-3.6 2.8-5.8 6-5.8s6 2.2 6 5.8z"/><circle cx="17.5" cy="9" r="2.6" opacity=".7"/><path d="M22 20c0-2.7-1.9-4.6-4.3-5.2 1.5 1.2 2.3 2.9 2.3 5.2z" opacity=".7"/></svg>',
+  market: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 8l1.5-4h15L21 8z" opacity=".7"/><path d="M4 8h16v12H4z" opacity=".3"/><path d="M4 8h16v2.2A3 3 0 0114 10a3 3 0 01-6 0 3 3 0 01-6 .2z"/></svg>',
+  dev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4L2 12l6 8M16 4l6 8-6 8"/></svg>',
 };
 function avatarHTML(av, size, badgeId) {
   const col = AVATAR_COLORS[(av.color | 0) % AVATAR_COLORS.length], fr = FRAMES[av.frame] || FRAMES.none, b = badgeId ? BADGE_DEFS.find((x) => x.id === badgeId) : null;
@@ -2597,7 +2609,7 @@ class Fx {
   }
 }
 
-const PAGE_SCREENS = { menu: 'screenMenu', modes: 'screenModes', settings: 'screenSettings', profile: 'screenProfile', rewards: 'screenRewards', board: 'screenBoard', tables: 'screenTables', cues: 'screenCues', dev: 'screenDev' };
+const PAGE_SCREENS = { menu: 'screenMenu', modes: 'screenModes', settings: 'screenSettings', profile: 'screenProfile', rewards: 'screenRewards', board: 'screenBoard', tables: 'screenTables', cues: 'screenCues', dev: 'screenDev', auth: 'screenAuth', market: 'screenMarket', friend: 'screenFriend' };
 
 class UI {
   constructor(store, audio) {
@@ -2611,7 +2623,7 @@ class UI {
     this.game = game; this.renderer = renderer; this.board = board;
     document.querySelectorAll('[data-ico]').forEach((el) => { el.innerHTML = ICONS[el.dataset.ico] || ''; });
     document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => { this.click(); this.go(b.dataset.go); }));
-    $('chipProfile').addEventListener('click', () => { this.click(); this.go('profile'); });
+    $('chipProfile').addEventListener('click', () => { this.click(); this.go(this.backend && this.backend.currentUser() ? 'profile' : 'auth'); });
     $('btnHelp').addEventListener('click', () => { this.click(); const n = this.store.claimHelp(); if (n) { this.toast('+' + fmtCoins(n) + ' ' + COIN_NAME + ' diterima', 'ok'); this.fx.burst(innerWidth / 2, innerHeight / 2, 60); this.refreshMenu(); } });
     $('btnPause').addEventListener('click', () => { this.click(); game.setPaused(true); });
     $('btnResume').addEventListener('click', () => { this.click(); game.setPaused(false); });
@@ -2639,7 +2651,14 @@ class UI {
     next.classList.remove('left'); next.classList.add('active'); this.current = id;
   }
   hideAll() { const cur = this.current ? $(this.current) : null; if (cur) cur.classList.remove('active'); this.current = ''; }
+  /** true = navigasi diblokir (dan sudah menangani redirect/toast-nya sendiri). Dipakai oleh go() maupun back() agar tombol "kembali" tidak bisa melewati gerbang admin/auth. */
+  _gateBlocked(name) {
+    if ((name === 'friend' || name === 'market') && this.backend && !this.backend.currentUser()) { this.stack = []; this.requireAuth(name); return true; }
+    if (name === 'dev' && !(this.backend && this.backend.isAdmin())) { this.stack = []; this.toast('Halaman Developer khusus admin', 'foul'); this.go('menu'); return true; }
+    return false;
+  }
   go(name) {
+    if (this._gateBlocked(name)) return;
     const id = PAGE_SCREENS[name]; if (!id) return;
     if (this.current) this.stack.push(this.current);
     this._renderPage(name); this.show(id);
@@ -2661,10 +2680,12 @@ class UI {
     document.querySelectorAll('#zoomSeg button').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.z === (s.aimZoom | 0))));
   }
   refreshMenu() {
-    const p = this.store.data.profile;
-    $('menuAv').innerHTML = avatarHTML(p.avatar, 34, p.badge); $('menuName').textContent = p.name; $('menuLevel').textContent = 'Level ' + this.store.level();
+    const p = this.store.data.profile, acc = this.backend && this.backend.currentUser();
+    if (acc) { $('menuAv').innerHTML = this.accountAvatarHTML(acc, 34); $('menuName').textContent = acc.name; $('menuLevel').textContent = (acc.role === 'admin' ? 'Admin · ' : '') + 'Level ' + this.store.level(); }
+    else { $('menuAv').innerHTML = avatarHTML(p.avatar, 34, p.badge); $('menuName').textContent = p.name; $('menuLevel').textContent = 'Tamu — ketuk untuk masuk'; }
     $('menuCoins').textContent = fmtCoins(p.coins);
     $('dotRewards').hidden = !this.store.hasClaimable(); $('btnHelp').hidden = !this.store.helpAvailable();
+    $('tileDev').hidden = !(this.backend && this.backend.isAdmin());
   }
 
   /* ------------------------------ callback dari Game ------------------------------ */
@@ -2875,7 +2896,7 @@ Object.assign(UI.prototype, {
   render_modes() {
     const st = this.store, el = $('pageModes'), coins = st.coins, local = this.selectedMode === 'local';
     if (BETS.indexOf(this.selectedBet) === -1 || this.selectedBet > coins) this.selectedBet = [...BETS].reverse().find((b) => b <= Math.min(coins, 5000)) || BETS[0];
-    const bet = this.selectedBet, canPlay = local || coins >= bet, game = this.selectedGame || '8ball', tbl = this.selectedTable || 'standard';
+    const noBet = local || this.selectedMode === 'online', bet = this.selectedBet, canPlay = noBet || coins >= bet, game = this.selectedGame || '8ball', tbl = this.selectedTable || 'standard';
     const GAMES = { '8ball': ['8 Ball', 'Klasik: bola penuh (1–7) atau strip (9–15), bola 8 menentukan kemenangan.'], '9ball': ['9 Ball', 'Bola 1–9, selalu kena bola bernomor terkecil lebih dulu. Masukkan bola 9 untuk menang.'], '9call': ['9 Ball · Pilih Kantong', 'Aturan 9 Ball, tetapi sebelum menembak Anda memilih kantong tujuan. Bola masuk kantong lain = foul.'] };
     el.innerHTML =
       '<h2>Pilih permainan</h2><div class="seg" style="margin:4px 0 6px">' + Object.keys(GAMES).map((k) => '<button data-act="game" data-v="' + k + '" aria-pressed="' + (game === k) + '">' + GAMES[k][0] + '</button>').join('') + '</div><p class="sub" style="margin-bottom:12px">' + GAMES[game][1] + '</p>' +
@@ -2884,7 +2905,8 @@ Object.assign(UI.prototype, {
       '<div class="tbl-row"><span>Ukuran meja</span><div class="seg">' + Object.values(TABLE_PROFILES).map((p) => '<button data-act="table" data-v="' + p.id + '" aria-pressed="' + (tbl === p.id) + '">' + p.name + '</button>').join('') + '</div></div>' +
       '<p class="sub" style="margin:2px 0 12px">' + TABLE_PROFILES[tbl].desc + '</p>' +
       (this.selectedMode === 'bot' ? '<div class="diff-row"><span>Tingkat kesulitan</span><div class="seg">' + [['easy', 'Mudah'], ['medium', 'Sedang'], ['hard', 'Sulit']].map((d) => '<button data-act="diff" data-v="' + d[0] + '" aria-pressed="' + (this.selectedDiff === d[0]) + '">' + d[1] + '</button>').join('') + '</div></div>' : '') +
-      (local ? '' :
+      (this.selectedMode === 'online' ? '<p class="note" style="margin:0 0 12px">Online: cari lawan sungguhan lewat antrian. <b>Tanpa taruhan</b> — taruhan koin antar pemain butuh server terpercaya (escrow), belum tersedia. Perlu masuk ke akun.</p>' : '') +
+      (noBet ? '' :
         '<div class="bet-head"><span>Taruhan</span><span class="muted" style="font-size:16px">Saldo ' + COIN_SVG + ' <b class="gold">' + fmtCoins(coins) + '</b></span></div>' +
         '<div class="bet-grid">' + BETS.map((b) => '<button class="bet" data-act="bet" data-v="' + b + '" aria-pressed="' + (b === bet) + '"' + (b > coins ? ' disabled' : '') + '>' + fmtShort(b) + '</button>').join('') + '</div>' +
         '<div class="payout"><span>Menang <b class="ok">+' + fmtCoins(Math.floor(bet * 2 * (1 - HOUSE_FEE))) + '</b></span><span>Kalah <b class="bad">−' + fmtCoins(bet) + '</b></span><span class="muted">Biaya rumah ' + Math.round(HOUSE_FEE * 100) + '%</span></div>') +
@@ -2896,6 +2918,7 @@ Object.assign(UI.prototype, {
       table: (d) => { this.selectedTable = d.v; this.render_modes(); },
       bet: (d) => { this.selectedBet = +d.v; this.render_modes(); },
       start: () => {
+        if (this.selectedMode === 'online') { this.startQuickMatch({ game: this.selectedGame || '8ball', table: this.selectedTable || 'standard' }); return; }
         if (!this.game.startMatch({ game: this.selectedGame || '8ball', table: this.selectedTable || 'standard', mode: this.selectedMode, difficulty: this.selectedDiff, bet: this.selectedBet })) this.toast('Saldo tidak cukup untuk taruhan ini', 'foul');
         else this.stack = [];
       },
@@ -2917,13 +2940,21 @@ Object.assign(UI.prototype, {
     }
     const wr = s.matches ? Math.round(s.wins / s.matches * 100) : 0;
     el.innerHTML = this._head('Profil', this._wallet()) + '<div class="pg-body">' +
-      '<div class="prof-top">' + avatarHTML(av, 84, p.badge) + '<div style="flex:1;min-width:200px"><input id="profName" maxlength="14" autocomplete="off" value="' + esc(p.name) + '" aria-label="Nama pemain"><div class="row" style="margin:10px 0 6px"><b class="gold" style="font:700 22px var(--f-head)">Level ' + pr.level + '</b><span class="muted">' + pr.into + ' / ' + pr.need + ' XP</span></div><div class="xpbar"><div class="xpfill" style="width:' + (pr.pct * 100).toFixed(1) + '%"></div></div></div></div>' +
+      '<div class="prof-top">' + '<div style="position:relative">' + this.accountAvatarHTML(this.backend.currentUser(), 84) + (this.backend.currentUser() ? '<label class="filebtn btn small" style="position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);font-size:11px;padding:4px 8px">Ganti foto<input type="file" id="profPhoto" accept="image/*"></label>' : '') + '</div><div style="flex:1;min-width:200px"><input id="profName" maxlength="14" autocomplete="off" value="' + esc(p.name) + '" aria-label="Nama pemain"><div class="row" style="margin:10px 0 6px"><b class="gold" style="font:700 22px var(--f-head)">Level ' + pr.level + '</b><span class="muted">' + pr.into + ' / ' + pr.need + ' XP</span></div><div class="xpbar"><div class="xpfill" style="width:' + (pr.pct * 100).toFixed(1) + '%"></div></div>' + (this.backend.currentUser() ? '<p class="muted" style="margin:8px 0 0;font-size:13px">Masuk sebagai ' + esc(this.backend.currentUser().email || this.backend.currentUser().name) + (this.backend.isAdmin() ? ' · <span class="gold">Admin</span>' : '') + ' · <button class="btn small" data-act="signout" style="margin-left:6px">Keluar akun</button></p>' : '<p class="muted" style="margin:8px 0 0;font-size:13px">Belum masuk akun — avatar foto & pembelian Market perlu akun. <button class="btn small primary" data-act="gotoauth">Masuk / Daftar</button></p>') + '</div></div>' +
       '<div class="seg" style="margin-bottom:10px">' + [['avatar', 'Avatar'], ['frame', 'Bingkai'], ['badge', 'Badge']].map((t) => '<button data-act="tab" data-v="' + t[0] + '" aria-pressed="' + (tab === t[0]) + '">' + t[1] + '</button>').join('') + '</div>' + grid +
       '<h3 class="sec">Statistik</h3><div class="stat-grid">' + [['Main', s.matches], ['Menang', s.wins], ['Kalah', s.losses], ['Win rate', wr + '%'], ['Runtun terbaik', s.bestStreak], ['Bola masuk', s.potted], ['Total untung', fmtShort(s.totalWon)], ['Taruhan terbesar dimenangkan', fmtShort(s.maxBetWon)]].map((x) => '<div class="stat-c"><small>' + x[0] + '</small><b>' + x[1] + '</b></div>').join('') + '</div></div>';
     const redo = () => this.render_profile();
-    $('profName').addEventListener('input', (e) => { p.name = e.target.value.trim().slice(0, 14) || 'Pemain'; st.save(); });
+    $('profName').addEventListener('input', (e) => { p.name = e.target.value.trim().slice(0, 14) || 'Pemain'; st.save(); if (this.backend.currentUser()) this.backend.updateProfile({ name: p.name }); });
+    const photoInput = $('profPhoto');
+    if (photoInput) photoInput.addEventListener('change', async () => {
+      if (!photoInput.files[0]) return;
+      try { const img = await readImageFile(photoInput.files[0]); const dataUrl = fitDataURL(img, 256, 256, 0.85); await this.backend.updateProfile({ avatarImage: dataUrl }); this.toast('Foto profil diperbarui', 'ok'); redo(); }
+      catch (e) { this.toast('Gagal membaca gambar', 'foul'); }
+    });
     this._bind(el, {
       tab: (d) => { this.profTab = d.v; redo(); },
+      signout: () => { this.backend.signOut(); this.toast('Berhasil keluar', 'ok'); this.back(); },
+      gotoauth: () => this.go('auth'),
       sym: (d) => { if (!st.setAvatar('sym', d.v)) this.toast('Avatar ini terkunci — raih level tertentu', 'foul'); redo(); },
       color: (d) => { st.setAvatar('color', +d.v); redo(); },
       frame: (d) => { if (!st.setAvatar('frame', d.v)) this.toast('Bingkai ini terkunci — raih level tertentu', 'foul'); redo(); },
@@ -3117,6 +3148,7 @@ function downloadBlob(blob, name) { const a = document.createElement('a'); a.hre
 
 Object.assign(UI.prototype, {
   render_dev() {
+    if (!(this.backend && this.backend.isAdmin())) { $('pageDev').innerHTML = this._head('Developer') + '<div class="pg-body"><p class="muted">Halaman ini khusus admin.</p></div>'; return; }
     const el = $('pageDev'), D = this.dev = this.dev || { tab: 'cue', flip: false, cueCanvas: null, clothImg: null, railImg: null, clothData: null, railData: null, ballTint: '#f6f6f0', ballFx: 'none', ballImg: null, ballDecalData: null };
     const st = this.store;
     const spec = '<div class="spec"><b>Pakai gambar milik sendiri atau yang berlisensi.</b> Skin tersimpan di perangkat ini saja dan hanya kosmetik (statistik cue mengikuti cue dasar yang dipilih).<br>' +
@@ -3175,7 +3207,17 @@ Object.assign(UI.prototype, {
       if (kind === 'cueballs') return '<span style="width:28px;height:28px;border-radius:50%;display:block;background:' + (x.tint || '#f6f6f0') + (x.image ? ';background-image:url(' + x.image + ');background-size:cover' : '') + ';box-shadow:inset -3px -3px 6px rgba(0,0,0,.35),inset 2px 2px 4px rgba(255,255,255,.4)"></span>';
       return '<span class="tprev" style="width:90px;height:28px;display:block;background:linear-gradient(90deg,' + x.cloth.a + ',' + x.cloth.c + ');border-radius:4px"></span>';
     };
-    return '<div class="dev-list">' + items.map((x) => '<div class="dev-item">' + thumb(x) + '<span>' + esc(x.name) + (kind === 'cueballs' && x.fx !== 'none' ? ' · ' + CUEBALL_FX[x.fx].name : '') + '</span><button class="btn small" data-act="use" data-k="' + kind + '" data-v="' + x.id + '">Pakai</button>' + (x.builtin ? '' : '<button class="btn small danger" data-act="del" data-k="' + kind + '" data-v="' + x.id + '">Hapus</button>') + '</div>').join('') + '</div>';
+    return '<div class="dev-list">' + items.map((x) => '<div class="dev-item">' + thumb(x) + '<span>' + esc(x.name) + (kind === 'cueballs' && x.fx !== 'none' ? ' · ' + CUEBALL_FX[x.fx].name : '') + '</span><button class="btn small" data-act="use" data-k="' + kind + '" data-v="' + x.id + '">Pakai</button>' + (x.builtin ? '' : '<button class="btn small primary" data-act="sell" data-k="' + kind + '" data-v="' + x.id + '">Jual di Market</button><button class="btn small danger" data-act="del" data-k="' + kind + '" data-v="' + x.id + '">Hapus</button>') + '</div>').join('') + '</div>';
+  },
+  _sellToMarket(kind, id) {
+    const st = this.store, item = kind === 'cues' ? CUE_CATALOG.concat(st.custom.cues).find((x) => x.id === id) || st.custom.cues.find((x) => x.id === id) : kind === 'tables' ? st.custom.tables.find((x) => x.id === id) : st.custom.cueballs.find((x) => x.id === id);
+    if (!item) return;
+    const priceStr = window.prompt('Harga jual "' + item.name + '" (BCPOOL)?', '10000'); if (priceStr === null) return;
+    const price = Math.max(0, parseInt(priceStr, 10) || 0);
+    if (kind === 'cues') this.backend.publish({ kind: 'cue', name: item.name, price, image: item.image, payload: item });
+    else if (kind === 'tables') this.backend.publish({ kind: 'table', name: item.name, price, theme: item, payload: item });
+    else this.backend.publish({ kind: 'cueball', name: item.name, price, tint: item.tint, image: item.image, fx: item.fx, payload: item });
+    this.toast('"' + item.name + '" dipublikasikan ke Market seharga ' + fmtCoins(price), 'ok');
   },
   _bindDev(el, D) {
     const st = this.store, redo = () => this.render_dev();
@@ -3196,6 +3238,7 @@ Object.assign(UI.prototype, {
       },
       use: (d) => { if (d.k === 'cues') st.equipCue(d.v); else if (d.k === 'tables') st.equipTable(d.v); else st.equipCueball(d.v); this.toast('Skin dipakai', 'ok'); },
       del: (d) => { st.removeCustom(d.k, d.v); redo(); },
+      sell: (d) => this._sellToMarket(d.k, d.v),
       clearImgs: () => { D.clothImg = D.railImg = D.clothData = D.railData = null; this._devTablePreview(); },
       clearBallImg: () => { D.ballImg = null; D.ballDecalData = null; if (D.preview) D.preview.set(D.ballTint, null, D.ballFx); },
       saveBall: () => {
@@ -3396,20 +3439,467 @@ class DevBallPreview {
 }
 
 /* =====================================================================
-   16 · MAIN — bootstrap & game loop
+   18 · BACKEND — antarmuka akun/online yang bisa ditukar.
+   MockBackend (aktif sekarang): simulasi penuh di localStorage + BroadcastChannel,
+   sehingga BISA diuji lintas TAB/WINDOW di browser yang SAMA (satu perangkat).
+   TIDAK menyambungkan perangkat berbeda — itu perlu backend sungguhan.
+   FirebaseBackend (siap pakai, belum aktif): sama persis bentuk API-nya,
+   tinggal isi CONFIG di 19-firebase-backend.js dan tukar di 20-main.js.
+   ===================================================================== */
+const DIRECTORY_KEY = 'pantul.directory.v1';   // "server" tiruan: daftar semua akun di browser ini
+const SESSION_KEY = 'pantul.session.v1';
+const MARKET_KEY = 'pantul.market.v1';
+const ROOM_PREFIX = 'pantul.room.';
+
+function uid(prefix) { return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function readJSON(key, fallback) { try { const s = window.localStorage.getItem(key); return s ? JSON.parse(s) : fallback; } catch (e) { return fallback; } }
+function writeJSON(key, val) { try { window.localStorage.setItem(key, JSON.stringify(val)); return true; } catch (e) { return false; } }
+
+/** Transport untuk "Main dengan Teman": bentuk API-nya sama persis dengan MockTransport (05-net.js),
+    jadi Game tidak perlu tahu bedanya. Tembakan sendiri diterapkan lokal + dikirim ke lawan; tembakan
+    yang datang dari lawan (sudah tervalidasi di sisi pengirim) diterapkan langsung. Bekerja di atas
+    MockBackend (satu browser, banyak tab) maupun FirebaseBackend (lintas perangkat sungguhan) karena
+    keduanya punya onRoom/sendRoomShot/offRoom dengan bentuk yang sama. */
+class RoomTransport {
+  constructor(backend, code) {
+    this.backend = backend; this.code = code; this.bus = new EventBus(); this.authority = null;
+    this.connected = true; this.roomId = code; this.playerId = (backend.currentUser() || {}).uid || 'guest';
+    backend.onRoom(code, (msg) => { if (msg.kind === 'shot' && msg.shot.__from !== this.playerId) this.bus.emit('shot', msg.shot); });   // abaikan gema dari tembakan sendiri (Firestore mengirim balik snapshot tulisan sendiri)
+  }
+  on(evt, fn) { return this.bus.on(evt, fn); }
+  sendShot(shot) {
+    if (!this.connected) { this.bus.emit('rejected', { shot, reason: 'Tidak terhubung ke room' }); return; }
+    const err = this.authority ? this.authority(shot) : null;
+    if (err) { this.bus.emit('rejected', { shot, reason: err }); return; }
+    this.bus.emit('shot', shot); this.backend.sendRoomShot(this.code, Object.assign({}, shot, { __from: this.playerId }));
+  }
+  publishSnapshot() { /* penyambungan ulang otomatis belum didukung untuk room teman */ }
+  disconnect() { this.connected = false; this.bus.emit('disconnected'); }
+  reconnect() { this.connected = true; this.bus.emit('reconnected', { snapshot: null }); }
+  close() { this.backend.offRoom(this.code); }
+}
+/** Hash string sederhana → seed deterministik, supaya kedua pemain di room yang sama menyusun rack yang identik tanpa jabat-tangan tambahan. */
+function seedFromRoomCode(code) { let h = 5381; for (let i = 0; i < code.length; i++) h = ((h << 5) + h + code.charCodeAt(i)) >>> 0; return h; }
+
+class MockBackend {
+  constructor() {
+    this.name = 'mock';
+    this.listeners = []; this.roomChannels = new Map();
+    this.bc = (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel('pantul-mock-net') : null;
+    if (this.bc) this.bc.onmessage = (e) => this._onNet(e.data);
+    const sess = readJSON(SESSION_KEY, null);
+    this.user = sess ? this._directory()[sess.uid] || null : null;
+  }
+  _directory() { return readJSON(DIRECTORY_KEY, {}); }
+  _saveDirectory(d) { writeJSON(DIRECTORY_KEY, d); }
+  _emitAuth() { for (const fn of this.listeners) fn(this.user); }
+  onAuthChanged(fn) { this.listeners.push(fn); fn(this.user); return () => { const i = this.listeners.indexOf(fn); if (i >= 0) this.listeners.splice(i, 1); }; }
+  currentUser() { return this.user; }
+  isAdmin() { return !!(this.user && this.user.role === 'admin'); }
+
+  /** Akun PERTAMA yang dibuat di browser ini otomatis admin, supaya mudah diuji tanpa Firestore Console. */
+  async signUpPassword(email, password, name) {
+    email = String(email || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, error: 'Email tidak valid' };
+    if (!password || password.length < 6) return { ok: false, error: 'Password minimal 6 karakter' };
+    const dir = this._directory();
+    if (Object.values(dir).some((u) => u.email === email)) return { ok: false, error: 'Email sudah terdaftar' };
+    const isFirst = Object.keys(dir).length === 0;
+    const user = { uid: uid('u'), email, passHash: this._hash(password), name: (name || email.split('@')[0]).slice(0, 20), avatarImage: null, role: isFirst ? 'admin' : 'user', coins: START_COINS, createdAt: Date.now(), provider: 'password' };
+    dir[user.uid] = user; this._saveDirectory(dir); writeJSON(SESSION_KEY, { uid: user.uid });
+    this.user = user; this._emitAuth(); this._netSend({ type: 'user-joined', user: this._publicUser(user) });
+    return { ok: true, user, isFirstAdmin: isFirst };
+  }
+  async signInPassword(email, password) {
+    email = String(email || '').trim().toLowerCase();
+    const dir = this._directory(), user = Object.values(dir).find((u) => u.email === email);
+    if (!user || user.passHash !== this._hash(password)) return { ok: false, error: 'Email atau password salah' };
+    writeJSON(SESSION_KEY, { uid: user.uid }); this.user = user; this._emitAuth();
+    return { ok: true, user };
+  }
+  /** Simulasi "Sign in with Google": di Mock ini membuat/memuat akun berbasis nama yang diketik (tanpa OAuth sungguhan). */
+  async signInGoogleMock(displayName) {
+    const name = (displayName || 'Pemain Google').trim().slice(0, 20) || 'Pemain Google';
+    const fakeEmail = name.toLowerCase().replace(/[^a-z0-9]+/g, '.') + '@gmail.mock';
+    const dir = this._directory(); let user = Object.values(dir).find((u) => u.email === fakeEmail);
+    const isFirst = Object.keys(dir).length === 0;
+    if (!user) { user = { uid: uid('u'), email: fakeEmail, passHash: null, name, avatarImage: null, role: isFirst ? 'admin' : 'user', coins: START_COINS, createdAt: Date.now(), provider: 'google' }; dir[user.uid] = user; this._saveDirectory(dir); this._netSend({ type: 'user-joined', user: this._publicUser(user) }); }
+    writeJSON(SESSION_KEY, { uid: user.uid }); this.user = user; this._emitAuth();
+    return { ok: true, user, isFirstAdmin: isFirst && Object.keys(dir).length === 1 };
+  }
+  signOut() { writeJSON(SESSION_KEY, null); this.user = null; this._emitAuth(); }
+  _hash(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0; return 'h' + h.toString(36); }
+  _publicUser(u) { return { uid: u.uid, name: u.name, avatarImage: u.avatarImage, role: u.role }; }
+
+  updateProfile(patch) {
+    if (!this.user) return false;
+    Object.assign(this.user, patch); const dir = this._directory(); dir[this.user.uid] = this.user; this._saveDirectory(dir);
+    this._emitAuth(); this._netSend({ type: 'user-updated', user: this._publicUser(this.user) }); return true;
+  }
+  spendCoins(n) { if (!this.user || this.user.coins < n) return false; this.user.coins -= n; this.updateProfile({ coins: this.user.coins }); return true; }
+  addCoins(n) { if (!this.user) return; this.updateProfile({ coins: this.user.coins + n }); }
+  /** Daftar akun lain yang pernah terlihat di browser ini (untuk lobi "pemain online" sederhana). */
+  listOtherUsers() { return Object.values(this._directory()).filter((u) => !this.user || u.uid !== this.user.uid).map(this._publicUser); }
+
+  /* ------------ marketplace (skin buatan admin) ------------ */
+  listMarket() { return readJSON(MARKET_KEY, []); }
+  publish(item) {
+    if (!this.isAdmin()) return false;
+    const list = this.listMarket(); list.push(Object.assign({ id: uid('m'), publishedAt: Date.now(), by: this.user.name }, item));
+    writeJSON(MARKET_KEY, list); this._netSend({ type: 'market-changed' }); return true;
+  }
+  unpublish(id) { if (!this.isAdmin()) return false; writeJSON(MARKET_KEY, this.listMarket().filter((x) => x.id !== id)); this._netSend({ type: 'market-changed' }); return true; }
+  buy(id, applyFn) {
+    const item = this.listMarket().find((x) => x.id === id); if (!item || !this.user) return { ok: false, error: 'Item tidak ditemukan' };
+    if (this.user.owned && this.user.owned.includes(id)) return { ok: false, error: 'Sudah dimiliki' };
+    if (!this.spendCoins(item.price)) return { ok: false, error: 'Koin tidak cukup' };
+    const owned = (this.user.owned || []).concat(id); this.updateProfile({ owned }); applyFn && applyFn(item);
+    return { ok: true, item };
+  }
+  onMarketChanged(fn) { this._marketCb = fn; }
+
+  /* ------------ room / main dengan teman (BroadcastChannel — satu browser, banyak tab) ------------ */
+  _netSend(msg) { if (this.bc) this.bc.postMessage(msg); }
+  _onNet(msg) {
+    if (msg.type === 'market-changed' && this._marketCb) this._marketCb();
+    if (msg.type === 'match-found' && this._queueCb && this.user && msg.to === this.user.uid) { const cb = this._queueCb; this._queueCb = null; cb({ code: msg.code, isHost: false, peer: msg.peer }); }
+    if (msg.type === 'user-joined' || msg.type === 'user-updated') { if (this._directoryCb) this._directoryCb(); }
+    const rc = this.roomChannels.get(msg.room); if (rc && msg.type === 'room-msg') rc(msg.payload);
+  }
+  onDirectoryChanged(fn) { this._directoryCb = fn; }
+  createRoom() { const code = Math.random().toString(36).slice(2, 7).toUpperCase(); writeJSON(ROOM_PREFIX + code, { code, host: this._publicUser(this.user), guest: null, log: [] }); return code; }
+  joinRoom(code) {
+    code = code.toUpperCase().trim(); const room = readJSON(ROOM_PREFIX + code, null);
+    if (!room) return { ok: false, error: 'Kode room tidak ditemukan (harus tab/browser yang sama)' };
+    if (room.host.uid === this.user.uid) return { ok: true, room, asHost: true };
+    room.guest = this._publicUser(this.user); writeJSON(ROOM_PREFIX + code, room);
+    this._roomSend(code, { kind: 'guest-joined', guest: room.guest });
+    return { ok: true, room, asHost: false };
+  }
+  /* ------------ matchmaking (antrian cari lawan) ------------ */
+  /** cb({code,isHost,peer}) dipanggil sekali saat lawan ditemukan. Mock: hanya menemukan pemain di browser yang sama. */
+  joinQueue(cb) {
+    const me = this._publicUser(this.user), now = Date.now();
+    let q = readJSON('pantul.queue.v1', []).filter((e) => now - e.ts < 45000 && e.uid !== me.uid);
+    const waiting = q.shift();
+    if (waiting) {
+      writeJSON('pantul.queue.v1', q);
+      const code = Math.random().toString(36).slice(2, 7).toUpperCase();
+      writeJSON(ROOM_PREFIX + code, { code, host: me, guest: waiting.user, log: [] });
+      this._netSend({ type: 'match-found', to: waiting.uid, code, peer: me });
+      cb({ code, isHost: true, peer: waiting.user });
+    } else {
+      q.push({ uid: me.uid, user: me, ts: now }); writeJSON('pantul.queue.v1', q);
+      this._queueCb = cb; this._queueUid = me.uid;
+    }
+  }
+  leaveQueue() { this._queueCb = null; if (this.user) writeJSON('pantul.queue.v1', readJSON('pantul.queue.v1', []).filter((e) => e.uid !== this.user.uid)); }
+  onRoom(code, fn) { this.roomChannels.set(code, fn); }
+  offRoom(code) { this.roomChannels.delete(code); }
+  _roomSend(code, payload) { this._netSend({ type: 'room-msg', room: code, payload }); }
+  sendRoomShot(code, shot) { this._roomSend(code, { kind: 'shot', shot }); }
+  sendRoomChat(code, text) { this._roomSend(code, { kind: 'chat', text, from: this.user.name }); }
+  sendRoomStart(code, info) { this._roomSend(code, { kind: 'start', info }); }
+}
+
+/* =====================================================================
+   19 · FIREBASE BACKEND — implementasi nyata (lintas perangkat), SAMA
+   bentuk API-nya dengan MockBackend, siap ditukar begitu FIREBASE_CONFIG
+   diisi. Perlu <script> Firebase (compat SDK) dimuat di <head> — lihat
+   FIREBASE_SETUP.md. Belum aktif di build ini karena CONFIG masih kosong;
+   diaktifkan dari 20-main.js: `const backend = FIREBASE_CONFIG ? new FirebaseBackend() : new MockBackend();`
+   ===================================================================== */
+const FIREBASE_CONFIG = null;   // isi dari Project Settings → General → Your apps (lihat FIREBASE_SETUP.md), lalu build ulang
+
+class FirebaseBackend {
+  constructor() {
+    this.name = 'firebase';
+    if (typeof firebase === 'undefined') throw new Error('SDK Firebase belum dimuat (cek <script> di index.html)');
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    this.auth = firebase.auth(); this.db = firebase.firestore(); this.storage = firebase.storage();
+    this.user = null; this.listeners = []; this.roomUnsubs = new Map();
+    this.auth.onAuthStateChanged(async (fbUser) => {
+      if (!fbUser) { this.user = null; this._emitAuth(); return; }
+      const ref = this.db.collection('users').doc(fbUser.uid);
+      let snap = await ref.get();
+      if (!snap.exists) {
+        // role SELALU 'user' di sini — lihat FIREBASE_SETUP.md. Harus dipromosikan manual lewat Firestore Console;
+        // aturan keamanan HARUS menolak client menulis role lain selain 'user' saat create, dan menolak perubahan
+        // role sama sekali saat update, kalau tidak sembarang client bisa klaim admin untuk dirinya sendiri.
+        const doc = { uid: fbUser.uid, email: fbUser.email, name: (fbUser.displayName || fbUser.email.split('@')[0]).slice(0, 20), avatarImage: fbUser.photoURL || null, role: 'user', coins: START_COINS, owned: [], createdAt: Date.now() };
+        await ref.set(doc); snap = await ref.get();
+      }
+      this.user = snap.data(); this._emitAuth();
+    });
+  }
+  _emitAuth() { for (const fn of this.listeners) fn(this.user); }
+  onAuthChanged(fn) { this.listeners.push(fn); fn(this.user); return () => { const i = this.listeners.indexOf(fn); if (i >= 0) this.listeners.splice(i, 1); }; }
+  currentUser() { return this.user; }
+  isAdmin() { return !!(this.user && this.user.role === 'admin'); }
+
+  async signUpPassword(email, password, name) {
+    try { const cred = await this.auth.createUserWithEmailAndPassword(email, password); if (name) await cred.user.updateProfile({ displayName: name }); return { ok: true }; }
+    catch (e) { return { ok: false, error: e.message }; }
+  }
+  async signInPassword(email, password) { try { await this.auth.signInWithEmailAndPassword(email, password); return { ok: true }; } catch (e) { return { ok: false, error: e.message }; } }
+  async signInGoogle() { try { await this.auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); return { ok: true }; } catch (e) { return { ok: false, error: e.message }; } }
+  signOut() { this.auth.signOut(); }
+
+  async updateProfile(patch) {
+    if (!this.user) return false;
+    if (patch.avatarImage && patch.avatarImage.startsWith('data:')) {
+      const ref = this.storage.ref('avatars/' + this.user.uid + '.jpg'); await ref.putString(patch.avatarImage, 'data_url'); patch.avatarImage = await ref.getDownloadURL();
+    }
+    await this.db.collection('users').doc(this.user.uid).update(patch); Object.assign(this.user, patch); this._emitAuth(); return true;
+  }
+  spendCoins(n) { if (!this.user || this.user.coins < n) return false; this.updateProfile({ coins: this.user.coins - n }); return true; }
+  addCoins(n) { if (this.user) this.updateProfile({ coins: this.user.coins + n }); }
+  async listOtherUsers() { const q = await this.db.collection('users').limit(50).get(); return q.docs.map((d) => d.data()).filter((u) => !this.user || u.uid !== this.user.uid); }
+
+  /* ------------ marketplace ------------ */
+  async listMarket() { const q = await this.db.collection('market').orderBy('publishedAt', 'desc').get(); return q.docs.map((d) => Object.assign({ id: d.id }, d.data())); }
+  async publish(item) { if (!this.isAdmin()) return false; await this.db.collection('market').add(Object.assign({ publishedAt: Date.now(), by: this.user.name }, item)); return true; }
+  async unpublish(id) { if (!this.isAdmin()) return false; await this.db.collection('market').doc(id).delete(); return true; }
+  async buy(id, applyFn) {
+    const doc = await this.db.collection('market').doc(id).get(); if (!doc.exists) return { ok: false, error: 'Item tidak ditemukan' };
+    const item = doc.data(); if ((this.user.owned || []).includes(id)) return { ok: false, error: 'Sudah dimiliki' };
+    if (!this.spendCoins(item.price)) return { ok: false, error: 'Koin tidak cukup' };
+    await this.updateProfile({ owned: (this.user.owned || []).concat(id) }); applyFn && applyFn(item); return { ok: true, item };
+  }
+  onMarketChanged(fn) { this.db.collection('market').onSnapshot(() => fn()); }
+  onDirectoryChanged() { /* Firestore selalu real-time; tidak perlu polling manual */ }
+
+  /* ------------ room (Firestore realtime — lintas perangkat sungguhan) ------------ */
+  /* ------------ matchmaking (antrian cari lawan, lintas perangkat) ------------ */
+  async joinQueue(cb) {
+    const me = { uid: this.user.uid, name: this.user.name, avatarImage: this.user.avatarImage }, qref = this.db.collection('queue');
+    const found = await this.db.runTransaction(async (tx) => {
+      const snap = await qref.orderBy('ts').limit(5).get(); const other = snap.docs.find((d) => d.id !== me.uid && Date.now() - d.data().ts < 45000);
+      if (other) { tx.delete(other.ref); return other.data(); }
+      tx.set(qref.doc(me.uid), { user: me, ts: Date.now() }); return null;
+    });
+    if (found) {
+      const code = Math.random().toString(36).slice(2, 7).toUpperCase();
+      await this.db.collection('rooms').doc(code).set({ code, host: me, guest: found.user, msgs: [] });
+      await this.db.collection('matches').doc(found.user.uid).set({ code, peer: me, ts: Date.now() });
+      cb({ code, isHost: true, peer: found.user });
+    } else {
+      this._matchUnsub = this.db.collection('matches').doc(me.uid).onSnapshot(async (d) => {
+        if (!d.exists) return; const m = d.data(); this._matchUnsub && this._matchUnsub(); this._matchUnsub = null; await d.ref.delete(); cb({ code: m.code, isHost: false, peer: m.peer });
+      });
+    }
+  }
+  leaveQueue() { if (this._matchUnsub) { this._matchUnsub(); this._matchUnsub = null; } if (this.user) this.db.collection('queue').doc(this.user.uid).delete().catch(() => {}); }
+  createRoom() {
+    const code = Math.random().toString(36).slice(2, 7).toUpperCase();
+    this.db.collection('rooms').doc(code).set({ code, host: { uid: this.user.uid, name: this.user.name, avatarImage: this.user.avatarImage }, guest: null, msgs: [] });
+    return code;
+  }
+  async joinRoom(code) {
+    code = code.toUpperCase().trim(); const ref = this.db.collection('rooms').doc(code), snap = await ref.get();
+    if (!snap.exists) return { ok: false, error: 'Kode room tidak ditemukan' };
+    const room = snap.data();
+    if (room.host.uid === this.user.uid) return { ok: true, room, asHost: true };
+    const guest = { uid: this.user.uid, name: this.user.name, avatarImage: this.user.avatarImage };
+    await ref.update({ guest, msgs: firebase.firestore.FieldValue.arrayUnion({ kind: 'guest-joined', guest }) });
+    return { ok: true, room, asHost: false };
+  }
+  onRoom(code, fn) {
+    let lastLen = 0;
+    const unsub = this.db.collection('rooms').doc(code).onSnapshot((snap) => { const d = snap.data(); if (!d) return; const msgs = d.msgs || []; for (let i = lastLen; i < msgs.length; i++) fn(msgs[i]); lastLen = msgs.length; });
+    this.roomUnsubs.set(code, unsub);
+  }
+  offRoom(code) { const u = this.roomUnsubs.get(code); if (u) u(); this.roomUnsubs.delete(code); }
+  sendRoomShot(code, shot) { this.db.collection('rooms').doc(code).update({ msgs: firebase.firestore.FieldValue.arrayUnion({ kind: 'shot', shot }) }); }
+  sendRoomChat(code, text) { this.db.collection('rooms').doc(code).update({ msgs: firebase.firestore.FieldValue.arrayUnion({ kind: 'chat', text, from: this.user.name }) }); }
+  sendRoomStart(code, info) { this.db.collection('rooms').doc(code).update({ msgs: firebase.firestore.FieldValue.arrayUnion({ kind: 'start', info }) }); }
+}
+
+/* =====================================================================
+   21 · ONLINE UI — autentikasi, profil-akun (avatar gambar), marketplace,
+   dan main-dengan-teman (buat/gabung room). Semua lewat objek `backend`
+   (MockBackend sekarang; tinggal tukar ke FirebaseBackend bila sudah
+   dikonfigurasi — lihat 19-firebase-backend.js & FIREBASE_SETUP.md).
+   ===================================================================== */
+Object.assign(UI.prototype, {
+  attachBackend(backend) {
+    this.backend = backend;
+    backend.onAuthChanged((user) => { this.account = user; this.refreshMenu(); if (this.current === 'screenAuth' && user) this.back(); });
+    if (backend.onDirectoryChanged) backend.onDirectoryChanged(() => { if (this.current === 'screenFriend') this.render_friend(); });
+  },
+  /** Buat (sekali) & kembalikan div konten untuk screen yang dibangun murni lewat JS (bukan lewat body.html statis). */
+  _mount(pageId, screenId) {
+    let el = $(pageId);
+    if (!el) { el = document.createElement('div'); el.id = pageId; el.className = 'pg'; $(screenId).appendChild(el); }
+    return el;
+  },
+  accountAvatarHTML(u, size) {
+    if (u && u.avatarImage) return '<div class="avx" style="--s:' + (size || 44) + 'px;overflow:hidden"><img src="' + u.avatarImage + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div>';
+    return avatarHTML(this.store.data.profile.avatar, size, this.store.data.profile.badge);
+  },
+
+  /* ------------------------------ Auth ------------------------------ */
+  render_auth() {
+    const el = this._mount('pageAuth', 'screenAuth');
+    const tab = this.authTab || 'signin';
+    const isMock = this.backend.name === 'mock';
+    el.innerHTML = this._head('Masuk / Daftar') + '<div class="pg-body"><div class="narrow" style="max-width:420px;margin:0 auto">' +
+      (isMock ? '<p class="note" style="background:rgba(244,197,66,.1);border:1px solid rgba(244,197,66,.35);padding:10px 12px;border-radius:10px">Mode <b>simulasi lokal</b>: akun hanya tersimpan di browser ini. Untuk akun sungguhan lintas perangkat (termasuk Sign in with Google asli), sambungkan Firebase — lihat <code>FIREBASE_SETUP.md</code>.</p>' : '') +
+      '<div class="seg" style="margin:10px 0"><button data-act="atab" data-v="signin" aria-pressed="' + (tab === 'signin') + '">Masuk</button><button data-act="atab" data-v="signup" aria-pressed="' + (tab === 'signup') + '">Daftar</button></div>' +
+      '<button class="btn" style="width:100%;margin-bottom:10px" data-act="google">' + (isMock ? 'Simulasikan Sign in with Google' : 'Lanjutkan dengan Google') + '</button>' +
+      (isMock ? '<input class="text-input" id="authGoogleName" placeholder="Nama tampilan (untuk simulasi)" style="width:100%;height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:var(--panel-2);padding:0 12px;margin-bottom:14px">' : '') +
+      '<div class="row" style="align-items:center;margin:6px 0 14px"><hr style="flex:1;border-color:rgba(255,255,255,.1)"><span class="muted">atau email</span><hr style="flex:1;border-color:rgba(255,255,255,.1)"></div>' +
+      (tab === 'signup' ? '<label class="note">Nama<input class="text-input" id="authName" maxlength="20" style="width:100%;height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:var(--panel-2);padding:0 12px;margin:4px 0 10px"></label>' : '') +
+      '<label class="note">Email<input class="text-input" id="authEmail" type="email" style="width:100%;height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:var(--panel-2);padding:0 12px;margin:4px 0 10px"></label>' +
+      '<label class="note">Password<input class="text-input" id="authPass" type="password" style="width:100%;height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:var(--panel-2);padding:0 12px;margin:4px 0 14px"></label>' +
+      '<button class="btn primary big" data-act="submit">' + (tab === 'signup' ? 'Buat akun' : 'Masuk') + '</button>' +
+      '<p class="note" id="authErr" style="color:var(--bad)"></p></div></div>';
+    const err = (m) => { $('authErr').textContent = m || ''; };
+    this._bind(el, {
+      atab: (d) => { this.authTab = d.v; this.render_auth(); },
+      google: async () => {
+        this.click();
+        if (isMock) { const r = await this.backend.signInGoogleMock($('authGoogleName').value); if (!r.ok) err(r.error); else { if (r.isFirstAdmin) this.toast('Akun ini otomatis jadi ADMIN (akun pertama di browser ini)', 'ok'); } }
+        else { const r = await this.backend.signInGoogle(); if (!r.ok) err(r.error); }
+      },
+      submit: async () => {
+        this.click(); err('');
+        const email = $('authEmail').value, pass = $('authPass').value;
+        const r = tab === 'signup' ? await this.backend.signUpPassword(email, pass, $('authName').value) : await this.backend.signInPassword(email, pass);
+        if (!r.ok) err(r.error); else if (r.isFirstAdmin) this.toast('Akun ini otomatis jadi ADMIN (akun pertama di browser ini)', 'ok');
+      },
+    });
+  },
+  requireAuth(thenGo) {
+    if (this.backend.currentUser()) { this.go(thenGo); return; }
+    this.authReturn = thenGo; this.go('auth');
+  },
+  back() {
+    if (this.current === 'screenAuth' && this.authReturn) { const t = this.authReturn; this.authReturn = null; if (this._gateBlocked(t)) return; this._renderPage(t); this.show(PAGE_SCREENS[t], true); return; }
+    const id = this.stack.pop() || 'screenMenu';
+    const name = Object.keys(PAGE_SCREENS).find((k) => PAGE_SCREENS[k] === id);
+    if (name && this._gateBlocked(name)) return;
+    if (name) this._renderPage(name);
+    this.show(id, true);
+  },
+
+  /* ------------------------------ Marketplace ------------------------------ */
+  render_market() {
+    const el = this._mount('pageMarket', 'screenMarket');
+    const items = this.backend.listMarket(), me = this.backend.currentUser(), owned = (me && me.owned) || [];
+    el.innerHTML = this._head('Market', this._wallet()) + '<div class="pg-body">' +
+      (items.length ? '<div class="tb-grid">' + items.map((it) => {
+        const has = owned.includes(it.id), previewHTML = it.kind === 'cue' ? '<img src="' + it.image + '" style="width:100%;max-height:80px;object-fit:contain">' : it.kind === 'cueball' ? '<div style="width:70px;height:70px;border-radius:50%;margin:0 auto;background:' + (it.tint || '#fff') + (it.image ? ';background-image:url(' + it.image + ');background-size:cover' : '') + '"></div>' : '<span data-theme-market="' + it.id + '"></span>';
+        return '<div class="tb-card"><div class="tb-prev">' + previewHTML + '</div><div class="tb-info"><h4>' + esc(it.name) + '<span class="rar Epic">' + { cue: 'Cue', table: 'Meja', cueball: 'Bola' }[it.kind] + '</span></h4><p class="muted" style="margin:0;font-size:13px">oleh ' + esc(it.by) + (it.kind === 'cueball' && it.fx !== 'none' ? ' · FX ' + CUEBALL_FX[it.fx].name : '') + '</p>' +
+          (has ? '<button class="btn small" disabled>Sudah dimiliki</button>' : '<button class="btn small green" data-act="buy" data-v="' + it.id + '">Beli · ' + COIN_SVG + ' ' + fmtShort(it.price) + '</button>') + '</div></div>';
+      }).join('') + '</div>' : '<p class="muted">Belum ada skin yang dijual admin.</p>') +
+      '<p class="note">Skin yang dibeli langsung ditambahkan ke koleksi Cue/Meja/Bola Putih kamu.</p></div>';
+    this._bind(el, { buy: (d) => this._buyMarketItem(d.v) });
+    el.querySelectorAll('[data-theme-market]').forEach((slot) => { const it = items.find((x) => x.id === slot.dataset.themeMarket); if (it) loadThemeImages(it.theme, (imgs) => { slot.innerHTML = ''; slot.appendChild(renderTablePreview(it.theme, 260, imgs)); }); });
+  },
+  _buyMarketItem(id) {
+    if (!this.backend.currentUser()) { this.toast('Masuk dulu untuk membeli', 'foul'); return; }
+    const item = this.backend.listMarket().find((x) => x.id === id); if (!item) return;
+    if (this.store.coins < item.price) { this.toast('Koin tidak cukup', 'foul'); return; }
+    if (!this.store.spend(item.price)) { this.toast('Koin tidak cukup', 'foul'); return; }
+    const r = this.backend.buy(id, () => {});
+    if (!r.ok) { this.store.addCoins(item.price); this.toast(r.error, 'foul'); return; }
+    if (item.kind === 'cue') this.store.addCustomCue(item.payload);
+    else if (item.kind === 'table') this.store.addCustomTable(item.payload);
+    else if (item.kind === 'cueball') this.store.addCustomCueball(item.payload);
+    this.toast('Berhasil membeli ' + item.name, 'ok'); this.fx.burst(innerWidth / 2, innerHeight / 2, 70); this.render_market(); this.refreshMenu();
+  },
+
+  /* ------------------------------ Matchmaking (cari lawan) ------------------------------ */
+  startQuickMatch(opts) {
+    const b = this.backend, me = b.currentUser();
+    if (!me) { this.requireAuth('modes'); return; }
+    const isMock = b.name === 'mock'; let cancelled = false;
+    $('mmSpin').style.display = 'block'; $('mmTitle').textContent = 'Mencari lawan…';
+    $('mmSub').textContent = isMock ? 'Mode simulasi: hanya menemukan pemain yang membuka game ini di browser yang sama.' : 'Mencari pemain lain yang sedang online';
+    $('mmVs').innerHTML = '<div class="stack" style="margin-top:14px"><button class="btn" id="mmCancel">Batal</button><button class="btn" id="mmBot" hidden>Main lawan bot saja</button></div>';
+    this.show('screenMM');
+    const botTimer = setTimeout(() => { const bt = $('mmBot'); if (bt) bt.hidden = false; }, 12000);
+    const stop = () => { cancelled = true; clearTimeout(botTimer); b.leaveQueue(); };
+    $('mmCancel').onclick = () => { stop(); this.show('screenModes', true); };
+    $('mmBot').onclick = () => { stop(); this.show('screenModes', true); this.game.startMatch({ game: opts.game, table: opts.table, mode: 'bot', difficulty: 'medium', bet: 0 }); };
+    b.joinQueue(({ code, isHost, peer }) => {
+      if (cancelled) return; clearTimeout(botTimer);
+      $('mmTitle').textContent = 'Lawan ditemukan: ' + peer.name; $('mmSpin').style.display = 'none'; $('mmVs').innerHTML = '';
+      this._enterRoom(code, isHost, { guest: isHost ? peer : null, silent: true });
+      if (isHost) setTimeout(() => { const info = { game: opts.game, table: opts.table, hostName: me.name }; b.sendRoomStart(code, info); this._launchRoomMatch(info); }, 900);   // jeda agar pendengar lawan sudah siap (BroadcastChannel tidak menyimpan pesan)
+    });
+  },
+
+  /* ------------------------------ Main dengan Teman ------------------------------ */
+  render_friend() {
+    const el = this._mount('pageFriend', 'screenFriend');
+    const isMock = this.backend.name === 'mock';
+    if (this.activeRoom) { this._renderRoomLobby(el); return; }
+    el.innerHTML = this._head('Main dengan Teman') + '<div class="pg-body narrow" style="max-width:440px;margin:0 auto">' +
+      (isMock ? '<p class="note">Mode simulasi: kode room hanya tersambung antar <b>tab/window di browser yang sama</b>. Untuk mengundang teman di perangkat lain sungguhan, sambungkan Firebase.</p>' : '') +
+      '<div class="stack"><button class="btn primary big" data-act="create">Buat room & undang teman</button></div>' +
+      '<h3 class="sec">Atau gabung dengan kode</h3><div class="row"><input id="roomCode" maxlength="5" placeholder="KODE" style="flex:1;height:44px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:var(--panel-2);padding:0 12px;text-transform:uppercase;letter-spacing:2px;font-weight:700"><button class="btn green" data-act="join">Gabung</button></div>' +
+      '<p class="note" id="friendErr" style="color:var(--bad)"></p></div>';
+    this._bind(el, {
+      create: () => { const code = this.backend.createRoom(); this._enterRoom(code, true); },
+      join: () => { const r = this.backend.joinRoom($('roomCode').value); if (!r.ok) $('friendErr').textContent = r.error; else this._enterRoom(r.room.code, false); },
+    });
+  },
+  _enterRoom(code, isHost, extra) {
+    this.activeRoom = { code, isHost, guest: (extra && extra.guest) || null, chat: [] };
+    this.backend.onRoom(code, (msg) => {
+      if (msg.kind === 'guest-joined') { this.activeRoom.guest = msg.guest; this.toast(msg.guest.name + ' bergabung ke room', 'ok'); }
+      else if (msg.kind === 'chat') this.activeRoom.chat.push(msg);
+      else if (msg.kind === 'start' && !this.activeRoom.isHost) { this._launchRoomMatch(msg.info); return; }
+      if (this.current === 'screenFriend') this.render_friend();
+    });
+    if (!(extra && extra.silent)) this.render_friend();
+  },
+  /** Dipanggil host (saat menekan Mulai) dan guest (saat menerima pesan 'start'): keduanya membangun Game dengan seed & transport room yang sama. */
+  _launchRoomMatch(info) {
+    const r = this.activeRoom; if (!r) return;
+    const peerName = r.isHost ? (r.guest ? r.guest.name : 'Teman') : (info.hostName || 'Host');
+    this.backend.offRoom(r.code);                       // lepas pendengar lobi dulu; RoomTransport memasang pendengar barunya sendiri di konstruktornya
+    const transport = new RoomTransport(this.backend, r.code);
+    this.stack = []; this.activeRoom = null;
+    this.game.startMatch({ mode: 'online', game: info.game, table: info.table, bet: 0, room: { code: r.code, isHost: r.isHost, peerName, myName: (this.backend.currentUser() || {}).name, transport } });
+  },
+  _renderRoomLobby(el) {
+    const r = this.activeRoom, me = this.backend.currentUser();
+    el.innerHTML = this._head('Room ' + r.code) + '<div class="pg-body narrow" style="max-width:440px;margin:0 auto">' +
+      '<div class="chip" style="font-size:28px;justify-content:center;letter-spacing:4px;padding:14px;margin-bottom:6px"><b>' + r.code + '</b></div>' +
+      '<p class="muted" style="text-align:center">Bagikan kode ini ke temanmu (di tab/window lain pada browser ini untuk mode simulasi).</p>' +
+      '<div class="row" style="justify-content:center;gap:22px;margin:14px 0">' +
+      '<div style="text-align:center">' + this.accountAvatarHTML(r.isHost ? me : { name: 'Host' }, 54) + '<div>' + esc(r.isHost ? me.name : 'Host') + '</div></div>' +
+      '<span class="gold" style="font:700 22px var(--f-head)">VS</span>' +
+      '<div style="text-align:center">' + (r.guest ? this.accountAvatarHTML(r.guest, 54) + '<div>' + esc(r.guest.name) + '</div>' : '<div class="avx" style="--s:54px;opacity:.4"></div><div class="muted">Menunggu…</div>') + '</div></div>' +
+      (r.isHost ? (r.guest ? '<button class="btn primary big" data-act="startroom">Mulai main</button>' : '<button class="btn big" disabled>Menunggu teman bergabung…</button>') : '<button class="btn big" disabled>Menunggu host memulai…</button>') +
+      '<button class="btn" style="margin-top:10px;width:100%" data-act="leaveroom">Batal / keluar room</button></div>';
+    this._bind(el, {
+      startroom: () => { const info = { game: '8ball', table: 'standard', hostName: me.name }; this.backend.sendRoomStart(r.code, info); this._launchRoomMatch(info); },
+      leaveroom: () => { this.backend.offRoom(r.code); this.activeRoom = null; this.render_friend(); },
+    });
+  },
+});
+
+/* =====================================================================
+   22 · MAIN — bootstrap & game loop
    ===================================================================== */
 (function main() {
   const store = new Store(), audio = new AudioManager(store.data.settings), ui = new UI(store, audio);
   const game = new Game({ ui, audio, store });
   const renderer = new Renderer($('stage'), game, store);
   const board = new MockLeaderboard(store);
+  const backend = FIREBASE_CONFIG ? new FirebaseBackend() : new MockBackend();
   ui.attach(game, renderer, board);
+  ui.attachBackend(backend);
   const input = new InputController($('stage'), game, renderer, ui);
   let resizeT = 0;
   window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => renderer.resize(), 80); });
   window.addEventListener('orientationchange', () => setTimeout(() => renderer.resize(), 200));
   window.addEventListener('blur', () => { if (game.isActiveMatch() && !game.paused) game.setPaused(true); });
-  window.__pantul = { game, renderer, store, ui, audio, CONFIG };     // untuk debugging/tes
+  window.__pantul = { game, renderer, store, ui, audio, CONFIG, backend };     // untuk debugging/tes
   let last = performance.now();
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;

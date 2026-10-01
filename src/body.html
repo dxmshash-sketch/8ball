@@ -44,10 +44,13 @@
           <div class="menu-grid">
             <button class="tile" data-go="rewards"><span class="ico" data-ico="gift"></span>Hadiah<i class="dot" id="dotRewards" hidden></i></button>
             <button class="tile" data-go="board"><span class="ico" data-ico="rank"></span>Peringkat</button>
+            <button class="tile" data-go="friend"><span class="ico" data-ico="friend"></span>Main Teman</button>
+            <button class="tile" data-go="market"><span class="ico" data-ico="market"></span>Market</button>
             <button class="tile" data-go="tables"><span class="ico" data-ico="table"></span>Meja</button>
             <button class="tile" data-go="cues"><span class="ico" data-ico="cue"></span>Cue</button>
             <button class="tile" data-go="profile"><span class="ico" data-ico="user"></span>Profil</button>
             <button class="tile" data-go="settings"><span class="ico" data-ico="gear"></span>Setelan</button>
+            <button class="tile" id="tileDev" data-go="dev" hidden><span class="ico" data-ico="dev"></span>Developer</button>
           </div>
           <button class="btn small green" id="btnHelp" hidden>Ambil bantuan koin +3.000</button>
         </div>
@@ -67,7 +70,6 @@
       <div class="set-row"><span>Prediksi pantulan cushion</span><button class="switch" role="switch" data-set="showBounce" aria-label="Prediksi pantulan"></button></div>
       <div class="set-row"><span>Zoom saat membidik</span><div class="seg" id="zoomSeg"><button data-z="0">Mati</button><button data-z="1">Sedang</button><button data-z="2">Dekat</button></div></div>
       <div class="stack">
-        <button class="btn" data-go="dev">Halaman Developer · skin DIY</button>
         <button class="btn danger" id="btnReset">Reset semua data</button>
         <button class="btn" id="btnSettingsBack">Selesai</button>
       </div>
@@ -98,4 +100,7 @@
   <section class="screen pagescreen" id="screenTables"><div class="pg" id="pageTables"></div></section>
   <section class="screen pagescreen cuescreen" id="screenCues"><div class="pg" id="pageCues"></div></section>
   <section class="screen pagescreen" id="screenDev"><div class="pg" id="pageDev"></div></section>
+  <section class="screen pagescreen" id="screenAuth"></section>
+  <section class="screen pagescreen" id="screenMarket"></section>
+  <section class="screen pagescreen" id="screenFriend"></section>
 </div>

@@ -144,13 +144,16 @@ class Game {
     if (bet > 0 && !this.store.spend(bet)) return false;
     this.bet = bet; this.pottedBySeat = [0, 0];
     this._setTable(opts.table === 'american' ? 'american' : 'standard');
-    this.lastOptions = opts; this.mode = opts.mode;
+    this.lastOptions = opts; this.mode = opts.mode; this.isRoomMatch = !!opts.room;
     this.gameType = ['8ball', '9ball', '9call'].indexOf(opts.game) === -1 ? '8ball' : opts.game;
     this.rules = this.gameType === '8ball' ? new MatchRules() : new NineBallRules(this.gameType === '9call' ? 'call' : 'standard'); this.difficulty = opts.difficulty || 'medium';
     const profile = this.store.data.profile, bot = this.cfg.bots[this.difficulty];
     const myLevel = 1 + Math.floor(profile.xp / 100);
-    this.seed = (Math.random() * 4294967296) >>> 0;
-    if (this.mode === 'bot') this.seats = [{ name: profile.name, control: 'local', level: myLevel }, { name: bot.name, control: 'bot', level: bot.level }];
+    this.seed = opts.room ? seedFromRoomCode(opts.room.code) : (Math.random() * 4294967296) >>> 0;
+    if (opts.room) {
+      const me = { name: opts.room.myName || profile.name, control: 'local', level: myLevel }, peer = { name: opts.room.peerName || 'Teman', control: 'remote', level: 1 };
+      this.seats = opts.room.isHost ? [me, peer] : [peer, me];
+    } else if (this.mode === 'bot') this.seats = [{ name: profile.name, control: 'local', level: myLevel }, { name: bot.name, control: 'bot', level: bot.level }];
     else if (this.mode === 'local') this.seats = [{ name: 'Pemain 1', control: 'local', level: 1 }, { name: 'Pemain 2', control: 'local', level: 1 }];
     else {
       const names = this.cfg.onlineOpponents;
@@ -159,12 +162,12 @@ class Game {
     this.brain = new BotBrain(this.cfg, this.mode === 'bot' ? this.difficulty : 'medium', new Rng(this.seed ^ 0x9e3779b9));
     this.matchId = 'M-' + this.seed.toString(36);
     this.cueStats = this.mode === 'local' ? { force: 5, aim: 5, spin: 5, time: 5 } : this.store.cueStats();
-    this.transport = new MockTransport({ latency: this.mode === 'online' ? 110 : 0, online: this.mode === 'online' });
+    this.transport = opts.room ? opts.room.transport : new MockTransport({ latency: this.mode === 'online' ? 110 : 0, online: this.mode === 'online' });
     this._bindTransport(this.transport);
     this.expectedSeq = 0; this.result = null; this.rackCount = 0; this.paused = false; this.disconnected = false;
     this.shotPending = false; this.cueAnim = null; this.report = null;
     this.sm.transition(GameState.MATCHMAKING);
-    this.mmTimer = this.cfg.rules.matchmakingSeconds[this.mode];
+    this.mmTimer = opts.room ? 0.3 : this.cfg.rules.matchmakingSeconds[this.mode];
     this.ui.showMatchmaking(this);
     return true;
   }
@@ -313,6 +316,7 @@ class Game {
   }
 
   _onShotAccepted(shot) {
+    if (this.sm.state === GameState.BALL_IN_HAND && this.isRoomMatch && this.seats[this.rules.currentSeat].control === 'remote') this.confirmPlacement();   // lawan menaruh bola putih di layarnya sendiri; posisi ikut di shot.cue
     if (!this.isTurnState()) return;
     this.shotPending = false; this.pendingShot = shot; this.expectedSeq++;
     this.cue.x = shot.cue.x; this.cue.y = shot.cue.y; this.cue.state = BallState.ON_TABLE;

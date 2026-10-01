@@ -12,6 +12,9 @@ const ICONS = {
   cue: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M3.5 20.5L19 5"/><path d="M19.5 4.5l1-1" stroke-width="3.4"/></svg>',
   user: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4.2"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z"/></svg>',
   gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1" stroke-linecap="round"/></svg>',
+  friend: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8" cy="8" r="3.4"/><path d="M2 20c0-3.6 2.8-5.8 6-5.8s6 2.2 6 5.8z"/><circle cx="17.5" cy="9" r="2.6" opacity=".7"/><path d="M22 20c0-2.7-1.9-4.6-4.3-5.2 1.5 1.2 2.3 2.9 2.3 5.2z" opacity=".7"/></svg>',
+  market: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 8l1.5-4h15L21 8z" opacity=".7"/><path d="M4 8h16v12H4z" opacity=".3"/><path d="M4 8h16v2.2A3 3 0 0114 10a3 3 0 01-6 0 3 3 0 01-6 .2z"/></svg>',
+  dev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4L2 12l6 8M16 4l6 8-6 8"/></svg>',
 };
 function avatarHTML(av, size, badgeId) {
   const col = AVATAR_COLORS[(av.color | 0) % AVATAR_COLORS.length], fr = FRAMES[av.frame] || FRAMES.none, b = badgeId ? BADGE_DEFS.find((x) => x.id === badgeId) : null;
@@ -43,7 +46,7 @@ class Fx {
   }
 }
 
-const PAGE_SCREENS = { menu: 'screenMenu', modes: 'screenModes', settings: 'screenSettings', profile: 'screenProfile', rewards: 'screenRewards', board: 'screenBoard', tables: 'screenTables', cues: 'screenCues', dev: 'screenDev' };
+const PAGE_SCREENS = { menu: 'screenMenu', modes: 'screenModes', settings: 'screenSettings', profile: 'screenProfile', rewards: 'screenRewards', board: 'screenBoard', tables: 'screenTables', cues: 'screenCues', dev: 'screenDev', auth: 'screenAuth', market: 'screenMarket', friend: 'screenFriend' };
 
 class UI {
   constructor(store, audio) {
@@ -57,7 +60,7 @@ class UI {
     this.game = game; this.renderer = renderer; this.board = board;
     document.querySelectorAll('[data-ico]').forEach((el) => { el.innerHTML = ICONS[el.dataset.ico] || ''; });
     document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => { this.click(); this.go(b.dataset.go); }));
-    $('chipProfile').addEventListener('click', () => { this.click(); this.go('profile'); });
+    $('chipProfile').addEventListener('click', () => { this.click(); this.go(this.backend && this.backend.currentUser() ? 'profile' : 'auth'); });
     $('btnHelp').addEventListener('click', () => { this.click(); const n = this.store.claimHelp(); if (n) { this.toast('+' + fmtCoins(n) + ' ' + COIN_NAME + ' diterima', 'ok'); this.fx.burst(innerWidth / 2, innerHeight / 2, 60); this.refreshMenu(); } });
     $('btnPause').addEventListener('click', () => { this.click(); game.setPaused(true); });
     $('btnResume').addEventListener('click', () => { this.click(); game.setPaused(false); });
@@ -85,7 +88,14 @@ class UI {
     next.classList.remove('left'); next.classList.add('active'); this.current = id;
   }
   hideAll() { const cur = this.current ? $(this.current) : null; if (cur) cur.classList.remove('active'); this.current = ''; }
+  /** true = navigasi diblokir (dan sudah menangani redirect/toast-nya sendiri). Dipakai oleh go() maupun back() agar tombol "kembali" tidak bisa melewati gerbang admin/auth. */
+  _gateBlocked(name) {
+    if ((name === 'friend' || name === 'market') && this.backend && !this.backend.currentUser()) { this.stack = []; this.requireAuth(name); return true; }
+    if (name === 'dev' && !(this.backend && this.backend.isAdmin())) { this.stack = []; this.toast('Halaman Developer khusus admin', 'foul'); this.go('menu'); return true; }
+    return false;
+  }
   go(name) {
+    if (this._gateBlocked(name)) return;
     const id = PAGE_SCREENS[name]; if (!id) return;
     if (this.current) this.stack.push(this.current);
     this._renderPage(name); this.show(id);
@@ -107,10 +117,12 @@ class UI {
     document.querySelectorAll('#zoomSeg button').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.z === (s.aimZoom | 0))));
   }
   refreshMenu() {
-    const p = this.store.data.profile;
-    $('menuAv').innerHTML = avatarHTML(p.avatar, 34, p.badge); $('menuName').textContent = p.name; $('menuLevel').textContent = 'Level ' + this.store.level();
+    const p = this.store.data.profile, acc = this.backend && this.backend.currentUser();
+    if (acc) { $('menuAv').innerHTML = this.accountAvatarHTML(acc, 34); $('menuName').textContent = acc.name; $('menuLevel').textContent = (acc.role === 'admin' ? 'Admin · ' : '') + 'Level ' + this.store.level(); }
+    else { $('menuAv').innerHTML = avatarHTML(p.avatar, 34, p.badge); $('menuName').textContent = p.name; $('menuLevel').textContent = 'Tamu — ketuk untuk masuk'; }
     $('menuCoins').textContent = fmtCoins(p.coins);
     $('dotRewards').hidden = !this.store.hasClaimable(); $('btnHelp').hidden = !this.store.helpAvailable();
+    $('tileDev').hidden = !(this.backend && this.backend.isAdmin());
   }
 
   /* ------------------------------ callback dari Game ------------------------------ */

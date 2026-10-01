@@ -37,7 +37,7 @@ Object.assign(UI.prototype, {
   render_modes() {
     const st = this.store, el = $('pageModes'), coins = st.coins, local = this.selectedMode === 'local';
     if (BETS.indexOf(this.selectedBet) === -1 || this.selectedBet > coins) this.selectedBet = [...BETS].reverse().find((b) => b <= Math.min(coins, 5000)) || BETS[0];
-    const bet = this.selectedBet, canPlay = local || coins >= bet, game = this.selectedGame || '8ball', tbl = this.selectedTable || 'standard';
+    const noBet = local || this.selectedMode === 'online', bet = this.selectedBet, canPlay = noBet || coins >= bet, game = this.selectedGame || '8ball', tbl = this.selectedTable || 'standard';
     const GAMES = { '8ball': ['8 Ball', 'Klasik: bola penuh (1–7) atau strip (9–15), bola 8 menentukan kemenangan.'], '9ball': ['9 Ball', 'Bola 1–9, selalu kena bola bernomor terkecil lebih dulu. Masukkan bola 9 untuk menang.'], '9call': ['9 Ball · Pilih Kantong', 'Aturan 9 Ball, tetapi sebelum menembak Anda memilih kantong tujuan. Bola masuk kantong lain = foul.'] };
     el.innerHTML =
       '<h2>Pilih permainan</h2><div class="seg" style="margin:4px 0 6px">' + Object.keys(GAMES).map((k) => '<button data-act="game" data-v="' + k + '" aria-pressed="' + (game === k) + '">' + GAMES[k][0] + '</button>').join('') + '</div><p class="sub" style="margin-bottom:12px">' + GAMES[game][1] + '</p>' +
@@ -46,7 +46,8 @@ Object.assign(UI.prototype, {
       '<div class="tbl-row"><span>Ukuran meja</span><div class="seg">' + Object.values(TABLE_PROFILES).map((p) => '<button data-act="table" data-v="' + p.id + '" aria-pressed="' + (tbl === p.id) + '">' + p.name + '</button>').join('') + '</div></div>' +
       '<p class="sub" style="margin:2px 0 12px">' + TABLE_PROFILES[tbl].desc + '</p>' +
       (this.selectedMode === 'bot' ? '<div class="diff-row"><span>Tingkat kesulitan</span><div class="seg">' + [['easy', 'Mudah'], ['medium', 'Sedang'], ['hard', 'Sulit']].map((d) => '<button data-act="diff" data-v="' + d[0] + '" aria-pressed="' + (this.selectedDiff === d[0]) + '">' + d[1] + '</button>').join('') + '</div></div>' : '') +
-      (local ? '' :
+      (this.selectedMode === 'online' ? '<p class="note" style="margin:0 0 12px">Online: cari lawan sungguhan lewat antrian. <b>Tanpa taruhan</b> — taruhan koin antar pemain butuh server terpercaya (escrow), belum tersedia. Perlu masuk ke akun.</p>' : '') +
+      (noBet ? '' :
         '<div class="bet-head"><span>Taruhan</span><span class="muted" style="font-size:16px">Saldo ' + COIN_SVG + ' <b class="gold">' + fmtCoins(coins) + '</b></span></div>' +
         '<div class="bet-grid">' + BETS.map((b) => '<button class="bet" data-act="bet" data-v="' + b + '" aria-pressed="' + (b === bet) + '"' + (b > coins ? ' disabled' : '') + '>' + fmtShort(b) + '</button>').join('') + '</div>' +
         '<div class="payout"><span>Menang <b class="ok">+' + fmtCoins(Math.floor(bet * 2 * (1 - HOUSE_FEE))) + '</b></span><span>Kalah <b class="bad">−' + fmtCoins(bet) + '</b></span><span class="muted">Biaya rumah ' + Math.round(HOUSE_FEE * 100) + '%</span></div>') +
@@ -58,6 +59,7 @@ Object.assign(UI.prototype, {
       table: (d) => { this.selectedTable = d.v; this.render_modes(); },
       bet: (d) => { this.selectedBet = +d.v; this.render_modes(); },
       start: () => {
+        if (this.selectedMode === 'online') { this.startQuickMatch({ game: this.selectedGame || '8ball', table: this.selectedTable || 'standard' }); return; }
         if (!this.game.startMatch({ game: this.selectedGame || '8ball', table: this.selectedTable || 'standard', mode: this.selectedMode, difficulty: this.selectedDiff, bet: this.selectedBet })) this.toast('Saldo tidak cukup untuk taruhan ini', 'foul');
         else this.stack = [];
       },
@@ -79,13 +81,21 @@ Object.assign(UI.prototype, {
     }
     const wr = s.matches ? Math.round(s.wins / s.matches * 100) : 0;
     el.innerHTML = this._head('Profil', this._wallet()) + '<div class="pg-body">' +
-      '<div class="prof-top">' + avatarHTML(av, 84, p.badge) + '<div style="flex:1;min-width:200px"><input id="profName" maxlength="14" autocomplete="off" value="' + esc(p.name) + '" aria-label="Nama pemain"><div class="row" style="margin:10px 0 6px"><b class="gold" style="font:700 22px var(--f-head)">Level ' + pr.level + '</b><span class="muted">' + pr.into + ' / ' + pr.need + ' XP</span></div><div class="xpbar"><div class="xpfill" style="width:' + (pr.pct * 100).toFixed(1) + '%"></div></div></div></div>' +
+      '<div class="prof-top">' + '<div style="position:relative">' + this.accountAvatarHTML(this.backend.currentUser(), 84) + (this.backend.currentUser() ? '<label class="filebtn btn small" style="position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);font-size:11px;padding:4px 8px">Ganti foto<input type="file" id="profPhoto" accept="image/*"></label>' : '') + '</div><div style="flex:1;min-width:200px"><input id="profName" maxlength="14" autocomplete="off" value="' + esc(p.name) + '" aria-label="Nama pemain"><div class="row" style="margin:10px 0 6px"><b class="gold" style="font:700 22px var(--f-head)">Level ' + pr.level + '</b><span class="muted">' + pr.into + ' / ' + pr.need + ' XP</span></div><div class="xpbar"><div class="xpfill" style="width:' + (pr.pct * 100).toFixed(1) + '%"></div></div>' + (this.backend.currentUser() ? '<p class="muted" style="margin:8px 0 0;font-size:13px">Masuk sebagai ' + esc(this.backend.currentUser().email || this.backend.currentUser().name) + (this.backend.isAdmin() ? ' · <span class="gold">Admin</span>' : '') + ' · <button class="btn small" data-act="signout" style="margin-left:6px">Keluar akun</button></p>' : '<p class="muted" style="margin:8px 0 0;font-size:13px">Belum masuk akun — avatar foto & pembelian Market perlu akun. <button class="btn small primary" data-act="gotoauth">Masuk / Daftar</button></p>') + '</div></div>' +
       '<div class="seg" style="margin-bottom:10px">' + [['avatar', 'Avatar'], ['frame', 'Bingkai'], ['badge', 'Badge']].map((t) => '<button data-act="tab" data-v="' + t[0] + '" aria-pressed="' + (tab === t[0]) + '">' + t[1] + '</button>').join('') + '</div>' + grid +
       '<h3 class="sec">Statistik</h3><div class="stat-grid">' + [['Main', s.matches], ['Menang', s.wins], ['Kalah', s.losses], ['Win rate', wr + '%'], ['Runtun terbaik', s.bestStreak], ['Bola masuk', s.potted], ['Total untung', fmtShort(s.totalWon)], ['Taruhan terbesar dimenangkan', fmtShort(s.maxBetWon)]].map((x) => '<div class="stat-c"><small>' + x[0] + '</small><b>' + x[1] + '</b></div>').join('') + '</div></div>';
     const redo = () => this.render_profile();
-    $('profName').addEventListener('input', (e) => { p.name = e.target.value.trim().slice(0, 14) || 'Pemain'; st.save(); });
+    $('profName').addEventListener('input', (e) => { p.name = e.target.value.trim().slice(0, 14) || 'Pemain'; st.save(); if (this.backend.currentUser()) this.backend.updateProfile({ name: p.name }); });
+    const photoInput = $('profPhoto');
+    if (photoInput) photoInput.addEventListener('change', async () => {
+      if (!photoInput.files[0]) return;
+      try { const img = await readImageFile(photoInput.files[0]); const dataUrl = fitDataURL(img, 256, 256, 0.85); await this.backend.updateProfile({ avatarImage: dataUrl }); this.toast('Foto profil diperbarui', 'ok'); redo(); }
+      catch (e) { this.toast('Gagal membaca gambar', 'foul'); }
+    });
     this._bind(el, {
       tab: (d) => { this.profTab = d.v; redo(); },
+      signout: () => { this.backend.signOut(); this.toast('Berhasil keluar', 'ok'); this.back(); },
+      gotoauth: () => this.go('auth'),
       sym: (d) => { if (!st.setAvatar('sym', d.v)) this.toast('Avatar ini terkunci — raih level tertentu', 'foul'); redo(); },
       color: (d) => { st.setAvatar('color', +d.v); redo(); },
       frame: (d) => { if (!st.setAvatar('frame', d.v)) this.toast('Bingkai ini terkunci — raih level tertentu', 'foul'); redo(); },

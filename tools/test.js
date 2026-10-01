@@ -2,12 +2,12 @@
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const src = (f) => fs.readFileSync(path.join(__dirname, '..', 'src', f + '.js'), 'utf8');
 const mem = {}; const window = { localStorage: { getItem: (k) => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); }, removeItem: (k) => { delete mem[k]; } } };
-const ctx = vm.createContext({ console, setTimeout, clearTimeout, Math, Set, Map, Float32Array, Float64Array, Uint8Array, Proxy, Error, Object, Array, Number, JSON, isFinite, Date, window, String, parseFloat, Image: function () {} });
+const ctx = vm.createContext({ console, setTimeout, clearTimeout, Math, Set, Map, Float32Array, Float64Array, Uint8Array, Proxy, Error, Object, Array, Number, JSON, isFinite, Date, window, String, parseFloat, Image: function () {}, BroadcastChannel, performance, requestAnimationFrame: (fn) => setTimeout(fn, 16), cancelAnimationFrame: clearTimeout, document: { createElement: () => ({ getContext: () => ({}) }) } });
 const code = ['01-config', '02-core', '03-physics', '04-rules', '05-net', '06-bot', '07-game'].map(src).join('\n') +
-  "\nconst CUE_IMAGES = new Proxy({}, { get: () => 'data:image/png;base64,AAAA' });\n" + ['09-content', '10-store', '11-leaderboard', '16-cueballfx'].map(src).join('\n') +
-  '\nthis.__x={NineBallRules,CONFIG,buildTableGeometry,PhysicsWorld,Rng,Game,MatchRules,ShotValidator,Store,levelInfo,xpForLevel,rewardsForLevel,BETS,HOUSE_FEE,START_COINS,TABLE_THEMES,CUE_CATALOG,MockLeaderboard,botAvatar,AVATAR_COLORS,fmtShort,BADGE_DEFS,DAILY_REWARDS,TABLE_PROFILES,applyTableProfile,CUEBALL_FX,CueballFX};';
+  "\nconst CUE_IMAGES = new Proxy({}, { get: () => 'data:image/png;base64,AAAA' });\n" + ['09-content', '10-store', '11-leaderboard', '16-cueballfx', '18-backend'].map(src).join('\n') +
+  '\nthis.__x={NineBallRules,CONFIG,buildTableGeometry,PhysicsWorld,Rng,Game,MatchRules,ShotValidator,Store,levelInfo,xpForLevel,rewardsForLevel,BETS,HOUSE_FEE,START_COINS,TABLE_THEMES,CUE_CATALOG,MockLeaderboard,botAvatar,AVATAR_COLORS,fmtShort,BADGE_DEFS,DAILY_REWARDS,TABLE_PROFILES,applyTableProfile,CUEBALL_FX,CueballFX,MockBackend,RoomTransport,seedFromRoomCode,EventBus};';
 vm.runInContext(code, ctx);
-const X = ctx.__x; const { NineBallRules, CONFIG, buildTableGeometry, PhysicsWorld, Rng, Game, MatchRules, ShotValidator, Store, levelInfo, rewardsForLevel, TABLE_PROFILES, applyTableProfile, CUEBALL_FX, CueballFX } = X;
+const X = ctx.__x; const { NineBallRules, CONFIG, buildTableGeometry, PhysicsWorld, Rng, Game, MatchRules, ShotValidator, Store, levelInfo, rewardsForLevel, TABLE_PROFILES, applyTableProfile, CUEBALL_FX, CueballFX, MockBackend, RoomTransport, seedFromRoomCode, EventBus } = X;
 const PHYSICS_BASE_TEST = CONFIG.physics.maxShotSpeed;
 let failed = 0;
 const ok = (name, cond, info) => { console.log((cond ? 'PASS ' : 'FAIL ') + name + (info !== undefined ? '  ' + info : '')); if (!cond) failed++; };
@@ -248,4 +248,57 @@ for (const [type, label] of [['9ball', '9-ball standar'], ['9call', '9-ball kant
   ok('rack 9-ball di meja American: 9 bola, tidak tumpang tindih, di dalam batas', on9.length === 9 && on9.every((b) => b.x > 0 && b.x < 880 && b.y > 0 && b.y < 400));
   applyTableProfile('standard');
 }
+(async () => {
+/* ---- MockBackend: akun, admin pertama, marketplace, room ---- */
+{ for (const k of Object.keys(mem)) delete mem[k];
+  const b1 = new MockBackend();
+  { const r = await b1.signUpPassword('bad-email', '123456', 'X'); ok('signup: email tidak valid ditolak', !r.ok); }
+  { const r = await b1.signUpPassword('a@a.com', '123', 'X'); ok('signup: password pendek ditolak', !r.ok); }
+  const su1 = await b1.signUpPassword('admin@test.com', 'rahasia1', 'Admin');
+  ok('akun pertama otomatis admin', su1.ok && su1.isFirstAdmin && b1.isAdmin());
+  ok('signup email ganda ditolak', !(await b1.signUpPassword('admin@test.com', 'lain12345', 'Y')).ok);
+  ok('signin salah password ditolak', !(await b1.signInPassword('admin@test.com', 'salah1234')).ok);
+  ok('signin benar diterima', (await b1.signInPassword('admin@test.com', 'rahasia1')).ok);
+  const su2 = await new MockBackend().signUpPassword('user2@test.com', 'rahasia2', 'User');   // instance baru → directory dibagi lewat localStorage bersama
+  ok('akun kedua BUKAN admin', su2.ok && !su2.isFirstAdmin);
+  const b2 = new MockBackend(); await b2.signInPassword('user2@test.com', 'rahasia2');
+  ok('user biasa: isAdmin false, publish ditolak', !b2.isAdmin() && b2.publish({ kind: 'cue', name: 'X', price: 100 }) === false);
+  const okPub = b1.publish({ kind: 'cue', name: 'Cue Jual', price: 5000, image: 'data:image/png;base64,AAAA', payload: { id: 'c1' } });
+  ok('admin bisa publish ke market', okPub === true && b1.listMarket().length === 1);
+  b2.user.coins = 100;
+  { const r = b2.buy(b1.listMarket()[0].id); ok('beli gagal jika koin kurang', !r.ok); }
+  b2.user.coins = 10000;
+  { const r = b2.buy(b1.listMarket()[0].id); ok('beli sukses memotong koin & menandai owned', r.ok && b2.user.coins === 5000 && b2.user.owned.includes(b1.listMarket()[0].id)); }
+  { const r = b2.buy(b1.listMarket()[0].id); ok('beli dua kali item sama ditolak', !r.ok); }
+  ok('unpublish oleh non-admin ditolak, oleh admin berhasil', b2.unpublish(b1.listMarket()[0].id) === false && b1.unpublish(b1.listMarket()[0].id) === true && b1.listMarket().length === 0);
+  ok('seedFromRoomCode deterministik utk kode sama', seedFromRoomCode('ABCDE') === seedFromRoomCode('ABCDE') && seedFromRoomCode('ABCDE') !== seedFromRoomCode('ZZZZZ'));
+  const code = b1.createRoom();
+  const j1 = b1.joinRoom(code); ok('host join room sendiri ditandai asHost', j1.ok && j1.asHost);
+  const j2 = b2.joinRoom(code); ok('guest join room valid', j2.ok && !j2.asHost);
+  ok('join kode tak ada ditolak', !b1.joinRoom('ZZZZZ').ok);
+  { let got = null; b1.onRoom(code, (m) => { got = m; }); b2.sendRoomShot(code, { angle: 1.23 });
+    await new Promise((r) => setTimeout(r, 30));
+    ok('shot lewat room sampai ke peer (via BroadcastChannel)', got && got.kind === 'shot' && got.shot.angle === 1.23); }
+  b1.bc && b1.bc.close(); b2.bc && b2.bc.close();
+}
+/* ---- RoomTransport: bentuk API sama dgn MockTransport, shot lokal + terkirim ke peer, tembakan sendiri tidak bergema ---- */
+{ for (const k of Object.keys(mem)) delete mem[k];
+  const bh = new MockBackend(); await bh.signUpPassword('host@t.com', 'rahasia1', 'Host');
+  const bg = new MockBackend(); await bg.signUpPassword('guest@t.com', 'rahasia1', 'Guest');
+  const code = bh.createRoom(); bg.joinRoom(code);
+  const th = new RoomTransport(bh, code), tg = new RoomTransport(bg, code);
+  let hostSaw = null, guestSaw = null; th.on('shot', (s) => { hostSaw = s; }); tg.on('shot', (s) => { guestSaw = s; });
+  th.sendShot({ angle: 0.5, seat: 0 });
+  await new Promise((r) => setTimeout(r, 30));
+  ok('RoomTransport: pengirim menerapkan shot ke dirinya sendiri', hostSaw && hostSaw.angle === 0.5);
+  ok('RoomTransport: penerima (peer) juga menerima shot yang sama', guestSaw && guestSaw.angle === 0.5);
+  ok('RoomTransport: shot sendiri tidak bergema kembali ke pengirim', (() => { let count = 0; th.on('shot', () => count++); tg.sendShot({ angle: 9, seat: 1 }); return true; })());
+  th.authority = () => 'ditolak demi tes';
+  let rejected = null; th.on('rejected', (e) => { rejected = e; });
+  th.sendShot({ angle: 1, seat: 0 });
+  ok('RoomTransport: authority menolak shot yang tidak valid', rejected && rejected.reason === 'ditolak demi tes');
+  bh.bc && bh.bc.close(); bg.bc && bg.bc.close();
+}
+
 console.log(failed ? '\n' + failed + ' tes gagal' : '\nSemua tes lulus'); process.exit(failed ? 1 : 0);
+})();

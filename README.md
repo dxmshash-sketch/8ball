@@ -10,14 +10,22 @@ Keyboard: ←/→ bidik (Shift = halus), Space tahan/lepas = power, Enter = temb
 
 ## Fitur
 - **Tiga permainan:** 8 Ball, **9 Ball standar**, dan **9 Ball · Pilih Kantong** (lihat aturan di bawah).
-- **Dua ukuran meja per pertandingan:** Standar (1600×728, seperti sebelumnya) dan **American** (800×400, bola lebih besar, kantong ≥ 2× diameter bola — lebih mudah dan lebih cepat). Dipilih di halaman Pilih permainan; berlaku untuk ketiga jenis permainan.
-- **Gameplay:** physics spin (top/back/side), 3 tingkat bot, dua pemain satu layar, mode online (simulasi lokal, siap disambung server).
+- **Dua ukuran meja per pertandingan:** Standar (1600×728, seperti sebelumnya) dan **American** (880×400, kantong bundar ≥ 2× diameter bola). Dipilih di halaman Pilih permainan; berlaku untuk ketiga jenis permainan.
+- **Gameplay:** physics spin (top/back/side), 3 tingkat bot, dua pemain satu layar.
+- **Akun & online sungguhan:** daftar/masuk dengan email+password atau Google, profil dengan foto avatar sendiri, **matchmaking online** (dipasangkan dengan pemain sungguhan lain lewat antrian, bukan bot), dan **Main dengan Teman** (buat room → bagikan kode → tembakan tersinkron real-time). Lihat `FIREBASE_SETUP.md` untuk mengaktifkan lintas perangkat sungguhan — tanpa itu, fitur ini berjalan dalam mode simulasi (`MockBackend`) yang hanya tersambung antar tab di browser yang sama.
+- **Peran admin & Market:** akun pertama yang mendaftar otomatis admin dan satu-satunya yang bisa membuka halaman Developer. Admin bisa memberi harga pada skin cue/meja/bola putih buatannya dan menerbitkannya ke halaman **Market**, tempat pemain lain membelinya dengan koin.
 - **Layout:** landscape lebar, landscape ponsel, dan **portrait** (meja diputar 90° agar mengisi layar). Kamera zoom halus ke area bidik (Setelan → Zoom saat membidik).
 - **Ekonomi BCPOOL:** akun baru 30.000 koin; taruhan 100 hingga 5.000.000; menang = 2× taruhan dikurangi biaya 5%; keluar di tengah = kalah. Hadiah harian 7 hari, bantuan koin saat hampir bangkrut.
 - **Level & hadiah:** kurva XP, animasi naik level, klaim hadiah (koin, cue, tema meja, avatar, bingkai).
 - **Profil:** avatar, warna, bingkai, dan badge pencapaian. **Peringkat:** simulasi lokal (antarmuka `MockLeaderboard` siap diganti server).
 - **Toko meja:** 8 tema bawaan (kayu, neon, ornamen, logam) dibeli dengan koin. **12 cue** dengan level & statistik yang memengaruhi permainan.
 - **Developer (Setelan → Halaman Developer):** buat skin cue dan meja dari gambar sendiri, pratinjau langsung, template panduan, ekspor/impor JSON. Skin hanya kosmetik dan tersimpan di perangkat.
+
+## Akun, online, dan Market
+- `src/18-backend.js` — `MockBackend` (aktif secara baku): auth, profil, market, dan room disimulasikan di `localStorage` + `BroadcastChannel`, jadi bisa dicoba sekarang juga dengan membuka dua tab di browser yang sama. **Tidak** menyambungkan perangkat berbeda.
+- `src/19-firebase-backend.js` — `FirebaseBackend`: implementasi nyata dengan bentuk API yang identik (auth, Firestore, Storage), otomatis aktif begitu `src/firebase-config.json` diisi. Lihat **`FIREBASE_SETUP.md`** untuk langkah lengkap (termasuk aturan keamanan Firestore yang wajib dipasang sebelum dipakai publik).
+- Pertandingan "online" (matchmaking maupun Main dengan Teman) memakai `RoomTransport`, bentuk lain dari `Transport` yang sama seperti mode lain — setiap tembakan divalidasi di sisi pengirim lalu disiarkan ke lawan dan diterapkan identik di kedua sisi (deterministik, karena fisika dan seed rack sama).
+- **Belum ada:** taruhan koin di mode Online/Main dengan Teman (disengaja — memindahkan koin antar pemain lewat client tanpa server tepercaya bisa dicurangi), dan validasi anti-cheat penuh di sisi penerima.
 
 ## Tata letak HUD
 Power bar vertikal ada di **kiri** layar; roda spin dan tombol bidik halus ada di **kanan** (di semua breakpoint: wide, compact, portrait — portrait memutar meja, bukan mengubah sisi kontrol). Bisa disesuaikan di `Renderer.layoutFor()` (margin meja) dan aturan `body[data-layout=...]` di `src/style.css`.

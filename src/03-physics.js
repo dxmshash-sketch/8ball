@@ -34,7 +34,7 @@ class Ball {
     this.x = 0; this.y = 0; this.vx = 0; this.vy = 0;
     this.rvx = 0; this.rvy = 0; this.wz = 0;
     this.orient = new Float32Array(9);
-    this.dirty = true; this.pocketIndex = -1; this.sinkT = 0; this.fallX = 0; this.fallY = 0;
+    this.dirty = true; this.pocketIndex = -1; this.sinkT = 0; this.fallX = 0; this.fallY = 0; this.fallVx = 0; this.fallVy = 0; this.pocketSeq = 0;
     this.resetOrientation(null);
   }
   /** Bola objek: nomor menghadap kamera dengan putaran acak. Bola putih: identitas. */
@@ -67,47 +67,705 @@ class EventQueue {
   clear() { this.count = 0; }
 }
 
+/** Membuat segmen garis kecil yang mengikuti busur lingkaran. */
+function addArcSegments(segs, cx, cy, radius, a1, a2, steps = 8) {
+  let px = cx + Math.cos(a1) * radius;
+  let py = cy + Math.sin(a1) * radius;
 
-/** Satu sumber kebenaran geometri meja: dipakai untuk collision DAN untuk digambar. */
-function buildTableGeometry(T) {
-  const W = T.width, H = T.height, ct = T.cushion, S2 = Math.SQRT2;
-  const tc = T.cornerMouth / S2, cb = T.cornerThroat / S2 - ct;    // ujung nose & ujung dasar cushion di dekat corner
-  const sn = T.sideMouth / 2, sb = T.sideThroat / 2;
-  const mx = (p) => [W - p[0], p[1]], my = (p) => [p[0], H - p[1]];
-  // urutan titik: nose-awal, nose-akhir, dasar-akhir, dasar-awal  (dasar lebih panjang dari nose → trapezoid)
-  const top = [[tc, 0], [W / 2 - sn, 0], [W / 2 - sb, -ct], [cb, -ct]];
-  const left = [[0, tc], [0, H - tc], [-ct, H - cb], [-ct, cb]];
-  const cushions = [top, top.map(mx), top.map(my), top.map(mx).map(my), left, left.map(mx)];
-  const segs = [];
-  for (const P of cushions) for (const [a, b] of [[0, 1], [1, 2], [3, 0]]) segs.push(P[a][0], P[a][1], P[b][0], P[b][1]);
-  const n = segs.length / 4, segLen2 = new Float64Array(n);
-  for (let i = 0; i < n; i++) { const ex = segs[4 * i + 2] - segs[4 * i], ey = segs[4 * i + 3] - segs[4 * i + 1]; segLen2[i] = ex * ex + ey * ey; }
-  const shapes = [], pockets = [];
-  const corner = (sx, sy_) => {
-    const f = (p) => [sx < 0 ? W - p[0] : p[0], sy_ < 0 ? H - p[1] : p[1]];
-    shapes.push({ tipA: f([tc, 0]), baseA: f([cb, -ct]), tipB: f([0, tc]), baseB: f([-ct, cb]), axis: [sx < 0 ? 1 : -1, sy_ < 0 ? 1 : -1].map((v) => v / S2), corner: true });
-  };
-  const side = (down) => {
-    const f = (p) => [p[0], down ? H - p[1] : p[1]];
-    shapes.push({ tipA: f([W / 2 - sn, 0]), baseA: f([W / 2 - sb, -ct]), tipB: f([W / 2 + sn, 0]), baseB: f([W / 2 + sb, -ct]), axis: [0, down ? 1 : -1], corner: false });
-  };
-  corner(1, 1); side(false); corner(-1, 1); corner(1, -1); side(true); corner(-1, -1);
-  // Kantong dirender & ditangkap sebagai LINGKARAN sejati: pusat = titik tengah baseA–baseB (leher cushion),
-  // radius = setengah jarak baseA–baseB — karena baseA & baseB simetris terhadap axis, keduanya otomatis
-  // tepat berada di lingkaran ini (diametrically opposite), sehingga corong terlihat benar-benar bulat.
-  for (const sh of shapes) {
-    const bax = sh.baseA[0], bay = sh.baseA[1], bbx = sh.baseB[0], bby = sh.baseB[1];
-    const ccx = (bax + bbx) / 2, ccy = (bay + bby) / 2, radius = Math.hypot(bax - bbx, bay - bby) / 2;
-    const a1 = Math.atan2(bay - ccy, bax - ccx), a2 = Math.atan2(bby - ccy, bbx - ccx), aOut = Math.atan2(sh.axis[1], sh.axis[0]);
-    const norm = (a) => { let d = a; while (d <= -Math.PI) d += 2 * Math.PI; while (d > Math.PI) d -= 2 * Math.PI; return d; };
-    const ccwSpan = norm(a2 - a1) >= 0 ? norm(a2 - a1) : norm(a2 - a1) + 2 * Math.PI, ccwMid = norm(a1 + ccwSpan / 2);
-    const anticlockwise = Math.abs(norm(ccwMid - aOut)) > Math.PI / 2;    // pilih arah sapuan yang melalui sisi luar (arah axis)
-    Object.assign(sh, { cx: ccx, cy: ccy, radius, a1, a2, anticlockwise });
-    pockets.push({ x: ccx, y: ccy, r: radius, corner: sh.corner, cx: ccx, cy: ccy, radius });
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    const a = a1 + (a2 - a1) * t;
+
+    const x = cx + Math.cos(a) * radius;
+    const y = cy + Math.sin(a) * radius;
+
+    segs.push(px, py, x, y);
+
+    px = x;
+    py = y;
   }
-  return { W, H, cushions, segs: new Float64Array(segs), segLen2, segCount: n, pockets, pocketShapes: shapes };
 }
 
+
+
+/** Satu sumber kebenaran geometri meja: dipakai untuk collision DAN untuk digambar. */
+// function buildTableGeometry(T) {
+//   const W = T.width, H = T.height, ct = T.cushion, S2 = Math.SQRT2;
+//   const tc = T.cornerMouth / S2, cb = T.cornerThroat / S2 - ct;    // ujung nose & ujung dasar cushion di dekat corner
+//   const sn = T.sideMouth / 2, sb = T.sideThroat / 2;
+//   const mx = (p) => [W - p[0], p[1]], my = (p) => [p[0], H - p[1]];
+//   // urutan titik: nose-awal, nose-akhir, dasar-akhir, dasar-awal  (dasar lebih panjang dari nose → trapezoid)
+//   const top = [[tc, 0], [W / 2 - sn, 0], [W / 2 - sb, -ct], [cb, -ct]];
+//   const left = [[0, tc], [0, H - tc], [-ct, H - cb], [-ct, cb]];
+//   const cushions = [top, top.map(mx), top.map(my), top.map(mx).map(my), left, left.map(mx)];
+//   const segs = [];
+//   for (const P of cushions)
+//     for (const [a, b] of [[0, 1], [1, 2], [3, 0]])
+//       segs.push(
+//         P[a][0], P[a][1],
+//         P[b][0], P[b][1]
+//       );
+//   const n = segs.length / 4, segLen2 = new Float64Array(n);
+//   for (let i = 0; i < n; i++) { const ex = segs[4 * i + 2] - segs[4 * i], ey = segs[4 * i + 3] - segs[4 * i + 1]; segLen2[i] = ex * ex + ey * ey; }
+//   const shapes = [], pockets = [];
+//   const corner = (sx, sy_) => {
+//     const f = (p) => [sx < 0 ? W - p[0] : p[0], sy_ < 0 ? H - p[1] : p[1]];
+//     shapes.push({ tipA: f([tc, 0]), baseA: f([cb, -ct]), tipB: f([0, tc]), baseB: f([-ct, cb]), axis: [sx < 0 ? 1 : -1, sy_ < 0 ? 1 : -1].map((v) => v / S2), corner: true });
+//   };
+//   const side = (down) => {
+//     const f = (p) => [p[0], down ? H - p[1] : p[1]];
+//     shapes.push({ tipA: f([W / 2 - sn, 0]), baseA: f([W / 2 - sb, -ct]), tipB: f([W / 2 + sn, 0]), baseB: f([W / 2 + sb, -ct]), axis: [0, down ? 1 : -1], corner: false });
+//   };
+//   corner(1, 1); side(false); corner(-1, 1); corner(1, -1); side(true); corner(-1, -1);
+//   // Kantong dirender & ditangkap sebagai LINGKARAN sejati: pusat = titik tengah baseA–baseB (leher cushion),
+//   // radius = setengah jarak baseA–baseB — karena baseA & baseB simetris terhadap axis, keduanya otomatis
+//   // tepat berada di lingkaran ini (diametrically opposite), sehingga corong terlihat benar-benar bulat.
+// for (const sh of shapes) {
+//   const bax = sh.baseA[0];
+//   const bay = sh.baseA[1];
+//   const bbx = sh.baseB[0];
+//   const bby = sh.baseB[1];
+
+//   const ccx0 = (bax + bbx) / 2;
+//   const ccy0 = (bay + bby) / 2;
+
+//   const radius =
+//     Math.hypot(bax - bbx, bay - bby) / 2;
+
+// // Semua pocket digeser keluar menuju rail.
+// // Corner: menuju sudut.
+// // Side: menuju rail atas/bawah.
+// const pocketShift = T.ballRadius * 0.9;
+
+// const ccx =
+//   ccx0 + sh.axis[0] * pocketShift;
+
+// const ccy =
+//   ccy0 + sh.axis[1] * pocketShift;
+
+//   const a1 = Math.atan2(
+//     bay - ccy,
+//     bax - ccx
+//   );
+
+//   const a2 = Math.atan2(
+//     bby - ccy,
+//     bbx - ccx
+//   );
+
+//   const aOut = Math.atan2(
+//     sh.axis[1],
+//     sh.axis[0]
+//   );
+
+//   const norm = (a) => {
+//     let d = a;
+//     while (d <= -Math.PI) d += 2 * Math.PI;
+//     while (d > Math.PI) d -= 2 * Math.PI;
+//     return d;
+//   };
+
+//   const ccwSpan =
+//     norm(a2 - a1) >= 0
+//       ? norm(a2 - a1)
+//       : norm(a2 - a1) + 2 * Math.PI;
+
+//   const ccwMid =
+//     norm(a1 + ccwSpan / 2);
+
+//   const anticlockwise =
+//     Math.abs(norm(ccwMid - aOut)) > Math.PI / 2;
+
+//   Object.assign(sh, {
+//     cx: ccx,
+//     cy: ccy,
+//     radius,
+//     a1,
+//     a2,
+//     anticlockwise
+//   });
+
+//   pockets.push({
+//     x: ccx,
+//     y: ccy,
+//     r: radius,
+//     corner: sh.corner,
+//     cx: ccx,
+//     cy: ccy,
+//     radius
+//   });
+// }
+/** =====================================================================
+ *  TABLE GEOMETRY
+ *
+ *  Pocket dibuat dengan:
+ *  - throat/pocket tetap berbentuk lingkaran
+ *  - jaw menuju pocket dibuat CURVED, bukan garis lurus
+ *  - geometry yang sama dipakai untuk physics collision
+ *  - 4 corner pocket + 2 side pocket
+ * ===================================================================== */
+function buildTableGeometry(T) {
+  const W = T.width;
+  const H = T.height;
+  const ct = T.cushion;
+  const S2 = Math.SQRT2;
+
+  /*
+   * ---------------------------------------------------------------
+   * BASIC TABLE DIMENSIONS
+   * ---------------------------------------------------------------
+   */
+  const tc = T.cornerMouth / S2;
+  const cb = T.cornerThroat / S2 - ct;
+
+  const sn = T.sideMouth / 2;
+  const sb = T.sideThroat / 2;
+
+  const mx = (p) => [W - p[0], p[1]];
+  const my = (p) => [p[0], H - p[1]];
+
+
+  /*
+   * ---------------------------------------------------------------
+   * ORIGINAL CUSHION SHAPES
+   *
+   * Point order:
+   *
+   *     0 -------- 1
+   *     |          /
+   *     |         /
+   *     3 ------- 2
+   *
+   * Tetapi sisi 1->2 dan 3->0 nanti dibuat CURVED.
+   * ---------------------------------------------------------------
+   */
+  const top = [
+    [tc, 0],
+    [W / 2 - sn, 0],
+    [W / 2 - sb, -ct],
+    [cb, -ct]
+  ];
+
+  const left = [
+    [0, tc],
+    [0, H - tc],
+    [-ct, H - cb],
+    [-ct, cb]
+  ];
+
+  const cushions = [
+    top,
+    top.map(mx),
+    top.map(my),
+    top.map(mx).map(my),
+    left,
+    left.map(mx)
+  ];
+
+
+  /*
+   * ---------------------------------------------------------------
+   * POCKET SHAPES
+   * ---------------------------------------------------------------
+   */
+  const shapes = [];
+  const pockets = [];
+
+  const corner = (sx, sy) => {
+    const f = (p) => [
+      sx < 0 ? W - p[0] : p[0],
+      sy < 0 ? H - p[1] : p[1]
+    ];
+
+    shapes.push({
+      tipA: f([tc, 0]),
+      baseA: f([cb, -ct]),
+
+      tipB: f([0, tc]),
+      baseB: f([-ct, cb]),
+
+      axis: [
+        sx < 0 ? 1 : -1,
+        sy < 0 ? 1 : -1
+      ].map((v) => v / S2),
+
+      corner: true
+    });
+  };
+
+
+  const side = (down) => {
+    const f = (p) => [
+      p[0],
+      down ? H - p[1] : p[1]
+    ];
+
+    shapes.push({
+      tipA: f([W / 2 - sn, 0]),
+      baseA: f([W / 2 - sb, -ct]),
+
+      tipB: f([W / 2 + sn, 0]),
+      baseB: f([W / 2 + sb, -ct]),
+
+      axis: [
+        0,
+        down ? 1 : -1
+      ],
+
+      corner: false
+    });
+  };
+
+
+  /*
+   * Order harus sama dengan kode physics:
+   *
+   * 0 = top-left
+   * 1 = top-middle
+   * 2 = top-right
+   * 3 = bottom-left
+   * 4 = bottom-middle
+   * 5 = bottom-right
+   */
+  corner(1, 1);
+  side(false);
+  corner(-1, 1);
+
+  corner(1, -1);
+  side(true);
+  corner(-1, -1);
+
+
+  /*
+   * ---------------------------------------------------------------
+   * POCKET CIRCLE
+   * ---------------------------------------------------------------
+   */
+  for (const sh of shapes) {
+    const bax = sh.baseA[0];
+    const bay = sh.baseA[1];
+
+    const bbx = sh.baseB[0];
+    const bby = sh.baseB[1];
+
+    /*
+     * Center pocket = midpoint baseA/baseB
+     */
+const baseCx = (bax + bbx) / 2;
+const baseCy = (bay + bby) / 2;
+
+    /*
+     * Radius pocket.
+     */
+    const radius =
+      Math.hypot(
+        bax - bbx,
+        bay - bby
+      ) / 2;
+    
+// ---------------------------------------------------------------
+// POCKET POSITION
+// ---------------------------------------------------------------
+
+
+
+// Corner pocket dibuat lebih dekat ke titik sudut.
+// Side pocket hanya digeser sedikit.
+const pocketShift = sh.corner
+  ? T.ballRadius * 1.4   // 4 lubang pojok
+  : T.ballRadius * 0.3;  // 2 lubang tengah
+
+const ccx =
+  baseCx + sh.axis[0] * pocketShift;
+
+const ccy =
+  baseCy + sh.axis[1] * pocketShift;
+   
+    /*
+     * Sudut awal / akhir lingkaran.
+     */
+    const a1 = Math.atan2(
+      bay - ccy,
+      bax - ccx
+    );
+
+    const a2 = Math.atan2(
+      bby - ccy,
+      bbx - ccx
+    );
+
+    const aOut = Math.atan2(
+      sh.axis[1],
+      sh.axis[0]
+    );
+
+
+    const norm = (a) => {
+      let d = a;
+
+      while (d <= -Math.PI) {
+        d += Math.PI * 2;
+      }
+
+      while (d > Math.PI) {
+        d -= Math.PI * 2;
+      }
+
+      return d;
+    };
+
+
+    const rawSpan = norm(a2 - a1);
+
+    const ccwSpan =
+      rawSpan >= 0
+        ? rawSpan
+        : rawSpan + Math.PI * 2;
+
+    const ccwMid =
+      norm(
+        a1 + ccwSpan / 2
+      );
+
+
+    const anticlockwise =
+      Math.abs(
+        norm(ccwMid - aOut)
+      ) > Math.PI / 2;
+
+
+    /*
+     * Simpan geometry pocket.
+     */
+    Object.assign(sh, {
+      cx: ccx,
+      cy: ccy,
+      radius,
+      a1,
+      a2,
+      anticlockwise
+    });
+
+
+    pockets.push({
+      x: ccx,
+      y: ccy,
+      r: radius,
+
+      corner: sh.corner,
+
+      cx: ccx,
+      cy: ccy,
+      radius
+    });
+  }
+
+
+  /*
+   * ===============================================================
+   * ROUNDED JAW GENERATOR
+   * ===============================================================
+   *
+   * Membuat curve dari:
+   *
+   *     TIP
+   *       \
+   *        )
+   *       )
+   *      BASE
+   *
+   * bukan:
+   *
+   *     TIP
+   *       \
+   *        \
+   *         \
+   *        BASE
+   *
+   * Jadi jaw tidak lagi terlihat sebagai garis kotak.
+   */
+  const addRoundedJaw = (
+    segs,
+    start,
+    end,
+    pocketCenter,
+    amount = 0.18,
+    steps = 10
+  ) => {
+
+    const sx = start[0];
+    const sy = start[1];
+
+    const ex = end[0];
+    const ey = end[1];
+
+    const cx = pocketCenter[0];
+    const cy = pocketCenter[1];
+
+
+    /*
+     * Vektor dari start menuju center pocket.
+     */
+    let dx = cx - sx;
+    let dy = cy - sy;
+
+    const len = Math.hypot(dx, dy) || 1;
+
+    dx /= len;
+    dy /= len;
+
+
+    /*
+     * Vektor perpendicular.
+     */
+    const px = -dy;
+    const py = dx;
+
+
+    /*
+     * Midpoint antara start dan end.
+     */
+    const mx = (sx + ex) / 2;
+    const my = (sy + ey) / 2;
+
+
+    /*
+     * Control point.
+     *
+     * Amount menentukan seberapa bulat jaw.
+     */
+    const distance =
+      Math.hypot(
+        ex - sx,
+        ey - sy
+      );
+
+    const bend =
+      distance * amount;
+
+
+    /*
+     * Control point diarahkan sedikit
+     * ke arah pocket.
+     */
+    const controlX =
+      mx + dx * bend;
+
+    const controlY =
+      my + dy * bend;
+
+
+    /*
+     * Quadratic Bézier.
+     */
+    let px0 = sx;
+    let py0 = sy;
+
+    for (let i = 1; i <= steps; i++) {
+
+      const t = i / steps;
+      const inv = 1 - t;
+
+      const x =
+        inv * inv * sx +
+        2 * inv * t * controlX +
+        t * t * ex;
+
+      const y =
+        inv * inv * sy +
+        2 * inv * t * controlY +
+        t * t * ey;
+
+
+      segs.push(
+        px0,
+        py0,
+        x,
+        y
+      );
+
+
+      px0 = x;
+      py0 = y;
+    }
+  };
+
+
+  /*
+   * ===============================================================
+   * BUILD COLLISION SEGMENTS
+   * ===============================================================
+   *
+   * Jangan lagi menggunakan:
+   *
+   * [0,1], [1,2], [3,0]
+   *
+   * secara langsung untuk jaw.
+   *
+   * Sekarang:
+   *
+   * 0 -> 1 = straight nose
+   *
+   * 1 -> 2 = ROUNDED JAW
+   *
+   * 3 -> 0 = ROUNDED JAW
+   *
+   * 2 -> 3 tetap tidak ditutup karena pocket opening.
+   * ===============================================================
+   */
+
+  const segs = [];
+
+
+  /*
+   * Helper untuk menambahkan 3 bagian
+   * dari satu cushion.
+   */
+  const addCushion = (P, shapeIndex) => {
+
+    const sh = shapes[shapeIndex];
+
+
+    /*
+     * -----------------------------------------------------------
+     * NOSE
+     * -----------------------------------------------------------
+     *
+     * P0 -> P1
+     */
+    segs.push(
+      P[0][0],
+      P[0][1],
+      P[1][0],
+      P[1][1]
+    );
+
+
+    /*
+     * -----------------------------------------------------------
+     * JAW A
+     * -----------------------------------------------------------
+     *
+     * P1 -> P2
+     *
+     * dibuat curve.
+     */
+    addRoundedJaw(
+      segs,
+      P[1],
+      P[2],
+      [sh.cx, sh.cy],
+      0.99,
+      12
+    );
+
+
+    /*
+     * -----------------------------------------------------------
+     * JAW B
+     * -----------------------------------------------------------
+     *
+     * P3 -> P0
+     */
+    addRoundedJaw(
+      segs,
+      P[3],
+      P[0],
+      [sh.cx, sh.cy],
+      0.99,
+      12
+    );
+  };
+
+
+  /*
+   * Map cushion -> pocketShape
+   *
+   * cushions:
+   *
+   * 0 top
+   * 1 top mirrored
+   * 2 bottom
+   * 3 bottom mirrored
+   * 4 left
+   * 5 right
+   *
+   * pocketShapes:
+   *
+   * 0 corner
+   * 1 side
+   * 2 corner
+   * 3 corner
+   * 4 side
+   * 5 corner
+   */
+
+  addCushion(top, 1);
+  addCushion(top.map(mx), 2);
+  addCushion(top.map(my), 4);
+  addCushion(top.map(mx).map(my), 5);
+
+  addCushion(left, 0);
+  addCushion(left.map(mx), 3);
+
+
+  /*
+   * ---------------------------------------------------------------
+   * SEGMENT LENGTH CACHE
+   * ---------------------------------------------------------------
+   */
+  const n = segs.length / 4;
+
+  const segLen2 =
+    new Float64Array(n);
+
+
+  for (let i = 0; i < n; i++) {
+
+    const k = i * 4;
+
+    const ex =
+      segs[k + 2] -
+      segs[k];
+
+    const ey =
+      segs[k + 3] -
+      segs[k + 1];
+
+
+    segLen2[i] =
+      ex * ex +
+      ey * ey;
+  }
+
+
+  /*
+   * ---------------------------------------------------------------
+   * RETURN
+   * ---------------------------------------------------------------
+   *
+   * Struktur tetap kompatibel dengan PhysicsWorld.
+   * ---------------------------------------------------------------
+   */
+  return {
+    W,
+    H,
+
+    cushions,
+
+    segs:
+      new Float64Array(segs),
+
+    segLen2,
+
+    segCount: n,
+
+    pockets,
+
+    pocketShapes: shapes
+  };
+}
+ 
 class PhysicsWorld {
   constructor(config) {
     this.cfg = config;
@@ -117,7 +775,7 @@ class PhysicsWorld {
     this.balls = [];
     for (let i = 0; i < 16; i++) this.balls.push(new Ball(i));
     this.events = new EventQueue(256);
-    this.accumulator = 0;
+    this.accumulator = 0; this.pocketCounter = 0;
     this.pockets = this.geo.pockets;
   }
 
@@ -229,13 +887,13 @@ class PhysicsWorld {
   }
 
   /** Pantulan cushion: restitusi tergantung kecepatan, gesekan tangensial mengubah side spin. */
-  _bounce(b, nx, ny, pen) {
+  _bounce(b, nx, ny, pen, eOverride) {
     const P = this.cfg.physics, R = this.R;
     b.x += nx * pen; b.y += ny * pen;
     const vn = b.vx * nx + b.vy * ny;
     if (vn >= 0) return;
     const sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
-    const e = Math.max(P.cushionMinRestitution, P.cushionRestitution - P.cushionSpeedLoss * sp);
+    const e = eOverride !== undefined ? eOverride : Math.max(P.cushionMinRestitution, P.cushionRestitution - P.cushionSpeedLoss * sp);
     const Jn = -(1 + e) * vn;
     b.vx += Jn * nx; b.vy += Jn * ny;
     const tx = -ny, ty = nx;
@@ -283,14 +941,14 @@ class PhysicsWorld {
     }
   }
 
-  /** Bola jatuh bila pusatnya melewati garis mulut kantong (sedikit lebih awal), atau bila melaju pelan tepat di bibir kantong — tidak ada bola yang "macet". */
-  /** Bola jatuh saat pusatnya cukup dekat lingkaran kantong sejati; bola pelan diberi toleransi lebih agar tak "macet" di bibir. */
+  /** Bola jatuh saat pusatnya masuk lingkaran kantong. Bola pelan selalu jatuh (toleransi lebih besar agar tak "macet" di bibir).
+   *  Bola CEPAT yang masuk menyamping ditolak oleh rahang (rattle) — lihat _jawRattle. */
   _checkPockets(b) {
     const R = this.R, slow = b.vx * b.vx + b.vy * b.vy < 8100;
     for (let p = 0; p < 6; p++) {
       const k = this.pockets[p], dx = b.x - k.cx, dy = b.y - k.cy, d2 = dx * dx + dy * dy;
       const cap = k.radius + (slow ? 0.68 : 0.14) * R;
-      if (d2 < cap * cap) { this._pocket(b, p); return; }
+      if (d2 < cap * cap) { if (!slow && this._jawRattle(b, p, dx, dy, d2)) return; this._pocket(b, p); return; }
     }
     const m = this.R * 4;
     if (b.x < -m || b.x > this.W + m || b.y < -m || b.y > this.H + m) {
@@ -300,10 +958,33 @@ class PhysicsWorld {
     }
   }
 
+  /** Rahang kantong (pocket jaw). Return true = bola TIDAK jatuh pada langkah ini.
+   *  - entry angle: cos antara arah laju dan garis ke pusat lubang (1 = lurus masuk).
+   *  - kecepatan maksimum yang masih jatuh = pocketMaxSpeed × (1 + 2.5·f²), f naik saat sudut makin lurus.
+   *  - topspin menaikkan batas (bola "merangkak" masuk), backspin menurunkannya (mudah memantul keluar).
+   *  - jika terlalu cepat/miring: bola dipantulkan oleh rahang sisi tempat ia menabrak (restitusi pocketJawRestitution);
+   *    gesekan tangensial di _bounce yang membuat sidespin membantu / melempar bola keluar.
+   *  Param opsional di CONFIG.physics: pocketMaxSpeed, pocketJawRestitution, pocketSpinGain, pocketJawAngle. */
+  _jawRattle(b, p, dx, dy, d2) {
+    const P = this.cfg.physics, sh = this.geo.pocketShapes[p], ax = sh.axis[0], ay = sh.axis[1];
+    if (dx * ax + dy * ay > 0) return false;                                    // sudah melewati pusat menuju dinding belakang: jatuh
+    const sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy), d = Math.sqrt(d2) || 1e-3;
+    const cosA = (b.vx * (-dx / d) + b.vy * (-dy / d)) / sp;
+    if (cosA < 0.05) return true;                                               // menjauh / menyamping di bibir: belum masuk
+    const base = P.pocketMaxSpeed || 0.5 * P.maxShotSpeed, f = Util.clamp((cosA - 0.5) / 0.5, 0, 1);
+    const rollAlong = (b.rvx * b.vx + b.rvy * b.vy) / sp, rel = Util.clamp((rollAlong - sp) / sp, -1, 1);   // >0 topspin, <0 backspin
+    const allow = base * (1 + 2.5 * f * f) * (1 + (P.pocketSpinGain === undefined ? 0.35 : P.pocketSpinGain) * rel);
+    if (sp <= allow) return false;                                              // cukup pelan / cukup lurus: jatuh
+    const tx = -ay, ty = ax, side = dx * tx + dy * ty >= 0 ? 1 : -1, ja = P.pocketJawAngle || 0.9;     // sisi rahang yang terkena
+    const nx = -ax * Math.cos(ja) - side * tx * Math.sin(ja), ny = -ay * Math.cos(ja) - side * ty * Math.sin(ja);
+    this._bounce(b, nx, ny, 0, P.pocketJawRestitution || 0.8);
+    return true;
+  }
+
   _pocket(b, index) {
     const sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
     b.state = BallState.POCKETED; b.pocketIndex = index; b.sinkT = 0;
-    b.fallX = b.x; b.fallY = b.y; b.stop();
+    b.fallX = b.x; b.fallY = b.y; b.fallVx = b.vx; b.fallVy = b.vy; b.pocketSeq = ++this.pocketCounter; b.stop();
     this.events.push(PhysicsEvent.POCKET, b.id, index, sp, this.pockets[index].x, this.pockets[index].y);
   }
 }

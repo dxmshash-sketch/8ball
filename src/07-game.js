@@ -76,10 +76,12 @@ class Game {
     return true;
   }
 
-  _rack(rng) { if (this.gameType === '8ball') this._rack8(rng); else this._rack9(rng); }
+  _clearTray() { for (const b of this.world.balls) b.pocketSeq = 0; }
+  _rack(rng) { this._clearTray(); if (this.gameType === '8ball') this._rack8(rng); else this._rack9(rng); }
   _hideBall(b) { b.state = BallState.POCKETED; b.sinkT = 1; b.stop(); b.x = -500; b.y = -500; b.pocketIndex = 0; }
   /** Rack 9-ball: diamond (1-2-3-2-1), bola 1 di apex (foot spot), bola 9 di tengah, sisanya acak. Bola 10–15 tidak dipakai. */
   _rack9(rng) {
+    this._clearTray();
     const T = this.cfg.table, R = T.ballRadius, balls = this.world.balls, dx = R * Math.sqrt(3) + 0.35, dy = R + 0.2, rows = [1, 2, 3, 2, 1], slots = [];
     rows.forEach((n, r) => { for (let c = 0; c < n; c++) slots.push({ x: T.footSpotX + r * dx, y: T.height / 2 + (c - (n - 1) / 2) * 2 * dy }); });
     const order = new Array(9), rest = rng.shuffle([2, 3, 4, 5, 6, 7, 8]); order[0] = 1; order[4] = 9;
@@ -99,6 +101,7 @@ class Game {
     b.x = T.footSpotX;
   }
   _rack8(rng) {
+    this._clearTray();
     const T = this.cfg.table, R = T.ballRadius, balls = this.world.balls;
     const dx = R * Math.sqrt(3) + 0.35, dy = R + 0.2;
     const slots = [];
@@ -238,7 +241,7 @@ class Game {
     this.time += dt;
     this.particles.update(dt);
     if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 2.4);
-    for (let i = 0; i < 16; i++) { const b = this.world.balls[i]; if (b.state === BallState.POCKETED && b.sinkT < 1) b.sinkT += dt / 0.12; }
+    for (let i = 0; i < 16; i++) { const b = this.world.balls[i]; if (b.state === BallState.POCKETED && b.sinkT < 1) b.sinkT += dt / 0.6; }
     if (this.paused) return;
     switch (this.sm.state) {
       case GameState.MENU: this._updateAttract(dt); break;

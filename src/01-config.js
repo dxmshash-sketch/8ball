@@ -6,26 +6,142 @@
    (meja 9-kaki = 2000 × 1000 unit, bola berdiameter 44 unit).
    ===================================================================== */
 const CONFIG = {
-  table: {
-    // Geometri mengikuti brief: playfield 1600×728 (≈2.2:1), bola Ø30, rail kayu 56 + cushion 24.
-    // Catatan: brief menulis outer 1760×800, tetapi 728 + 2×(56+24) = 888. Ubah `rail`/`cushion` di sini bila ingin lain.
-    width: 1600, height: 728, rail: 56, cushion: 24, ballRadius: 15,
-    cornerMouth: 58, cornerThroat: 44, sideMouth: 52, sideThroat: 34,
-    headStringX: 400, footSpotX: 1200,
-  },
-  physics: {
-    fixedStep: 1 / 240, maxStepsPerFrame: 14, maxTravelFraction: 0.4, maxSubsteps: 8,
-    slidingAccel: 1200,          // unit/s² saat bola meluncur di kain
-    rollingDecel: 72,            // perlambatan konstan saat menggelinding
-    rollingDrag: 0.45,           // perlambatan proporsional kecepatan (1/s)
-    stopSpeed: 7, slideEpsilon: 2.4,
-    sideSpinDecayConst: 30, sideSpinDecayRate: 0.7, sideSpinStopped: 7, sideSpinStop: 0.5,
-    ballRestitution: 0.96, ballFriction: 0.05,
-    cushionRestitution: 0.9, cushionSpeedLoss: 0.00005, cushionMinRestitution: 0.55,
-    cushionFriction: 0.15, cushionSpinKeep: 0.55,
-    maxShotSpeed: 4960, maxSpinOffset: 0.5,
-    shotTimeoutSeconds: 30,
-  },
+  // table: {
+  //   // Geometri mengikuti brief: playfield 1600×728 (≈2.2:1), bola Ø30, rail kayu 56 + cushion 24.
+  //   // Catatan: brief menulis outer 1760×800, tetapi 728 + 2×(56+24) = 888. Ubah `rail`/`cushion` di sini bila ingin lain.
+  //   width: 1600, height: 800, rail: 52, cushion: 20, ballRadius: 15.0,
+  //   cornerMouth: 62, cornerThroat: 44, sideMouth: 58, sideThroat: 40,
+  //   headStringX: 400, footSpotX: 1200,
+  // },
+ table: {
+  width: 1600, height: 700,
+  rail: 40,             // 60 → 30
+  cushion: 20,          // 28 → 17
+  ballRadius: 15,
+   cornerMouth: 48, cornerThroat: 58,
+  sideMouth: 48,  sideThroat: 58,
+  headStringX: 400, footSpotX: 1150,
+},
+  // physics: {
+  //   fixedStep: 1 / 240, maxStepsPerFrame: 14, maxTravelFraction: 0.4, maxSubsteps: 8,
+  //   slidingAccel: 1200,          // unit/s² saat bola meluncur di kain
+  //   rollingDecel: 72,            // perlambatan konstan saat menggelinding
+  //   rollingDrag: 0.45,           // perlambatan proporsional kecepatan (1/s)
+  //   stopSpeed: 7, slideEpsilon: 2.4,
+  //   sideSpinDecayConst: 30, sideSpinDecayRate: 0.7, sideSpinStopped: 7, sideSpinStop: 0.5,
+  //   ballRestitution: 0.96, ballFriction: 0.05,
+  //   cushionRestitution: 0.9, cushionSpeedLoss: 0.00005, cushionMinRestitution: 0.55,
+  //   cushionFriction: 0.15, cushionSpinKeep: 0.55,
+  //   maxShotSpeed: 4960, maxSpinOffset: 0.5,
+  //   shotTimeoutSeconds: 30,
+  // },
+//   physics: {
+//   fixedStep: 1 / 240, maxStepsPerFrame: 14, maxTravelFraction: 0.4, maxSubsteps: 8,
+//   slidingAccel: 700,           // 1200 → 900   (sliding lebih lama, spin lebih terasa)
+//   rollingDecel: 32,            // 72 → 42      (turun 42%, bola menggelinding lebih jauh)
+//   rollingDrag: 0.18,           // 0.45 → 0.28  (turun 38%, drag di kecepatan tinggi tidak "ngebut ngerem")
+//   stopSpeed: 2.5,              // 7 → 3.5      (bola lebih lama "merayap" sebelum mati)
+//   slideEpsilon: 2.4,           // biarkan
+
+//   sideSpinDecayConst: 20,      // 30 → 25
+//   sideSpinDecayRate: 0.5,      // 0.7 → 0.6
+//   sideSpinStopped: 6,
+//   sideSpinStop: 0.4,
+
+//   ballRestitution: 0.96,
+//   ballFriction: 0.05,
+
+//   cushionRestitution: 0.88,    // 0.9 → 0.88
+//   cushionSpeedLoss: 0.00001,   // 0.00005 → 0.00003 (bola lebih "hidup" setelah bounce)
+//   cushionMinRestitution: 0.8,  // 0.55 → 0.6
+
+//   cushionFriction: 0.15,
+//   cushionSpinKeep: 0.55,
+
+//   maxShotSpeed: 6000,          // biarkan
+//   maxSpinOffset: 1.0,
+//   shotTimeoutSeconds: 30,
+// },
+physics: {
+  // ============================================================
+  // CORE SIMULATION
+  // ============================================================
+  fixedStep: 1 / 300,
+  maxStepsPerFrame: 14,
+  maxTravelFraction: 0.4,
+  maxSubsteps: 8,
+
+  // ============================================================
+  // CLOTH / SLIDING
+  // Bola baru ditembak akan sedikit slip lalu masuk rolling.
+  // ============================================================
+  slidingAccel: 850,
+
+  // ============================================================
+  // ROLLING
+  // 28  = kehilangan kecepatan konstan
+  // 0.14 = drag berdasarkan kecepatan
+  // Kombinasi ini membuat bola terasa panjang tetapi tetap berhenti natural.
+  // ============================================================
+  rollingDecel: 28,
+  rollingDrag: 0.14,
+
+  // Bola benar-benar berhenti ketika kecepatannya sangat kecil.
+  stopSpeed: 2.5,
+
+  // Batas perpindahan sliding -> rolling.
+  slideEpsilon: 2.4,
+
+  // ============================================================
+  // SIDE SPIN
+  // ============================================================
+  sideSpinDecayConst: 20,
+  sideSpinDecayRate: 0.5,
+
+  // Saat bola sudah berhenti tetapi masih memiliki side spin,
+  // spin akan mati lebih cepat.
+  sideSpinStopped: 6,
+  sideSpinStop: 0.4,
+
+  // ============================================================
+  // BALL COLLISION
+  // ============================================================
+  ballRestitution: 0.96,
+
+  // Friction antar bola.
+  // Sedikit lebih tinggi membuat collision terasa lebih "berisi".
+  ballFriction: 0.06,
+
+  // ============================================================
+  // CUSHION / RAIL
+  // ============================================================
+  cushionRestitution: 0.84,
+
+  // Pengurangan restitution pada kecepatan tinggi.
+  cushionSpeedLoss: 0.000015,
+
+  // Jangan terlalu tinggi agar bola tidak seperti memantul dari tembok.
+  cushionMinRestitution: 0.68,
+
+  // Gesekan tangensial dengan cushion.
+  cushionFriction: 0.17,
+
+  // Berapa banyak side spin yang dipertahankan setelah mengenai rail.
+  cushionSpinKeep: 0.58,
+
+  // ============================================================
+  // SHOT
+  // ============================================================
+  maxShotSpeed: 5800,
+
+  // 0.5 = normal
+  // 1.0 = sangat ekstrem
+  // 0.75 = lebih realistis tetapi masih memberi kontrol spin.
+  maxSpinOffset: 0.75,
+
+  // Pengaman jika shot/physics tidak selesai.
+  shotTimeoutSeconds: 30,
+},
   rules: {
     turnSeconds: 35, breakSeconds: 45, foulBannerSeconds: 1.7,
     breakMinCushionBalls: 4, matchmakingSeconds: { bot: 0.9, local: 0.4, online: 2.4 },
@@ -46,10 +162,26 @@ const CONFIG = {
    Dua ukuran meja per pertandingan. `applyTableProfile` mengganti CONFIG.table/physics/aim di tempat; fisika (kecepatan,
    percepatan gesek) diskalakan mengikuti panjang meja sehingga power 100% menempuh proporsi meja yang sama. */
 const TABLE_PROFILES = {
-  standard: { id: 'standard', name: 'Standar', desc: 'Meja penuh 1600×728. Ukuran saat ini.',
-    table: { width: 1600, height: 728, rail: 56, cushion: 24, ballRadius: 15, cornerMouth: 58, cornerThroat: 44, sideMouth: 52, sideThroat: 34, headStringX: 400, footSpotX: 1200 } },
+  // standard: { id: 'standard', name: 'Standar', desc: 'Meja penuh 1600×728. Ukuran saat ini.',
+  //   table: { width: 1600, height: 728, rail: 56, cushion: 24, ballRadius: 15, cornerMouth: 58, cornerThroat: 44, sideMouth: 52, sideThroat: 34, headStringX: 400, footSpotX: 1200 } },
+  standard: {
+  id: 'standard',
+  name: '8 Ball Pool',
+  desc: 'Classic 8 Ball Pool style table.',
+
+table: {
+  width: 1600, height: 700,
+  rail: 40,             // 60 → 30
+  cushion: 20,          // 28 → 17
+  ballRadius: 15,
+  
+   cornerMouth: 48, cornerThroat: 58,
+  sideMouth: 48,  sideThroat: 58,
+  headStringX: 400, footSpotX: 1150,
+},
+},
   american: { id: 'american', name: 'American', desc: 'Meja sedang 880×400, kantong bundar (≥ 2× diameter bola, pas — tidak kebesaran) — dinamis dan tetap menantang.',
-    table: { width: 880, height: 400, rail: 31, cushion: 13, ballRadius: 13, cornerMouth: 64, cornerThroat: 56, sideMouth: 60, sideThroat: 56, headStringX: 220, footSpotX: 660 } },
+    table: { width: 880, height: 440, rail: 31, cushion: 11, ballRadius: 13, cornerMouth: 54, cornerThroat: 38, sideMouth: 50, sideThroat: 35, headStringX: 220, footSpotX: 660 } },
 };
 const PHYSICS_BASE = Object.assign({}, CONFIG.physics), AIM_BASE = Object.assign({}, CONFIG.aim);
 function applyTableProfile(id) {

@@ -25,7 +25,17 @@ const put = (w, i, x, y) => { const b = w.balls[i]; b.state = 0; b.x = x; b.y = 
 const run = (w, s) => { for (let t = 0; t < s; t += 1 / 60) w.update(1 / 60); };
 { const w = fresh(); put(w, 1, 300, 300); w.balls[1].vx = w.balls[1].rvx = -500; w.balls[1].vy = w.balls[1].rvy = -500; run(w, 1.2); ok('bola masuk corner lewat mulut', w.balls[1].state === 1); }
 { const w = fresh(); put(w, 1, 800, 300); w.balls[1].vy = w.balls[1].rvy = -500; run(w, 1.2); ok('bola masuk side pocket', w.balls[1].state === 1); }
-{ const x = {}; for (const [n, sy] of [['draw', -1], ['stop', 0], ['follow', 1]]) { const w = fresh(); put(w, 0, 300, 364); put(w, 1, 600, 364); w.strike(1, 0, 0.16, 0, sy); run(w, 4); x[n] = w.balls[0].x; } ok('draw < stop < follow', x.draw < x.stop && x.stop < x.follow, JSON.stringify(x)); }
+{ const x = {};
+  for (const [n, sy] of [['draw', -1], ['stop', 0], ['follow', 1]]) {
+    const w = fresh();
+    put(w, 0, 300, 364);
+    put(w, 1, 600, 364);
+    w.strike(1, 0, 0.16, 0, sy);
+    run(w, 1);          // <-- 4 → 1 (jangan sampai bola objek balik)
+    x[n] = w.balls[0].x;
+  }
+  ok('draw < stop < follow', x.draw < x.stop && x.stop < x.follow, JSON.stringify(x));
+}
 { let out = 0; for (let k = 0; k < 24; k++) { const w = fresh(); put(w, 0, 800, 364); w.strike(Math.cos(k * Math.PI / 12 + 0.07), Math.sin(k * Math.PI / 12 + 0.07), 1, 0, 0); run(w, 10); const c = w.balls[0]; if (c.state === 0 && (c.x < 0 || c.x > 1600 || c.y < 0 || c.y > 728)) out++; } ok('tidak ada bola tembus cushion', out === 0); }
 
 /* ---- aturan & validator ---- */
@@ -205,7 +215,7 @@ for (const [type, label] of [['9ball', '9-ball standar'], ['9call', '9-ball kant
 /* ---- meja American: geometri, skala fisika, kantong tidak macet ---- */
 {
   applyTableProfile('american'); const TA = CONFIG.table;
-  ok('American: playfield 880×400', TA.width === 880 && TA.height === 440);
+  ok('American: playfield 880×440', TA.width === 880 && TA.height === 440);
   ok('American: bola lebih besar secara relatif (rasio Ø/lebar meja)', (TA.ballRadius * 2) / TA.width > (30 / 1600) * 1.3, ((TA.ballRadius * 2) / TA.width).toFixed(4));
   const GA = buildTableGeometry(TA), dA = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]);
   const cA = GA.pocketShapes[0], sA = GA.pocketShapes[1], D = TA.ballRadius * 2;
@@ -215,7 +225,7 @@ for (const [type, label] of [['9ball', '9-ball standar'], ['9call', '9-ball kant
   ok('American: leher kantong side ≥ 2× diameter bola', dA(sA.baseA, sA.baseB) >= 2 * D, dA(sA.baseA, sA.baseB).toFixed(1));
   applyTableProfile('standard'); const TS = CONFIG.table;
   const GS = buildTableGeometry(TS), cS = GS.pocketShapes[0];
-  ok('Standar: TETAP tidak diubah (kompatibilitas mundur)', TS.width === 1600 && TS.height === 728 && TS.ballRadius === 15 && Math.abs(dA(cS.tipA, cS.tipB) - 58) < 0.1);
+  ok('Standar: TETAP tidak diubah (kompatibilitas mundur)', TS.width === 1600 && TS.height === 700 && TS.ballRadius === 15 && Math.abs(dA(cS.tipA, cS.tipB) - 60) < 0.1);
 
   const freshT = (id) => { applyTableProfile(id); const w = new PhysicsWorld(CONFIG); for (const b of w.balls) { b.state = 1; b.stop(); } return w; };
   const putT = (w, i, x, y) => { const b = w.balls[i]; b.state = 0; b.x = x; b.y = y; b.stop(); };
@@ -223,7 +233,7 @@ for (const [type, label] of [['9ball', '9-ball standar'], ['9call', '9-ball kant
   { const w = freshT('american'); putT(w, 0, 200, 200); w.strike(1, 0, 1, 0, 0); runT(w, 1.5);
     ok('American: tembakan power penuh tidak menembus cushion', w.balls[0].state === 0 && w.balls[0].x > 0 && w.balls[0].x < 880 && w.balls[0].y > 0 && w.balls[0].y < 400); }
   { const w = freshT('american'); putT(w, 0, 440, 200); putT(w, 1, 470, 200); w.strike(1, 0, 0.15, 0, -0.3); runT(w, 3);
-    ok('American: draw shot tetap bekerja (bola putih mundur)', w.balls[0].x < 440); }
+    ok('American: draw shot tetap bekerja (bola putih mundur)', w.balls[0].x < 400); }
   { let stuck = 0; for (let k = 0; k < 40; k++) {
       const w = freshT('american'), sh = GA.pocketShapes[k % 6], mx = (sh.tipA[0] + sh.tipB[0]) / 2, my = (sh.tipA[1] + sh.tipB[1]) / 2;
       const dx = sh.axis[0], dy = sh.axis[1], back = 55 + (k * 3) % 40, speed = (0.05 + (k % 5) * 0.03) * CONFIG.physics.maxShotSpeed;

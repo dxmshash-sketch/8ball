@@ -181,8 +181,9 @@ table: {
 },
 },
   american: { id: 'american', name: 'American', desc: 'Meja sedang 880×400, kantong bundar (≥ 2× diameter bola, pas — tidak kebesaran) — dinamis dan tetap menantang.',
-    table: { width: 880, height: 440, rail: 31, cushion: 11, ballRadius: 13, cornerMouth: 52, cornerThroat: 48, sideMouth: 42, sideThroat: 42, headStringX: 220, footSpotX: 660 } },
+    table: { width: 880, height: 440, rail: 31, cushion: 13, ballRadius: 13, cornerMouth: 64, cornerThroat: 56, sideMouth: 60, sideThroat: 56, headStringX: 220, footSpotX: 660 } },
 };
+
 const PHYSICS_BASE = Object.assign({}, CONFIG.physics), AIM_BASE = Object.assign({}, CONFIG.aim);
 function applyTableProfile(id) {
   const p = TABLE_PROFILES[id] || TABLE_PROFILES.standard, k = p.table.width / TABLE_PROFILES.standard.table.width;

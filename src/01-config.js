@@ -18,8 +18,8 @@ const CONFIG = {
   rail: 40,             // 60 → 30
   cushion: 20,          // 28 → 17
   ballRadius: 15,
-   cornerMouth: 48, cornerThroat: 58,
-  sideMouth: 48,  sideThroat: 58,
+  cornerMouth: 60, cornerThroat: 55,
+  sideMouth: 60,  sideThroat: 58,
   headStringX: 400, footSpotX: 1150,
 },
   // physics: {
@@ -175,13 +175,13 @@ table: {
   cushion: 20,          // 28 → 17
   ballRadius: 15,
   
-   cornerMouth: 48, cornerThroat: 58,
-  sideMouth: 48,  sideThroat: 58,
+  cornerMouth: 60, cornerThroat: 55,
+  sideMouth: 60,  sideThroat: 58,
   headStringX: 400, footSpotX: 1150,
 },
 },
   american: { id: 'american', name: 'American', desc: 'Meja sedang 880×400, kantong bundar (≥ 2× diameter bola, pas — tidak kebesaran) — dinamis dan tetap menantang.',
-    table: { width: 880, height: 440, rail: 31, cushion: 11, ballRadius: 13, cornerMouth: 54, cornerThroat: 38, sideMouth: 50, sideThroat: 35, headStringX: 220, footSpotX: 660 } },
+    table: { width: 880, height: 440, rail: 31, cushion: 11, ballRadius: 13, cornerMouth: 52, cornerThroat: 48, sideMouth: 42, sideThroat: 42, headStringX: 220, footSpotX: 660 } },
 };
 const PHYSICS_BASE = Object.assign({}, CONFIG.physics), AIM_BASE = Object.assign({}, CONFIG.aim);
 function applyTableProfile(id) {

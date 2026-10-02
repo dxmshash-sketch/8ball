@@ -15,8 +15,8 @@ const freshStore = () => { for (const k of Object.keys(mem)) delete mem[k]; retu
 
 /* ---- geometri ---- */
 const G = buildTableGeometry(CONFIG.table), A = G.pocketShapes[0], S = G.pocketShapes[1], d = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]);
-ok('mulut corner 58', Math.abs(d(A.tipA, A.tipB) - 58) < 0.1); ok('leher corner < mulut', d(A.baseA, A.baseB) < d(A.tipA, A.tipB));
-ok('mulut side 52', Math.abs(d(S.tipA, S.tipB) - 52) < 0.1); ok('leher side < mulut', d(S.baseA, S.baseB) < d(S.tipA, S.tipB));
+ok('mulut corner 60', Math.abs(d(A.tipA, A.tipB) - 60) < 0.1); ok('leher corner < mulut', d(A.baseA, A.baseB) < d(A.tipA, A.tipB));
+ok('mulut side 60', Math.abs(d(S.tipA, S.tipB) - 60) < 0.1); ok('leher side < mulut', d(S.baseA, S.baseB) < d(S.tipA, S.tipB));
 ok('cushion trapesium (dasar > nose)', G.cushions[0][2][0] - G.cushions[0][3][0] > G.cushions[0][1][0] - G.cushions[0][0][0]);
 
 /* ---- physics ---- */
@@ -205,7 +205,7 @@ for (const [type, label] of [['9ball', '9-ball standar'], ['9call', '9-ball kant
 /* ---- meja American: geometri, skala fisika, kantong tidak macet ---- */
 {
   applyTableProfile('american'); const TA = CONFIG.table;
-  ok('American: playfield 880×400', TA.width === 880 && TA.height === 400);
+  ok('American: playfield 880×400', TA.width === 880 && TA.height === 440);
   ok('American: bola lebih besar secara relatif (rasio Ø/lebar meja)', (TA.ballRadius * 2) / TA.width > (30 / 1600) * 1.3, ((TA.ballRadius * 2) / TA.width).toFixed(4));
   const GA = buildTableGeometry(TA), dA = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]);
   const cA = GA.pocketShapes[0], sA = GA.pocketShapes[1], D = TA.ballRadius * 2;

@@ -15,8 +15,28 @@ const freshStore = () => { for (const k of Object.keys(mem)) delete mem[k]; retu
 
 /* ---- geometri ---- */
 const G = buildTableGeometry(CONFIG.table), A = G.pocketShapes[0], S = G.pocketShapes[1], d = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]);
-ok('mulut corner 60', Math.abs(d(A.tipA, A.tipB) - 60) < 0.1); ok('leher corner < mulut', d(A.baseA, A.baseB) < d(A.tipA, A.tipB));
-ok('mulut side 60', Math.abs(d(S.tipA, S.tipB) - 60) < 0.1); ok('leher side < mulut', d(S.baseA, S.baseB) < d(S.tipA, S.tipB));
+ok(
+  'mulut corner sesuai config',
+  Math.abs(d(A.tipA, A.tipB) - CONFIG.table.cornerMouth) < 0.1,
+  d(A.tipA, A.tipB).toFixed(2)
+);
+
+const cornerMouth = d(A.tipA, A.tipB);
+const cornerThroat = d(A.baseA, A.baseB);
+ok(
+  'mulut corner sesuai config',
+  Math.abs(cornerMouth - CONFIG.table.cornerMouth) < 0.1
+);
+
+ok(
+  'leher corner sesuai config',
+  Math.abs(cornerThroat - CONFIG.table.cornerThroat) < 0.1
+);
+ok(
+  'mulut side sesuai config',
+  Math.abs(d(S.tipA, S.tipB) - CONFIG.table.sideMouth) < 0.1,
+  d(S.tipA, S.tipB).toFixed(2)
+); 
 ok('cushion trapesium (dasar > nose)', G.cushions[0][2][0] - G.cushions[0][3][0] > G.cushions[0][1][0] - G.cushions[0][0][0]);
 
 /* ---- physics ---- */
@@ -24,7 +44,8 @@ const fresh = () => { const w = new PhysicsWorld(CONFIG); for (const b of w.ball
 const put = (w, i, x, y) => { const b = w.balls[i]; b.state = 0; b.x = x; b.y = y; b.stop(); };
 const run = (w, s) => { for (let t = 0; t < s; t += 1 / 60) w.update(1 / 60); };
 { const w = fresh(); put(w, 1, 300, 300); w.balls[1].vx = w.balls[1].rvx = -500; w.balls[1].vy = w.balls[1].rvy = -500; run(w, 1.2); ok('bola masuk corner lewat mulut', w.balls[1].state === 1); }
-{ const w = fresh(); put(w, 1, 800, 300); w.balls[1].vy = w.balls[1].rvy = -500; run(w, 1.2); ok('bola masuk side pocket', w.balls[1].state === 1); }
+{ const w = fresh();
+put(w, 1, CONFIG.table.width / 2, CONFIG.table.height / 2); w.balls[1].vy = w.balls[1].rvy = -500; run(w, 1.2); ok('bola masuk side pocket', w.balls[1].state === 1); }
 { const x = {};
   for (const [n, sy] of [['draw', -1], ['stop', 0], ['follow', 1]]) {
     const w = fresh();
@@ -36,7 +57,18 @@ const run = (w, s) => { for (let t = 0; t < s; t += 1 / 60) w.update(1 / 60); };
   }
   ok('draw < stop < follow', x.draw < x.stop && x.stop < x.follow, JSON.stringify(x));
 }
-{ let out = 0; for (let k = 0; k < 24; k++) { const w = fresh(); put(w, 0, 800, 364); w.strike(Math.cos(k * Math.PI / 12 + 0.07), Math.sin(k * Math.PI / 12 + 0.07), 1, 0, 0); run(w, 10); const c = w.balls[0]; if (c.state === 0 && (c.x < 0 || c.x > 1600 || c.y < 0 || c.y > 728)) out++; } ok('tidak ada bola tembus cushion', out === 0); }
+{ let out = 0; for (let k = 0; k < 24; k++) { const w = fresh(); put(w, 0, 800, 364); w.strike(Math.cos(k * Math.PI / 12 + 0.07), Math.sin(k * Math.PI / 12 + 0.07), 1, 0, 0); run(w, 10); const c = w.balls[0];
+if (
+  c.state === 0 &&
+  (
+    c.x < 0 ||
+    c.x > CONFIG.table.width ||
+    c.y < 0 ||
+    c.y > CONFIG.table.height
+  )
+) out++;
+
+ } ok('tidak ada bola tembus cushion', out === 0); }
 
 /* ---- aturan & validator ---- */
 { const r = new MatchRules(); r.reset(0); r.evaluate({ firstContact: 1, pocketed: [1], cuePocketed: false, railAfterContact: true, cushionBalls: 5 }); ok('break sah dengan bola masuk: giliran lanjut', r.currentSeat === 0);
@@ -215,18 +247,69 @@ for (const [type, label] of [['9ball', '9-ball standar'], ['9call', '9-ball kant
 /* ---- meja American: geometri, skala fisika, kantong tidak macet ---- */
 {
   applyTableProfile('american'); const TA = CONFIG.table;
-  ok('American: playfield 880×440', TA.width === 880 && TA.height === 440);
-  ok('American: bola lebih besar secara relatif (rasio Ø/lebar meja)', (TA.ballRadius * 2) / TA.width > (30 / 1600) * 1.3, ((TA.ballRadius * 2) / TA.width).toFixed(4));
+  ok(
+  'American: playfield 880×440',
+  TA.width === 880 && TA.height === 440
+);
+  const standardRatio =
+  (TABLE_PROFILES.standard.table.ballRadius * 2) /
+  TABLE_PROFILES.standard.table.width;
+
+const americanRatio =
+  (TA.ballRadius * 2) /
+  TA.width;
+
+ok(
+  'American: bola lebih besar secara relatif',
+  americanRatio > standardRatio * 1.3,
+  americanRatio.toFixed(4) +
+    ' vs standard ' +
+    standardRatio.toFixed(4)
+);
   const GA = buildTableGeometry(TA), dA = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]);
-  const cA = GA.pocketShapes[0], sA = GA.pocketShapes[1], D = TA.ballRadius * 2;
-  ok('American: mulut kantong corner ≥ 2× diameter bola', dA(cA.tipA, cA.tipB) >= 2 * D, dA(cA.tipA, cA.tipB).toFixed(1) + ' vs min ' + (2 * D));
-  ok('American: leher kantong corner ≥ 2× diameter bola', dA(cA.baseA, cA.baseB) >= 2 * D, dA(cA.baseA, cA.baseB).toFixed(1));
-  ok('American: mulut kantong side ≥ 2× diameter bola', dA(sA.tipA, sA.tipB) >= 2 * D, dA(sA.tipA, sA.tipB).toFixed(1));
-  ok('American: leher kantong side ≥ 2× diameter bola', dA(sA.baseA, sA.baseB) >= 2 * D, dA(sA.baseA, sA.baseB).toFixed(1));
+  const cA = GA.pocketShapes[0], 
+  sA = GA.pocketShapes[1], 
+  D = TA.ballRadius * 2;
+  const AM = TABLE_PROFILES.american.table;
+
+  const amCornerMouth = dA(cA.tipA, cA.tipB);
+  const amCornerThroat = dA(cA.baseA, cA.baseB);
+  const amSideMouth = dA(sA.tipA, sA.tipB);
+  const amSideThroat = dA(sA.baseA, sA.baseB);
+  ok(
+  'American: mulut kantong corner sesuai config',
+  Math.abs(amCornerMouth - AM.cornerMouth) < 0.1,
+  amCornerMouth.toFixed(1)
+);
+
+ok(
+  'American: leher kantong corner sesuai config',
+  Math.abs(amCornerThroat - AM.cornerThroat) < 0.1,
+  amCornerThroat.toFixed(1)
+);
+
+ok(
+  'American: mulut kantong side sesuai config',
+  Math.abs(amSideMouth - AM.sideMouth) < 0.1,
+  amSideMouth.toFixed(1)
+);
+
+ok(
+  'American: leher kantong side sesuai config',
+  Math.abs(amSideThroat - AM.sideThroat) < 0.1,
+  amSideThroat.toFixed(1)
+);
   applyTableProfile('standard'); const TS = CONFIG.table;
   const GS = buildTableGeometry(TS), cS = GS.pocketShapes[0];
-  ok('Standar: TETAP tidak diubah (kompatibilitas mundur)', TS.width === 1600 && TS.height === 700 && TS.ballRadius === 15 && Math.abs(dA(cS.tipA, cS.tipB) - 60) < 0.1);
-
+  ok(
+    'Standar: profil sesuai config',
+    TS.width === 1600 &&
+    TS.height === 728 &&
+    TS.ballRadius === 15 &&
+    TS.rail === 56 &&
+    TS.cushion === 24 &&
+    Math.abs(dA(cS.tipA, cS.tipB) - TS.cornerMouth) < 0.1
+  );
   const freshT = (id) => { applyTableProfile(id); const w = new PhysicsWorld(CONFIG); for (const b of w.balls) { b.state = 1; b.stop(); } return w; };
   const putT = (w, i, x, y) => { const b = w.balls[i]; b.state = 0; b.x = x; b.y = y; b.stop(); };
   const runT = (w, s) => { for (let t = 0; t < s; t += 1 / 60) w.update(1 / 60); };

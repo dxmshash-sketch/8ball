@@ -34,7 +34,13 @@ class Ball {
     this.x = 0; this.y = 0; this.vx = 0; this.vy = 0;
     this.rvx = 0; this.rvy = 0; this.wz = 0;
     this.orient = new Float32Array(9);
-    this.dirty = true; this.pocketIndex = -1; this.sinkT = 0; this.fallX = 0; this.fallY = 0; this.fallVx = 0; this.fallVy = 0; this.pocketSeq = 0;
+    this.dirty = true; this.pocketIndex = -1; this.sinkT = 0; this.fallX = 0; this.fallY = 0; this.fallVx = 0; this.fallVy = 0; this.pocketSeq = 0; this.wallHits = 0; this.sx = 0; this.sy = 0; this.svx = 0; this.svy = 0; this.sz = 0; this.sHit = false;
+    // === TAMBAHAN: kontrol animasi jatuh ===
+    this.sDownV = 0;       // kecepatan turun (z) — untuk drop yang lebih natural
+    this.sOrbit = 0;       // sudut orbit di dalam lubang (ngguling di dinding)
+    this.sOrbitV = 0;      // kecepatan orbit
+    this.sTilt = 0;        // sudut miring saat jatuh (bukan cuma lurus ke pusat)
+    // === END ===
     this.resetOrientation(null);
   }
   /** Bola objek: nomor menghadap kamera dengan putaran acak. Bola putih: identitas. */
@@ -67,323 +73,57 @@ class EventQueue {
   clear() { this.count = 0; }
 }
 
-/** Membuat segmen garis kecil yang mengikuti busur lingkaran. */
-function addArcSegments(segs, cx, cy, radius, a1, a2, steps = 8) {
-  let px = cx + Math.cos(a1) * radius;
-  let py = cy + Math.sin(a1) * radius;
-
-  for (let i = 1; i <= steps; i++) {
-    const t = i / steps;
-    const a = a1 + (a2 - a1) * t;
-
-    const x = cx + Math.cos(a) * radius;
-    const y = cy + Math.sin(a) * radius;
-
-    segs.push(px, py, x, y);
-
-    px = x;
-    py = y;
-  }
-}
-
-
 
 /** Satu sumber kebenaran geometri meja: dipakai untuk collision DAN untuk digambar. */
-// function buildTableGeometry(T) {
-//   const W = T.width, H = T.height, ct = T.cushion, S2 = Math.SQRT2;
-//   const tc = T.cornerMouth / S2, cb = T.cornerThroat / S2 - ct;    // ujung nose & ujung dasar cushion di dekat corner
-//   const sn = T.sideMouth / 2, sb = T.sideThroat / 2;
-//   const mx = (p) => [W - p[0], p[1]], my = (p) => [p[0], H - p[1]];
-//   // urutan titik: nose-awal, nose-akhir, dasar-akhir, dasar-awal  (dasar lebih panjang dari nose → trapezoid)
-//   const top = [[tc, 0], [W / 2 - sn, 0], [W / 2 - sb, -ct], [cb, -ct]];
-//   const left = [[0, tc], [0, H - tc], [-ct, H - cb], [-ct, cb]];
-//   const cushions = [top, top.map(mx), top.map(my), top.map(mx).map(my), left, left.map(mx)];
-//   const segs = [];
-//   for (const P of cushions)
-//     for (const [a, b] of [[0, 1], [1, 2], [3, 0]])
-//       segs.push(
-//         P[a][0], P[a][1],
-//         P[b][0], P[b][1]
-//       );
-//   const n = segs.length / 4, segLen2 = new Float64Array(n);
-//   for (let i = 0; i < n; i++) { const ex = segs[4 * i + 2] - segs[4 * i], ey = segs[4 * i + 3] - segs[4 * i + 1]; segLen2[i] = ex * ex + ey * ey; }
-//   const shapes = [], pockets = [];
-//   const corner = (sx, sy_) => {
-//     const f = (p) => [sx < 0 ? W - p[0] : p[0], sy_ < 0 ? H - p[1] : p[1]];
-//     shapes.push({ tipA: f([tc, 0]), baseA: f([cb, -ct]), tipB: f([0, tc]), baseB: f([-ct, cb]), axis: [sx < 0 ? 1 : -1, sy_ < 0 ? 1 : -1].map((v) => v / S2), corner: true });
-//   };
-//   const side = (down) => {
-//     const f = (p) => [p[0], down ? H - p[1] : p[1]];
-//     shapes.push({ tipA: f([W / 2 - sn, 0]), baseA: f([W / 2 - sb, -ct]), tipB: f([W / 2 + sn, 0]), baseB: f([W / 2 + sb, -ct]), axis: [0, down ? 1 : -1], corner: false });
-//   };
-//   corner(1, 1); side(false); corner(-1, 1); corner(1, -1); side(true); corner(-1, -1);
-//   // Kantong dirender & ditangkap sebagai LINGKARAN sejati: pusat = titik tengah baseA–baseB (leher cushion),
-//   // radius = setengah jarak baseA–baseB — karena baseA & baseB simetris terhadap axis, keduanya otomatis
-//   // tepat berada di lingkaran ini (diametrically opposite), sehingga corong terlihat benar-benar bulat.
-// for (const sh of shapes) {
-//   const bax = sh.baseA[0];
-//   const bay = sh.baseA[1];
-//   const bbx = sh.baseB[0];
-//   const bby = sh.baseB[1];
-
-//   const ccx0 = (bax + bbx) / 2;
-//   const ccy0 = (bay + bby) / 2;
-
-//   const radius =
-//     Math.hypot(bax - bbx, bay - bby) / 2;
-
-// // Semua pocket digeser keluar menuju rail.
-// // Corner: menuju sudut.
-// // Side: menuju rail atas/bawah.
-// const pocketShift = T.ballRadius * 0.9;
-
-// const ccx =
-//   ccx0 + sh.axis[0] * pocketShift;
-
-// const ccy =
-//   ccy0 + sh.axis[1] * pocketShift;
-
-//   const a1 = Math.atan2(
-//     bay - ccy,
-//     bax - ccx
-//   );
-
-//   const a2 = Math.atan2(
-//     bby - ccy,
-//     bbx - ccx
-//   );
-
-//   const aOut = Math.atan2(
-//     sh.axis[1],
-//     sh.axis[0]
-//   );
-
-//   const norm = (a) => {
-//     let d = a;
-//     while (d <= -Math.PI) d += 2 * Math.PI;
-//     while (d > Math.PI) d -= 2 * Math.PI;
-//     return d;
-//   };
-
-//   const ccwSpan =
-//     norm(a2 - a1) >= 0
-//       ? norm(a2 - a1)
-//       : norm(a2 - a1) + 2 * Math.PI;
-
-//   const ccwMid =
-//     norm(a1 + ccwSpan / 2);
-
-//   const anticlockwise =
-//     Math.abs(norm(ccwMid - aOut)) > Math.PI / 2;
-
-//   Object.assign(sh, {
-//     cx: ccx,
-//     cy: ccy,
-//     radius,
-//     a1,
-//     a2,
-//     anticlockwise
-//   });
-
-//   pockets.push({
-//     x: ccx,
-//     y: ccy,
-//     r: radius,
-//     corner: sh.corner,
-//     cx: ccx,
-//     cy: ccy,
-//     radius
-//   });
-// }
-/** =====================================================================
- *  TABLE GEOMETRY
- *
- *  Pocket dibuat dengan:
- *  - throat/pocket tetap berbentuk lingkaran
- *  - jaw menuju pocket dibuat CURVED, bukan garis lurus
- *  - geometry yang sama dipakai untuk physics collision
- *  - 4 corner pocket + 2 side pocket
- * ===================================================================== */
 function buildTableGeometry(T) {
-  const W = T.width;
-  const H = T.height;
-  const ct = T.cushion;
-  const S2 = Math.SQRT2;
-
-  /*
-   * ---------------------------------------------------------------
-   * BASIC TABLE DIMENSIONS
-   * ---------------------------------------------------------------
-   */
-  const tc = T.cornerMouth / S2;
-  const cb = T.cornerThroat / S2 - ct;
-
-  const sn = T.sideMouth / 2;
-  const sb = T.sideThroat / 2;
-
-  const mx = (p) => [W - p[0], p[1]];
-  const my = (p) => [p[0], H - p[1]];
-
-
-  /*
-   * ---------------------------------------------------------------
-   * ORIGINAL CUSHION SHAPES
-   *
-   * Point order:
-   *
-   *     0 -------- 1
-   *     |          /
-   *     |         /
-   *     3 ------- 2
-   *
-   * Tetapi sisi 1->2 dan 3->0 nanti dibuat CURVED.
-   * ---------------------------------------------------------------
-   */
-  const top = [
-    [tc, 0],
-    [W / 2 - sn, 0],
-    [W / 2 - sb, -ct],
-    [cb, -ct]
-  ];
-
-  const left = [
-    [0, tc],
-    [0, H - tc],
-    [-ct, H - cb],
-    [-ct, cb]
-  ];
-
-  const cushions = [
-    top,
-    top.map(mx),
-    top.map(my),
-    top.map(mx).map(my),
-    left,
-    left.map(mx)
-  ];
-
-
-  /*
-   * ---------------------------------------------------------------
-   * POCKET SHAPES
-   * ---------------------------------------------------------------
-   */
-  const shapes = [];
-  const pockets = [];
-
-  const corner = (sx, sy) => {
-    const f = (p) => [
-      sx < 0 ? W - p[0] : p[0],
-      sy < 0 ? H - p[1] : p[1]
-    ];
-
-    shapes.push({
-      tipA: f([tc, 0]),
-      baseA: f([cb, -ct]),
-
-      tipB: f([0, tc]),
-      baseB: f([-ct, cb]),
-
-      axis: [
-        sx < 0 ? 1 : -1,
-        sy < 0 ? 1 : -1
-      ].map((v) => v / S2),
-
-      corner: true
-    });
+  const W = T.width, H = T.height, ct = T.cushion, S2 = Math.SQRT2;
+  const tc = T.cornerMouth / S2, cb = T.cornerThroat / S2 - ct;    // ujung nose & ujung dasar cushion di dekat corner
+  const sn = T.sideMouth / 2, sb = T.sideThroat / 2;
+  const mx = (p) => [W - p[0], p[1]], my = (p) => [p[0], H - p[1]];
+  // urutan titik: nose-awal, nose-akhir, dasar-akhir, dasar-awal  (dasar lebih panjang dari nose → trapezoid)
+  const top = [[tc, 0], [W / 2 - sn, 0], [W / 2 - sb, -ct], [cb, -ct]];
+  const left = [[0, tc], [0, H - tc], [-ct, H - cb], [-ct, cb]];
+  const cushions = [top, top.map(mx), top.map(my), top.map(mx).map(my), left, left.map(mx)];
+  const segs = [];
+  for (const P of cushions) for (const [a, b] of [[0, 1], [1, 2], [3, 0]]) segs.push(P[a][0], P[a][1], P[b][0], P[b][1]);
+  const n = segs.length / 4, segLen2 = new Float64Array(n);
+  for (let i = 0; i < n; i++) { const ex = segs[4 * i + 2] - segs[4 * i], ey = segs[4 * i + 3] - segs[4 * i + 1]; segLen2[i] = ex * ex + ey * ey; }
+  const shapes = [], pockets = [];
+  const corner = (sx, sy_) => {
+    const f = (p) => [sx < 0 ? W - p[0] : p[0], sy_ < 0 ? H - p[1] : p[1]];
+    shapes.push({ tipA: f([tc, 0]), baseA: f([cb, -ct]), tipB: f([0, tc]), baseB: f([-ct, cb]), axis: [sx < 0 ? 1 : -1, sy_ < 0 ? 1 : -1].map((v) => v / S2), corner: true });
   };
-
-
   const side = (down) => {
-    const f = (p) => [
-      p[0],
-      down ? H - p[1] : p[1]
-    ];
-
-    shapes.push({
-      tipA: f([W / 2 - sn, 0]),
-      baseA: f([W / 2 - sb, -ct]),
-
-      tipB: f([W / 2 + sn, 0]),
-      baseB: f([W / 2 + sb, -ct]),
-
-      axis: [
-        0,
-        down ? 1 : -1
-      ],
-
-      corner: false
-    });
+    const f = (p) => [p[0], down ? H - p[1] : p[1]];
+    shapes.push({ tipA: f([W / 2 - sn, 0]), baseA: f([W / 2 - sb, -ct]), tipB: f([W / 2 + sn, 0]), baseB: f([W / 2 + sb, -ct]), axis: [0, down ? 1 : -1], corner: false });
   };
-
-
-  /*
-   * Order harus sama dengan kode physics:
-   *
-   * 0 = top-left
-   * 1 = top-middle
-   * 2 = top-right
-   * 3 = bottom-left
-   * 4 = bottom-middle
-   * 5 = bottom-right
-   */
-  corner(1, 1);
-  side(false);
-  corner(-1, 1);
-
-  corner(1, -1);
-  side(true);
-  corner(-1, -1);
-
-
-  /*
-   * ---------------------------------------------------------------
-   * POCKET CIRCLE
-   * ---------------------------------------------------------------
-   */
+  corner(1, 1); side(false); corner(-1, 1); corner(1, -1); side(true); corner(-1, -1);
+  // Kantong dirender & ditangkap sebagai LINGKARAN sejati: pusat = titik tengah baseA–baseB (leher cushion),
+  // radius = setengah jarak baseA–baseB — karena baseA & baseB simetris terhadap axis, keduanya otomatis
+  // tepat berada di lingkaran ini (diametrically opposite), sehingga corong terlihat benar-benar bulat.
   for (const sh of shapes) {
-    const bax = sh.baseA[0];
-    const bay = sh.baseA[1];
+    const bax = sh.baseA[0], bay = sh.baseA[1];
+    const bbx = sh.baseB[0], bby = sh.baseB[1];
 
-    const bbx = sh.baseB[0];
-    const bby = sh.baseB[1];
+    // Titik tengah asli mulut/leher pocket
+    const baseCx = (bax + bbx) / 2;
+    const baseCy = (bay + bby) / 2;
 
-    /*
-     * Center pocket = midpoint baseA/baseB
-     */
-const baseCx = (bax + bbx) / 2;
-const baseCy = (bay + bby) / 2;
+    // =========================================================
+    // POSISI POCKET
+    // 4 CORNER POCKET  -> jauh lebih dekat ke titik sudut
+    // 2 SIDE POCKET    -> hanya bergeser sedikit
+    // =========================================================
+    const pocketShift = sh.corner
+      ? T.ballRadius * 1   // 4 lubang pojok
+      : T.ballRadius * 0.7;  // 2 lubang tengah
 
-    /*
-     * Radius pocket.
-     */
-    const radius =
-      Math.hypot(
-        bax - bbx,
-        bay - bby
-      ) / 2;
-    
-// ---------------------------------------------------------------
-// POCKET POSITION
-// ---------------------------------------------------------------
+    // sh.axis menunjuk ke arah LUAR meja / arah sudut pocket
+    const ccx = baseCx + sh.axis[0] * pocketShift;
+    const ccy = baseCy + sh.axis[1] * pocketShift;
 
+    const radius = Math.hypot(bax - bbx, bay - bby) / 2;
 
-
-// Corner pocket dibuat lebih dekat ke titik sudut.
-// Side pocket hanya digeser sedikit.
-const pocketShift = sh.corner
-  ? T.ballRadius * 1.4   // 4 lubang pojok
-  : T.ballRadius * 0.3;  // 2 lubang tengah
-
-const ccx =
-  baseCx + sh.axis[0] * pocketShift;
-
-const ccy =
-  baseCy + sh.axis[1] * pocketShift;
-   
-    /*
-     * Sudut awal / akhir lingkaran.
-     */
     const a1 = Math.atan2(
       bay - ccy,
       bax - ccx
@@ -399,44 +139,25 @@ const ccy =
       sh.axis[0]
     );
 
-
     const norm = (a) => {
       let d = a;
-
-      while (d <= -Math.PI) {
-        d += Math.PI * 2;
-      }
-
-      while (d > Math.PI) {
-        d -= Math.PI * 2;
-      }
-
+      while (d <= -Math.PI) d += 2 * Math.PI;
+      while (d > Math.PI) d -= 2 * Math.PI;
       return d;
     };
 
-
-    const rawSpan = norm(a2 - a1);
-
     const ccwSpan =
-      rawSpan >= 0
-        ? rawSpan
-        : rawSpan + Math.PI * 2;
+      norm(a2 - a1) >= 0
+        ? norm(a2 - a1)
+        : norm(a2 - a1) + 2 * Math.PI;
 
-    const ccwMid =
-      norm(
-        a1 + ccwSpan / 2
-      );
-
+    const ccwMid = norm(
+      a1 + ccwSpan / 2
+    );
 
     const anticlockwise =
-      Math.abs(
-        norm(ccwMid - aOut)
-      ) > Math.PI / 2;
+      Math.abs(norm(ccwMid - aOut)) > Math.PI / 2;
 
-
-    /*
-     * Simpan geometry pocket.
-     */
     Object.assign(sh, {
       cx: ccx,
       cy: ccy,
@@ -446,326 +167,19 @@ const ccy =
       anticlockwise
     });
 
-
     pockets.push({
       x: ccx,
       y: ccy,
       r: radius,
-
       corner: sh.corner,
-
       cx: ccx,
       cy: ccy,
       radius
     });
   }
-
-
-  /*
-   * ===============================================================
-   * ROUNDED JAW GENERATOR
-   * ===============================================================
-   *
-   * Membuat curve dari:
-   *
-   *     TIP
-   *       \
-   *        )
-   *       )
-   *      BASE
-   *
-   * bukan:
-   *
-   *     TIP
-   *       \
-   *        \
-   *         \
-   *        BASE
-   *
-   * Jadi jaw tidak lagi terlihat sebagai garis kotak.
-   */
-  const addRoundedJaw = (
-    segs,
-    start,
-    end,
-    pocketCenter,
-    amount = 0.18,
-    steps = 10
-  ) => {
-
-    const sx = start[0];
-    const sy = start[1];
-
-    const ex = end[0];
-    const ey = end[1];
-
-    const cx = pocketCenter[0];
-    const cy = pocketCenter[1];
-
-
-    /*
-     * Vektor dari start menuju center pocket.
-     */
-    let dx = cx - sx;
-    let dy = cy - sy;
-
-    const len = Math.hypot(dx, dy) || 1;
-
-    dx /= len;
-    dy /= len;
-
-
-    /*
-     * Vektor perpendicular.
-     */
-    const px = -dy;
-    const py = dx;
-
-
-    /*
-     * Midpoint antara start dan end.
-     */
-    const mx = (sx + ex) / 2;
-    const my = (sy + ey) / 2;
-
-
-    /*
-     * Control point.
-     *
-     * Amount menentukan seberapa bulat jaw.
-     */
-    const distance =
-      Math.hypot(
-        ex - sx,
-        ey - sy
-      );
-
-    const bend =
-      distance * amount;
-
-
-    /*
-     * Control point diarahkan sedikit
-     * ke arah pocket.
-     */
-    const controlX =
-      mx + dx * bend;
-
-    const controlY =
-      my + dy * bend;
-
-
-    /*
-     * Quadratic Bézier.
-     */
-    let px0 = sx;
-    let py0 = sy;
-
-    for (let i = 1; i <= steps; i++) {
-
-      const t = i / steps;
-      const inv = 1 - t;
-
-      const x =
-        inv * inv * sx +
-        2 * inv * t * controlX +
-        t * t * ex;
-
-      const y =
-        inv * inv * sy +
-        2 * inv * t * controlY +
-        t * t * ey;
-
-
-      segs.push(
-        px0,
-        py0,
-        x,
-        y
-      );
-
-
-      px0 = x;
-      py0 = y;
-    }
-  };
-
-
-  /*
-   * ===============================================================
-   * BUILD COLLISION SEGMENTS
-   * ===============================================================
-   *
-   * Jangan lagi menggunakan:
-   *
-   * [0,1], [1,2], [3,0]
-   *
-   * secara langsung untuk jaw.
-   *
-   * Sekarang:
-   *
-   * 0 -> 1 = straight nose
-   *
-   * 1 -> 2 = ROUNDED JAW
-   *
-   * 3 -> 0 = ROUNDED JAW
-   *
-   * 2 -> 3 tetap tidak ditutup karena pocket opening.
-   * ===============================================================
-   */
-
-  const segs = [];
-
-
-  /*
-   * Helper untuk menambahkan 3 bagian
-   * dari satu cushion.
-   */
-  const addCushion = (P, shapeIndex) => {
-
-    const sh = shapes[shapeIndex];
-
-
-    /*
-     * -----------------------------------------------------------
-     * NOSE
-     * -----------------------------------------------------------
-     *
-     * P0 -> P1
-     */
-    segs.push(
-      P[0][0],
-      P[0][1],
-      P[1][0],
-      P[1][1]
-    );
-
-
-    /*
-     * -----------------------------------------------------------
-     * JAW A
-     * -----------------------------------------------------------
-     *
-     * P1 -> P2
-     *
-     * dibuat curve.
-     */
-    addRoundedJaw(
-      segs,
-      P[1],
-      P[2],
-      [sh.cx, sh.cy],
-      0.99,
-      12
-    );
-
-
-    /*
-     * -----------------------------------------------------------
-     * JAW B
-     * -----------------------------------------------------------
-     *
-     * P3 -> P0
-     */
-    addRoundedJaw(
-      segs,
-      P[3],
-      P[0],
-      [sh.cx, sh.cy],
-      0.99,
-      12
-    );
-  };
-
-
-  /*
-   * Map cushion -> pocketShape
-   *
-   * cushions:
-   *
-   * 0 top
-   * 1 top mirrored
-   * 2 bottom
-   * 3 bottom mirrored
-   * 4 left
-   * 5 right
-   *
-   * pocketShapes:
-   *
-   * 0 corner
-   * 1 side
-   * 2 corner
-   * 3 corner
-   * 4 side
-   * 5 corner
-   */
-
-  addCushion(top, 1);
-  addCushion(top.map(mx), 2);
-  addCushion(top.map(my), 4);
-  addCushion(top.map(mx).map(my), 5);
-
-  addCushion(left, 0);
-  addCushion(left.map(mx), 3);
-
-
-  /*
-   * ---------------------------------------------------------------
-   * SEGMENT LENGTH CACHE
-   * ---------------------------------------------------------------
-   */
-  const n = segs.length / 4;
-
-  const segLen2 =
-    new Float64Array(n);
-
-
-  for (let i = 0; i < n; i++) {
-
-    const k = i * 4;
-
-    const ex =
-      segs[k + 2] -
-      segs[k];
-
-    const ey =
-      segs[k + 3] -
-      segs[k + 1];
-
-
-    segLen2[i] =
-      ex * ex +
-      ey * ey;
-  }
-
-
-  /*
-   * ---------------------------------------------------------------
-   * RETURN
-   * ---------------------------------------------------------------
-   *
-   * Struktur tetap kompatibel dengan PhysicsWorld.
-   * ---------------------------------------------------------------
-   */
-  return {
-    W,
-    H,
-
-    cushions,
-
-    segs:
-      new Float64Array(segs),
-
-    segLen2,
-
-    segCount: n,
-
-    pockets,
-
-    pocketShapes: shapes
-  };
+  return { W, H, cushions, segs: new Float64Array(segs), segLen2, segCount: n, pockets, pocketShapes: shapes };
 }
- 
+
 class PhysicsWorld {
   constructor(config) {
     this.cfg = config;
@@ -941,52 +355,501 @@ class PhysicsWorld {
     }
   }
 
-  /** Bola jatuh saat pusatnya masuk lingkaran kantong. Bola pelan selalu jatuh (toleransi lebih besar agar tak "macet" di bibir).
-   *  Bola CEPAT yang masuk menyamping ditolak oleh rahang (rattle) — lihat _jawRattle. */
-  _checkPockets(b) {
-    const R = this.R, slow = b.vx * b.vx + b.vy * b.vy < 8100;
+  /** Kantong = rahang (segmen cushion, tabrakan nyata) + rongga bundar dengan DINDING BELAKANG di setengah lingkaran sisi luar.
+   *  - Bola pelan (< 90 u/s) jatuh begitu pusatnya dekat bibir lubang.
+   *  - Bola lain meluncur masuk ke rongga sampai menabrak dinding belakang. Di titik itu diputuskan:
+   *      masuk  → _pocket (animasi "nabrak ujung lubang lalu menggelinding turun"),
+   *      ditolak → memantul keras dari dinding belakang dan keluar lagi (rattle); rahang bisa menahannya lagi.
+   *  - Keputusan memakai sudut masuk terhadap sumbu lubang, kecepatan, dan top/backspin (lihat _pocketAccepts).
+   *  - Bola yang sudah memantul ≥ 2× dari dinding belakang pasti jatuh (rattle yang akhirnya masuk). */
+  // _checkPockets(b) {
+  //   const R = this.R, P = this.cfg.physics, v2 = b.vx * b.vx + b.vy * b.vy, slow = v2 < 8100;
+  //   for (let p = 0; p < 6; p++) {
+  //     const k = this.pockets[p], dx = b.x - k.cx, dy = b.y - k.cy, d2 = dx * dx + dy * dy, r = k.radius;
+  //     if (slow) { const cap = r + 0.68 * R; if (d2 < cap * cap) { this._pocket(b, p); return; } continue; }
+  //     if (d2 >= r * r) { if (b.wallHits && d2 > (r + 2 * R) * (r + 2 * R)) b.wallHits = 0; continue; }
+  //     const sh = this.geo.pocketShapes[p];
+  //     if (dx * sh.axis[0] + dy * sh.axis[1] <= 0) continue;                       // masih di setengah depan (sisi meja)
+  //     const d = Math.sqrt(d2), rw = r * (P.pocketBackWall || 0.8);
+  //     if (d < rw) continue;
+  //     const nx = dx / d, ny = dy / d;
+  //     if (b.vx * nx + b.vy * ny <= 0) continue;                                     // sedang menjauhi dinding belakang
+  //     if (b.wallHits >= 2 || this._pocketAccepts(b, sh, Math.sqrt(v2))) { this._pocket(b, p, nx, ny); return; }
+  //     b.wallHits++; this._bounce(b, -nx, -ny, d - rw, P.pocketJawRestitution || 0.62);   // rattle: mental dari dinding belakang
+  //     return;
+  //   }
+  //   const m = this.R * 4;
+  //   if (b.x < -m || b.x > this.W + m || b.y < -m || b.y > this.H + m) {
+  //     let best = 0, bd = Infinity;
+  //     for (let p = 0; p < 6; p++) { const k = this.pockets[p], d = (b.x - k.x) ** 2 + (b.y - k.y) ** 2; if (d < bd) { bd = d; best = p; } }
+  //     this._pocket(b, best);
+  //   }
+  // }
+
+// _checkPockets(b) {
+//   const R = this.R, P = this.cfg.physics, v2 = b.vx * b.vx + b.vy * b.vy;
+//   // slow threshold lebih ketat: hanya bola yang benar-benar pelan (< 50 u/s) yang langsung masuk
+//   const slow = v2 < 2500;
+//   for (let p = 0; p < 6; p++) {
+//     const k = this.pockets[p], dx = b.x - k.cx, dy = b.y - k.cy, d2 = dx * dx + dy * dy, r = k.radius;
+
+//     // === BOLA PELAN: langsung masuk, tapi hanya jika benar-benar di dekat pusat lubang ===
+//     if (slow) {
+//       const cap = r + 0.35 * R;                    // ↓ dari 0.68 → 0.35 (lebih ketat)
+//       if (d2 < cap * cap) { this._pocket(b, p); return; }
+//       continue;
+//     }
+
+//     // === BOLA CEPAT: hanya jika benar-benar di dalam lubang ===
+//     if (d2 >= r * r) {
+//       if (b.wallHits && d2 > (r + 2 * R) * (r + 2 * R)) b.wallHits = 0;
+//       continue;
+//     }
+
+//     const sh = this.geo.pocketShapes[p];
+//     if (dx * sh.axis[0] + dy * sh.axis[1] <= 0) continue;    // masih di setengah depan (sisi meja)
+
+//     const d = Math.sqrt(d2);
+//     const rw = r * (P.pocketBackWall || 0.92);              // ↑ dari 0.8 → 0.92 (dinding lebih dekat bibir)
+//     if (d < rw) continue;
+//     const nx = dx / d, ny = dy / d;
+//     if (b.vx * nx + b.vy * ny <= 0) continue;                // sedang menjauhi dinding belakang
+
+//     if (b.wallHits >= 2 || this._pocketAccepts(b, sh, Math.sqrt(v2))) {
+//       this._pocket(b, p, nx, ny);
+//       return;
+//     }
+//     b.wallHits++;
+//     this._bounce(b, -nx, -ny, d - rw, P.pocketJawRestitution || 0.62);
+//     return;
+//   }
+
+//   // Fallback: bola nyasar keluar meja
+//   const m = this.R * 4;
+//   if (b.x < -m || b.x > this.W + m || b.y < -m || b.y > this.H + m) {
+//     let best = 0, bd = Infinity;
+//     for (let p = 0; p < 6; p++) {
+//       const k = this.pockets[p], d = (b.x - k.x) ** 2 + (b.y - k.y) ** 2;
+//       if (d < bd) { bd = d; best = p; }
+//     }
+//     this._pocket(b, best);
+//   }
+// }
+_checkPockets(b) {
+  const R = this.R;
+  const P = this.cfg.physics;
+
+  const vx = b.vx;
+  const vy = b.vy;
+
+  const speed = Math.hypot(vx, vy);
+
+  for (let p = 0; p < 6; p++) {
+    const k = this.pockets[p];
+    const sh = this.geo.pocketShapes[p];
+
+    const dx = b.x - k.cx;
+    const dy = b.y - k.cy;
+
+    const dist2 = dx * dx + dy * dy;
+    const dist = Math.sqrt(dist2);
+
+    /*
+     * Pocket radius berasal dari throat.
+     * Bola tidak langsung dianggap masuk hanya karena
+     * menyentuh lingkaran pocket.
+     */
+    const captureRadius = k.radius - R * 0.12;
+
+    if (dist > captureRadius) continue;
+
+    /*
+     * Arah bola menuju pocket.
+     */
+    const towardPocket =
+      speed > 0
+        ? (vx * (k.cx - b.x) + vy * (k.cy - b.y)) / speed
+        : 0;
+
+    /*
+     * Bola yang sudah sangat dekat dan hampir berhenti
+     * boleh jatuh.
+     */
+    if (speed < 55) {
+      if (dist < k.radius + R * 0.25) {
+        this._pocket(b, p);
+        return;
+      }
+
+      continue;
+    }
+
+    /*
+     * Bola harus benar-benar bergerak menuju pocket.
+     */
+    if (towardPocket <= 0) continue;
+
+    /*
+     * Arah masuk terhadap axis pocket.
+     */
+    const axisDot =
+      (vx * sh.axis[0] + vy * sh.axis[1]) / speed;
+
+    /*
+     * Semakin lurus masuk, semakin mudah diterima.
+     * Untuk bola yang sangat dekat, sudut sedikit miring
+     * tetap boleh masuk.
+     */
+    const angleLimit =
+      speed < 450
+        ? 0.15
+        : 0.28;
+
+    if (axisDot < angleLimit) continue;
+
+    /*
+     * Kalau pusat bola sudah cukup jauh masuk,
+     * langsung mulai animasi sink.
+     */
+    if (dist < k.radius - R * 0.25) {
+      this._pocket(b, p);
+      return;
+    }
+  }
+
+  /*
+   * Safety fallback.
+   */
+  const margin = R * 3;
+
+  if (
+    b.x < -margin ||
+    b.x > this.W + margin ||
+    b.y < -margin ||
+    b.y > this.H + margin
+  ) {
+    let best = 0;
+    let bestDist = Infinity;
+
     for (let p = 0; p < 6; p++) {
-      const k = this.pockets[p], dx = b.x - k.cx, dy = b.y - k.cy, d2 = dx * dx + dy * dy;
-      const cap = k.radius + (slow ? 0.68 : 0.14) * R;
-      if (d2 < cap * cap) { if (!slow && this._jawRattle(b, p, dx, dy, d2)) return; this._pocket(b, p); return; }
+      const k = this.pockets[p];
+
+      const dx = b.x - k.x;
+      const dy = b.y - k.y;
+
+      const d2 = dx * dx + dy * dy;
+
+      if (d2 < bestDist) {
+        bestDist = d2;
+        best = p;
+      }
     }
-    const m = this.R * 4;
-    if (b.x < -m || b.x > this.W + m || b.y < -m || b.y > this.H + m) {
-      let best = 0, bd = Infinity;
-      for (let p = 0; p < 6; p++) { const k = this.pockets[p], d = (b.x - k.x) ** 2 + (b.y - k.y) ** 2; if (d < bd) { bd = d; best = p; } }
-      this._pocket(b, best);
+
+    this._pocket(b, best);
+  }
+}
+  /** Apakah bola yang menabrak dinding belakang kantong jatuh? Batas kecepatan = pocketMaxSpeed × (1 + 3f²) × (1 + gain·spin),
+   *  f = seberapa lurus arah gerak terhadap sumbu lubang (0 pada ≥ 63° miring, 1 pada lurus), spin>0 = topspin (membantu), <0 = backspin. */
+  // _pocketAccepts(b, sh, sp) {
+  //   const P = this.cfg.physics, cosA = (b.vx * sh.axis[0] + b.vy * sh.axis[1]) / sp;
+  //   const base = P.pocketMaxSpeed || 0.3 * P.maxShotSpeed, f = Util.clamp((cosA - 0.45) / 0.55, 0, 1);
+  //   const rel = Util.clamp((b.rvx * b.vx + b.rvy * b.vy) / (sp * sp), -1, 1);   // 0 = meluncur tanpa putaran (netral), + topspin, − backspin
+  //   return sp <= base * (1 + 3 * f * f) * (1 + (P.pocketSpinGain === undefined ? 0.35 : P.pocketSpinGain) * rel);
+  // }
+
+  _pocketAccepts(b, sh, sp) {
+  const P = this.cfg.physics;
+  const cosA = (b.vx * sh.axis[0] + b.vy * sh.axis[1]) / sp;
+  // base lebih rendah → hanya bola yang benar-benar searah lubang yang diterima
+  const base = P.pocketMaxSpeed || 0.22 * P.maxShotSpeed;    // ↓ dari 0.3 → 0.22
+  const f = Util.clamp((cosA - 0.55) / 0.45, 0, 1);          // f jadi 0 saat < 56°, 1 saat searah
+  const rel = Util.clamp((b.rvx * b.vx + b.rvy * b.vy) / (sp * sp), -1, 1);
+  const gain = P.pocketSpinGain === undefined ? 0.35 : P.pocketSpinGain;
+  return sp <= base * (1 + 2 * f * f) * (1 + gain * rel);    // ↓ dari 3 → 2 (kurang toleran)
+}
+
+  /** Bola masuk: simpan keadaan awal untuk animasi jatuh (posisi, kecepatan terbatas, normal dinding yang ditabrak). */
+  // _pocket(b, index, nx, ny) {
+  //   const sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy), k = this.pockets[index], sh = this.geo.pocketShapes[index], R = this.R, vmax = R * 26;
+  //   b.state = BallState.POCKETED; b.pocketIndex = index; b.sinkT = 0; b.wallHits = 0;
+  //   b.fallX = b.x; b.fallY = b.y; b.fallVx = b.vx; b.fallVy = b.vy; b.pocketSeq = ++this.pocketCounter;
+  //   const q = sp > vmax ? vmax / sp : 1; b.sx = b.x; b.sy = b.y; b.svx = b.vx * q; b.svy = b.vy * q; b.sz = 0; b.sHit = false;
+  //   if (nx !== undefined) {                                                          // menabrak dinding belakang: pantul kecil ke dalam
+  //     const vn = b.svx * nx + b.svy * ny; b.svx -= 1.35 * vn * nx; b.svy -= 1.35 * vn * ny; b.sHit = true;
+  //   } else if (sp < 40) { b.svx += sh.axis[0] * 30; b.svy += sh.axis[1] * 30; }        // bola pelan: dorongan kecil melewati bibir
+  //   b.stop();
+  //   this.events.push(PhysicsEvent.POCKET, b.id, index, sp, k.x, k.y);
+  // }
+
+/** Bola masuk: simpan keadaan awal untuk animasi jatuh yang realistis.
+ *  Fase:
+ *   1. Ngguling (bola menyentuh bibir → geser ke dalam)
+ *   2. Turun di dinding lubang (z naik pelan)
+ *   3. Drop ke dasar (z → 1, fade out)
+ */
+// _pocket(b, index, nx, ny) {
+//   const sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+//   const k = this.pockets[index];
+//   const sh = this.geo.pocketShapes[index];
+//   const R = this.R;
+
+//   // Batasi kecepatan masuk biar animasi tetap terlihat (jangan skip fase)
+//   const vmax = R * 22;                                        // ~330 u/s untuk R=15
+//   const q = sp > vmax ? vmax / sp : 1;
+
+//   b.state = BallState.POCKETED;
+//   b.pocketIndex = index;
+//   b.sinkT = 0;
+//   b.wallHits = 0;
+//   b.fallX = b.x; b.fallY = b.y;
+//   b.fallVx = b.vx; b.fallVy = b.vy;
+//   b.pocketSeq = ++this.pocketCounter;
+
+//   // Setup posisi awal animasi
+//   b.sx = b.x;
+//   b.sy = b.y;
+//   b.svx = b.vx * q;
+//   b.svy = b.vy * q;
+//   b.sz = 0;
+//   b.sDownV = 0;
+//   b.sHit = false;
+
+//   // === Hitung arah orbit di dalam lubang ===
+//   // Bola yang masuk dengan sudut tertentu akan "ngguling" di dinding lubang
+//   const dxToCenter = k.cx - b.x;
+//   const dyToCenter = k.cy - b.y;
+//   const distToCenter = Math.sqrt(dxToCenter * dxToCenter + dyToCenter * dyToCenter) || 1;
+//   const ux = dxToCenter / distToCenter;
+//   const uy = dyToCenter / distToCenter;
+
+//   // Komponen kecepatan tegak lurus (tangensial) → jadi orbit
+//   const vTangential = b.vx * -uy + b.vy * ux;
+//   b.sOrbitV = vTangential / (R * 0.6);                       // kecepatan angular
+//   b.sOrbit = Math.atan2(b.y - k.cy, b.x - k.cx);             // sudut awal
+
+//   // Tilt awal = sudut masuk terhadap sumbu lubang (0..0.5 rad)
+//   const dotAxis = (b.vx * sh.axis[0] + b.vy * sh.axis[1]) / (sp || 1);
+//   b.sTilt = Math.acos(Math.max(-1, Math.min(1, dotAxis))) * 0.35;
+
+//   if (nx !== undefined) {
+//     // Bola menabrak dinding belakang → animasi micilpi
+//     const vn = b.svx * nx + b.svy * ny;
+//     b.svx -= 1.35 * vn * nx;
+//     b.svy -= 1.35 * vn * ny;
+//     b.sHit = true;
+//     b.sDownV = 0.15;                                          // mulai turun pelan
+//   } else if (sp < 40) {
+//     // Bola sangat pelan: dorongan kecil melewati bibir, langsung drop
+//     b.svx += sh.axis[0] * 20;
+//     b.svy += sh.axis[1] * 20;
+//     b.sDownV = 0.05;
+//   } else {
+//     // Bola sedang/cepat: sedikit "micilpi" di bibir
+//     b.sHit = sp > 60;
+//     b.sDownV = 0.02;
+//   }
+
+//   b.stop();
+//   this.events.push(PhysicsEvent.POCKET, b.id, index, sp, k.x, k.y);
+// }
+  /** Dipanggil Game.update tiap frame untuk bola yang sedang jatuh (sinkT 0→1). Simulasi kecil: meluncur, menabrak ujung/dinding
+   *  lubang, lalu menggelinding turun ke pusat lubang sambil "tenggelam" (sz 0→1). Mengembalikan true saat menabrak dinding (untuk suara). */
+
+_pocket(b, index, nx, ny) {
+  const k = this.pockets[index];
+  const sh = this.geo.pocketShapes[index];
+
+  const R = this.R;
+
+  const vx = b.vx;
+  const vy = b.vy;
+
+  const speed = Math.hypot(vx, vy);
+
+  b.state = BallState.POCKETED;
+
+  b.pocketIndex = index;
+  b.sinkT = 0;
+  b.wallHits = 0;
+
+  b.fallX = b.x;
+  b.fallY = b.y;
+
+  b.fallVx = vx;
+  b.fallVy = vy;
+
+  b.pocketSeq = ++this.pocketCounter;
+
+  /*
+   * Posisi animasi dimulai dari posisi sebenarnya.
+   */
+  b.sx = b.x;
+  b.sy = b.y;
+
+  /*
+   * Batasi velocity supaya bola tidak teleport
+   * ketika masuk pocket dengan power besar.
+   */
+  const MAX_POCKET_SPEED = R * 24;
+
+  const scale =
+    speed > MAX_POCKET_SPEED
+      ? MAX_POCKET_SPEED / speed
+      : 1;
+
+  b.svx = vx * scale;
+  b.svy = vy * scale;
+
+  /*
+   * Kedalaman pocket.
+   */
+  b.sz = 0;
+
+  /*
+   * State tambahan.
+   */
+  b.sDownV = 0;
+  b.sOrbit = 0;
+  b.sOrbitV = 0;
+
+  /*
+   * Sudut masuk.
+   */
+  const dot =
+    speed > 0
+      ? (vx * sh.axis[0] + vy * sh.axis[1]) / speed
+      : 1;
+
+  b.sTilt = Math.acos(
+    Math.max(-1, Math.min(1, dot))
+  );
+
+  /*
+   * Kalau datang dari arah dinding belakang,
+   * kurangi momentum sedikit.
+   */
+  if (nx !== undefined && ny !== undefined) {
+    const vn =
+      b.svx * nx +
+      b.svy * ny;
+
+    if (vn > 0) {
+      b.svx -= vn * 0.65 * nx;
+      b.svy -= vn * 0.65 * ny;
     }
   }
 
-  /** Rahang kantong (pocket jaw). Return true = bola TIDAK jatuh pada langkah ini.
-   *  - entry angle: cos antara arah laju dan garis ke pusat lubang (1 = lurus masuk).
-   *  - kecepatan maksimum yang masih jatuh = pocketMaxSpeed × (1 + 2.5·f²), f naik saat sudut makin lurus.
-   *  - topspin menaikkan batas (bola "merangkak" masuk), backspin menurunkannya (mudah memantul keluar).
-   *  - jika terlalu cepat/miring: bola dipantulkan oleh rahang sisi tempat ia menabrak (restitusi pocketJawRestitution);
-   *    gesekan tangensial di _bounce yang membuat sidespin membantu / melempar bola keluar.
-   *  Param opsional di CONFIG.physics: pocketMaxSpeed, pocketJawRestitution, pocketSpinGain, pocketJawAngle. */
-  _jawRattle(b, p, dx, dy, d2) {
-    const P = this.cfg.physics, sh = this.geo.pocketShapes[p], ax = sh.axis[0], ay = sh.axis[1];
-    if (dx * ax + dy * ay > 0) return false;                                    // sudah melewati pusat menuju dinding belakang: jatuh
-    const sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy), d = Math.sqrt(d2) || 1e-3;
-    const cosA = (b.vx * (-dx / d) + b.vy * (-dy / d)) / sp;
-    if (cosA < 0.05) return true;                                               // menjauh / menyamping di bibir: belum masuk
-    const base = P.pocketMaxSpeed || 0.5 * P.maxShotSpeed, f = Util.clamp((cosA - 0.5) / 0.5, 0, 1);
-    const rollAlong = (b.rvx * b.vx + b.rvy * b.vy) / sp, rel = Util.clamp((rollAlong - sp) / sp, -1, 1);   // >0 topspin, <0 backspin
-    const allow = base * (1 + 2.5 * f * f) * (1 + (P.pocketSpinGain === undefined ? 0.35 : P.pocketSpinGain) * rel);
-    if (sp <= allow) return false;                                              // cukup pelan / cukup lurus: jatuh
-    const tx = -ay, ty = ax, side = dx * tx + dy * ty >= 0 ? 1 : -1, ja = P.pocketJawAngle || 0.9;     // sisi rahang yang terkena
-    const nx = -ax * Math.cos(ja) - side * tx * Math.sin(ja), ny = -ay * Math.cos(ja) - side * ty * Math.sin(ja);
-    this._bounce(b, nx, ny, 0, P.pocketJawRestitution || 0.8);
-    return true;
+  /*
+   * Bola pelan mendapat dorongan kecil
+   * menuju pusat pocket.
+   */
+  if (speed < 80) {
+    b.svx += sh.axis[0] * 18;
+    b.svy += sh.axis[1] * 18;
   }
 
-  _pocket(b, index) {
-    const sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
-    b.state = BallState.POCKETED; b.pocketIndex = index; b.sinkT = 0;
-    b.fallX = b.x; b.fallY = b.y; b.fallVx = b.vx; b.fallVy = b.vy; b.pocketSeq = ++this.pocketCounter; b.stop();
-    this.events.push(PhysicsEvent.POCKET, b.id, index, sp, this.pockets[index].x, this.pockets[index].y);
+  b.stop();
+
+  this.events.push(
+    PhysicsEvent.POCKET,
+    b.id,
+    index,
+    speed,
+    k.x,
+    k.y
+  );
+}
+  /** Animasi bola jatuh ke lubang — 3 fase realistis (mirip 8 Ball Pool):
+ *   Fase 1 (t = 0.00 – 0.25)  : ngguling di bibir, muter di dinding
+ *   Fase 2 (t = 0.25 – 0.75)  : turun pelan di dalam lubang (z naik)
+ *   Fase 3 (t = 0.75 – 1.00)  : drop cepat ke dasar, fade out
+ */
+stepSink(b, dt) {
+  if (b.sinkT >= 1) return false;
+
+  const k  = this.pockets[b.pocketIndex];
+  const sh = this.geo.pocketShapes[b.pocketIndex];
+  const R  = this.R;
+
+  // Total durasi animasi (lebih lama dari sebelumnya)
+  const DUR = 0.95;
+
+  let hit = false;
+  b.sinkT = Math.min(1, b.sinkT + dt / DUR);
+
+  // Substep untuk akurasi tinggi
+  const n = Math.max(1, Math.ceil(dt / (1 / 120)));
+  const h = dt / n;
+
+  const rw   = k.radius * 0.88;              // radius dinding dalam
+  const tNow = b.sinkT;                      // 0..1
+
+  // === FASE TRANSISI ===
+  // f1: 0→1 saat t 0.00–0.25 (ngguling di bibir)
+  // f2: 0→1 saat t 0.25–0.75 (turun pelan)
+  // f3: 0→1 saat t 0.75–1.00 (drop ke dasar)
+  const f1 = Math.min(1, Math.max(0, tNow / 0.25));
+  const f2 = Math.min(1, Math.max(0, (tNow - 0.25) / 0.50));
+  const f3 = Math.min(1, Math.max(0, (tNow - 0.75) / 0.25));
+
+  for (let i = 0; i < n; i++) {
+    // === FASE 1: ngguling ===
+    // Geser posisi dari titik masuk ke dalam lubang (menuju pusat)
+    // Damping rendah supaya bola masih "hidup"
+    const damp1 = Math.exp(-2.5 * h);
+    b.svx *= damp1;
+    b.svy *= damp1;
+
+    // === FASE 2 & 3: tarikan ke pusat + orbit ===
+    if (tNow > 0.20) {
+      const pullStrength = 320 * f2 + 800 * f3;
+      b.svx += (k.cx - b.sx) * pullStrength * h;
+      b.svy += (k.cy - b.sy) * pullStrength * h;
+
+      // Orbit: bola ngguling di dinding lubang
+      b.sOrbit += b.sOrbitV * h;
+      b.sOrbitV *= Math.exp(-3.0 * h);                 // orbit melambat
+
+      // Tarik posisi ke lingkaran orbit dengan radius yang mengecil
+      const orbitR = rw * (0.85 - 0.55 * f2 - 0.25 * f3);   // 0.85 → 0.05 (mengecil)
+      const orbX = k.cx + Math.cos(b.sOrbit) * orbitR;
+      const orbY = k.cy + Math.sin(b.sOrbit) * orbitR;
+      const blend = Math.min(1, 3.5 * f2);             // blend dari gerak lurus ke orbit
+      b.sx = b.sx * (1 - blend) + orbX * blend;
+      b.sy = b.sy * (1 - blend) + orbY * blend;
+    }
+
+    // === KEDALAMAN (z) ===
+    // Naik pelan di fase 2, cepat di fase 3
+    const zSpeed = 0.35 * f2 + 1.8 * f3;
+    b.sz = Math.min(1, b.sz + zSpeed * h);
+
+    // Update posisi (masih ada momentum)
+    b.sx += b.svx * h;
+    b.sy += b.svy * h;
+
+    // === TABRAKAN DENGAN UJUNG LUBANG (untuk efek micilpi) ===
+    const dx = b.sx - k.cx, dy = b.sy - k.cy, d = Math.sqrt(dx * dx + dy * dy);
+    if (!b.sHit && d > rw && dx * sh.axis[0] + dy * sh.axis[1] > 0) {
+      const nx = dx / d, ny = dy / d, vn = b.svx * nx + b.svy * ny;
+      if (vn > 0) {
+        b.svx -= 1.45 * vn * nx;
+        b.svy -= 1.45 * vn * ny;
+      }
+      b.sx = k.cx + nx * rw;
+      b.sy = k.cy + ny * rw;
+      b.sHit = true;
+      hit = true;
+    }
+
+    // Rotasi bola (ngguling di dinding)
+    const rollScale = 1 + 2 * f2 + 4 * f3;
+    rotateOrientation(b.orient, b.svy / R, -b.svx / R, b.sOrbitV * 0.5, h * rollScale);
   }
+
+  b.dirty = true;
+  return hit;
+}
 }
 
 /** Ray-cast untuk garis bidik: bola pertama yang kena atau cushion pertama. */

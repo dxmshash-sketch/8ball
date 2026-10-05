@@ -95,7 +95,7 @@ class Game {
   _respotBall(id) {
     const T = this.cfg.table, R = T.ballRadius, b = this.world.balls[id], y = T.height / 2;
     const free = (x) => this.world.balls.every((o) => o === b || o.state !== BallState.ON_TABLE || Math.hypot(o.x - x, o.y - y) >= 2 * R + 1);
-    b.state = BallState.ON_TABLE; b.sinkT = 0; b.stop(); b.resetOrientation(this.rng); b.y = y; b.dirty = true;
+    b.state = BallState.ON_TABLE; b.sinkT = 0; b.stop(); b.resetOrientation(this.rng); b.y = y; b.dirty = true; b.pocketSeq = 0;
     for (let x = T.footSpotX; x <= T.width - R; x += 2) if (free(x)) { b.x = x; return; }
     for (let x = T.footSpotX; x >= R; x -= 2) if (free(x)) { b.x = x; return; }
     b.x = T.footSpotX;
@@ -241,7 +241,7 @@ class Game {
     this.time += dt;
     this.particles.update(dt);
     if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 2.4);
-    for (let i = 0; i < 16; i++) { const b = this.world.balls[i]; if (b.state === BallState.POCKETED && b.sinkT < 1) b.sinkT += dt / 0.6; }
+    for (let i = 0; i < 16; i++) { const b = this.world.balls[i]; if (b.state === BallState.POCKETED && b.sinkT < 1 && this.world.stepSink(b, dt)) this.audio.play('cushion', 0.3); }
     if (this.paused) return;
     switch (this.sm.state) {
       case GameState.MENU: this._updateAttract(dt); break;

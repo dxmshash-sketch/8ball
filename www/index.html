@@ -311,6 +311,252 @@ h3.sec{font:700 20px var(--f-head);margin:16px 0 6px}
 @media (max-height:520px){.panel{padding:14px}.panel h2{font-size:26px}.logo{font-size:56px}.tag{display:none}.menu-wrap{padding:10px 18px}.mode-card span{display:none}.mode-card{padding:10px}}
 @media (prefers-reduced-motion:reduce){.screen,.switch,.switch::after,button{transition:none}.spinner,.dot,.lu-ring::after{animation:none}}
 
+.xp-track{position:relative;height:6px;border-radius:999px;background:rgba(255,255,255,.06);
+  border:1px solid rgba(90,170,255,.18);overflow:hidden;}
+.xp-fill{height:100%;border-radius:999px;
+  background:linear-gradient(90deg,#2A8FE8,#4FC3FF);
+  box-shadow:0 0 12px rgba(79,195,255,.55);}
+
+  /* =====================================================================
+   BLACK CHROME — chrome-glass overrides (additive)
+   ===================================================================== */
+
+/* --- Ambient vignette + faint blue bloom --- */
+html,body{background:var(--bg);font-family:var(--f-body);-webkit-font-smoothing:antialiased;}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(60% 40% at 50% 0%, rgba(79,195,255,.08), transparent 70%),
+    radial-gradient(80% 60% at 50% 120%, rgba(59,168,255,.06), transparent 70%),
+    radial-gradient(120% 80% at 50% 0%, transparent 40%, rgba(0,0,0,.55) 100%);
+}
+
+/* --- Headline font untuk semua judul --- */
+.logo, .panel h2, .pg-head h2, .mode-card b, .btn,
+.cue-panel h3, .tb-info h4, .rw-lv, .res-row,
+.mm h2, .lu h2, .pname, #turnChip, .hud-menu,
+.chip.coins, .pot b, .lvl-big, .lu-num, .pod b, .lb-rank, .lb-val{
+  font-family:var(--f-head);
+  letter-spacing:.04em;
+}
+/* --- Numbers pakai Rajdhani --- */
+#pot b, .res-row b, .stat-c b, .lb-val, .chip.coins, .lu-num{
+  font-family:var(--f-num);font-weight:700;
+}
+
+/* --- Glass panel primitive --- */
+.panel{
+  background:
+    linear-gradient(180deg, rgba(120,180,255,.08), transparent 40%),
+    var(--glass);
+  border:1px solid var(--stroke-soft);
+  border-radius:22px;
+  box-shadow:var(--shadow);
+  backdrop-filter:blur(14px) saturate(140%);
+  -webkit-backdrop-filter:blur(14px) saturate(140%);
+}
+.chip,.tile,.mode-card,.bet,.stat-c,.tb-card,.dev-item,.lb-row,
+.set-row,.cue-panel,.cue-preview,.bdg-card,.pick,.rw-row,.day,.pod{
+  background:
+    linear-gradient(180deg, rgba(120,180,255,.06), transparent 40%),
+    var(--glass);
+  border:1px solid var(--stroke-soft);
+  box-shadow:var(--shadow-sm);
+  backdrop-filter:blur(12px) saturate(140%);
+  -webkit-backdrop-filter:blur(12px) saturate(140%);
+  transition:transform .2s cubic-bezier(.2,.9,.25,1),
+             box-shadow .2s cubic-bezier(.2,.9,.25,1),
+             border-color .2s cubic-bezier(.2,.9,.25,1);
+}
+.tile:hover,.tb-card:hover,.bdg-card:hover,.pick:hover{
+  transform:translateY(-4px);
+  border-color:var(--primary);
+  box-shadow:var(--shadow-sm), var(--bloom);
+}
+
+/* --- Primary CTA (chrome blue) --- */
+.btn{
+  border:1px solid rgba(180,225,255,.45);
+  background:linear-gradient(180deg, rgba(120,180,255,.10), rgba(0,0,0,.55));
+  color:var(--text);
+  font-weight:700;letter-spacing:.05em;
+  border-radius:22px;
+  box-shadow:var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,.08);
+}
+.btn:hover:not(:disabled){filter:brightness(1.1);box-shadow:var(--shadow-sm), var(--bloom);}
+
+.btn.primary{
+  background:linear-gradient(180deg,#4FB6FF 0%,#2A8FE8 55%,#1E6FBD 100%);
+  color:#04121F;
+  border-color:rgba(180,225,255,.55);
+  box-shadow:var(--bloom), 0 10px 24px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.5);
+}
+.btn.green{
+  background:linear-gradient(180deg,#4ee89a 0%,#32D583 60%,#1e8c56 100%);
+  color:#04120a;
+  border-color:rgba(140,255,200,.5);
+  box-shadow:0 0 22px rgba(50,213,131,.35), inset 0 1px 0 rgba(255,255,255,.45);
+}
+.btn.danger{
+  background:linear-gradient(180deg,#ff7a86 0%,#FF5A6A 60%,#a02e3b 100%);
+  color:#1a0308;
+  border-color:rgba(255,160,170,.5);
+  box-shadow:0 0 22px rgba(255,90,106,.35), inset 0 1px 0 rgba(255,255,255,.35);
+}
+.btn.small{min-height:38px;padding:0 16px;font-size:15px;}
+.btn.big{min-height:56px;font-size:22px;}
+
+/* --- Currency capsule --- */
+.chip.coins,.pot{
+  background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(0,0,0,.45));
+  border:1px solid var(--stroke-gold);
+  color:var(--gold);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.15), 0 4px 12px rgba(0,0,0,.4);
+}
+.chip.coins{color:var(--gold);font-family:var(--f-num);font-weight:700;}
+
+/* --- Segmented controls --- */
+.seg{background:rgba(14,22,36,.7);border:1px solid var(--stroke-soft);}
+.seg button{color:var(--text-dim, var(--muted));}
+.seg button[aria-pressed=true]{
+  background:linear-gradient(180deg,#4FB6FF,#2A8FE8);
+  color:#04121F;
+  box-shadow:var(--bloom);
+}
+
+/* --- Mode & bet cards --- */
+.mode-card[aria-pressed=true]{
+  border-color:var(--primary);
+  background:rgba(30,46,72,.55);
+  box-shadow:var(--shadow-sm), var(--bloom);
+}
+.bet[aria-pressed=true]{
+  border-color:var(--gold);color:var(--gold);
+  background:rgba(242,193,78,.08);
+  box-shadow:inset 0 0 0 1px rgba(242,193,78,.35);
+}
+
+/* --- Power / spin / fine --- */
+#powerTrack{
+  background:linear-gradient(180deg,#0d2340,#12305a);
+  border:2px solid rgba(90,170,255,.25);
+  box-shadow:inset 0 3px 8px rgba(0,0,0,.6), 0 0 18px rgba(79,195,255,.15);
+}
+#powerFill{
+  background:linear-gradient(180deg,#32D583 0%,#4FC3FF 50%,#FF5A6A 100%);
+}
+#spin{
+  background:radial-gradient(circle at 35% 30%, #ffffff, #b8c8d8 70%, #6a7a8a);
+  border:3px solid #0A101A;
+  box-shadow:0 0 0 1px rgba(79,195,255,.4), var(--shadow-sm);
+}
+#fine button{
+  background:rgba(14,22,36,.85);
+  border:1px solid var(--stroke);
+  border-radius:14px;
+  box-shadow:var(--shadow-sm);
+}
+#fine button:hover{border-color:var(--primary);box-shadow:var(--shadow-sm), var(--bloom);}
+
+/* --- HUD --- */
+#hudTop{
+  background:linear-gradient(180deg, rgba(6,11,20,.94), rgba(6,11,20,.72));
+  border-bottom:1px solid var(--stroke-soft);
+}
+#turnChip{
+  background:rgba(14,22,36,.85);
+  border:1px solid var(--stroke);
+  font-family:var(--f-head);letter-spacing:.06em;
+  box-shadow:var(--shadow-sm);
+}
+#turnChip.mine{
+  background:linear-gradient(180deg,rgba(50,213,131,.85),rgba(30,140,86,.85));
+  border-color:rgba(50,213,131,.6);
+}
+#turnChip.foul{
+  background:linear-gradient(180deg,rgba(255,90,106,.9),rgba(160,40,44,.9));
+  border-color:rgba(255,90,106,.6);
+}
+#tracker,#toast{
+  background:rgba(14,22,36,.85);
+  border:1px solid var(--stroke-soft);
+  backdrop-filter:blur(6px);
+}
+
+/* --- Spinner & pulse --- */
+.spinner{border-color:rgba(90,170,255,.18);border-top-color:var(--primary);}
+
+/* --- XP bar --- */
+.xpbar{background:rgba(255,255,255,.06);border:1px solid var(--stroke-soft);}
+.xpfill{
+  background:linear-gradient(90deg,#2A8FE8,#4FC3FF);
+  box-shadow:0 0 12px rgba(79,195,255,.55);
+}
+
+/* --- Scrollbar halus --- */
+.pg-body::-webkit-scrollbar,
+.panel::-webkit-scrollbar,
+.menu-wrap::-webkit-scrollbar{width:8px}
+.pg-body::-webkit-scrollbar-thumb,
+.panel::-webkit-scrollbar-thumb,
+.menu-wrap::-webkit-scrollbar-thumb{
+  background:rgba(90,170,255,.35);border-radius:8px;
+}
+
+/* --- Cue Collection (chrome-glass panel) --- */
+.cue-panel{
+  background:linear-gradient(180deg, rgba(120,180,255,.06), rgba(14,22,36,.9));
+  border:1px solid var(--stroke);
+  border-radius:18px;
+}
+.cue-panel h3{color:var(--text);letter-spacing:.04em;}
+.cells i{background:rgba(90,170,255,.12);}
+.cells i.on{background:var(--glow);box-shadow:0 0 6px rgba(79,195,255,.6);}
+.cp-box{border-color:var(--stroke-gold);background:rgba(242,193,78,.05);}
+.cp-box .cp-title{background:rgba(0,0,0,.4);color:var(--gold);letter-spacing:.06em;}
+.cp-line{color:var(--cue-sec);}
+.cp-line b{color:var(--gold);}
+
+/* --- Table preview (toko meja) --- */
+.tb-prev{background:radial-gradient(ellipse at 50% 40%,#1a2738,#060B14);}
+
+/* --- Toggle switch --- */
+.switch{background:rgba(90,170,255,.18);border:1px solid var(--stroke-soft);}
+.switch[aria-checked=true]{
+  background:linear-gradient(90deg,#2A8FE8,#4FC3FF);
+  box-shadow:0 0 14px rgba(79,195,255,.5);
+}
+.switch[aria-checked=true]::after{transform:translateX(22px);background:#fff;}
+
+/* --- Avatar ring (chrome bevel) --- */
+.avx{box-shadow:inset 0 -4px 8px rgba(0,0,0,.35), inset 0 2px 4px rgba(255,255,255,.22);}
+.avx[data-frame=neon],.avx[data-frame=diamond],.avx[data-frame=gold]{
+  box-shadow:
+    0 0 0 calc(var(--s)*.07) var(--frame),
+    0 0 0 calc(var(--s)*.105) rgba(0,0,0,.4),
+    0 0 calc(var(--s)*.4) var(--frame);
+}
+
+/* --- Level-up modal (gold chrome) --- */
+.lu-ring{
+  background:radial-gradient(circle at 35% 30%, #FFF3C4, #F2C14E 55%, #8A6A16);
+  box-shadow:0 0 0 8px rgba(0,0,0,.3), 0 0 60px rgba(242,193,78,.55);
+}
+.lu-num{color:#04121F;font-family:var(--f-num);}
+.lvl-big{
+  background:radial-gradient(circle at 35% 30%, #FFF3C4, #F2C14E 55%, #8A6A16);
+  color:#04121F;
+}
+
+/* --- Podium & leaderboard accents --- */
+.pod.p1{
+  background:linear-gradient(#2a2418, #131D2D);
+  border:1px solid rgba(242,193,78,.5);
+}
+.lb-row.you{
+  background:rgba(242,193,78,.08);
+  border:1px solid rgba(242,193,78,.55);
+}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
@@ -433,196 +679,324 @@ h3.sec{font:700 20px var(--f-head);margin:16px 0 6px}
    Semua angka "ajaib" ada di sini. Satuan dunia: 1 unit ≈ 1,27 mm
    (meja 9-kaki = 2000 × 1000 unit, bola berdiameter 44 unit).
    ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   Profil meja — sumber kebenaran geometri.
+   CONFIG.table akan diisi otomatis dari TABLE_PROFILES.standard.table.
+   --------------------------------------------------------------------- */
+ const TABLE_PROFILES = {
+  standard: {
+    id: 'standard',
+    name: '8 Ball Pool',
+    desc: 'Miniclip-inspired 8 Ball Pool table geometry.',
+    table: {
+      // ============================================================
+      // WORLD / PLAYFIELD
+      // ============================================================
+      width: 1600,
+      height: 728,
+
+      // ============================================================
+      // TABLE STRUCTURE
+      // ============================================================
+      rail: 40,
+      cushion: 20,
+
+      // ============================================================
+      // BALL
+      // ============================================================
+      ballRadius: 15,
+
+      // ============================================================
+      // POCKET GEOMETRY
+      // ============================================================
+      cornerMouth: 52,
+      cornerThroat: 60,
+
+      sideMouth: 50,
+      sideThroat: 56,
+
+      // ============================================================
+      // BREAK / RACK
+      // ============================================================
+      headStringX: 400,
+      footSpotX: 1200,
+
+      // ============================================================
+      // REFERENCE MARKERS
+      // ============================================================
+      headSpotX: 400,
+      footSpotY: 364,
+
+      // ============================================================
+      // POCKET CENTERS
+      // ============================================================
+      pockets: {
+        topLeft: {
+          x: 0,
+          y: 0,
+          type: 'corner',
+        },
+
+        topSide: {
+          x: 800,
+          y: 0,
+          type: 'side',
+        },
+
+        topRight: {
+          x: 1600,
+          y: 0,
+          type: 'corner',
+        },
+
+        bottomLeft: {
+          x: 0,
+          y: 728,
+          type: 'corner',
+        },
+
+        bottomSide: {
+          x: 800,
+          y: 728,
+          type: 'side',
+        },
+
+        bottomRight: {
+          x: 1600,
+          y: 728,
+          type: 'corner',
+        },
+      },
+
+      // ============================================================
+      // RACK
+      // ============================================================
+      rack: {
+        balls: 15,
+        rows: 5,
+
+        // Apex ball points toward head of table.
+        apexX: 1200,
+
+        // Center of table.
+        centerY: 364,
+
+        // 8-ball goes in center of rack.
+        eightBallRow: 3,
+        eightBallIndex: 1,
+
+        // Ball diameter = 30.
+        spacing: 30.05,
+      },
+    },
+  },
+    american: {
+    id: 'american',
+    name: 'American',
+    desc: 'Meja sedang 880×440, kantong bundar — dinamis dan tetap menantang.',
+    table: {
+      width: 880, height: 440,
+      rail: 31,
+      cushion: 13,
+      ballRadius: 11.5,
+      cornerMouth: 48, cornerThroat: 38,
+      sideMouth: 44,  sideThroat: 32,
+      headStringX: 220, footSpotX: 660,
+    },
+  },
+};
+
 const CONFIG = {
-  // table: {
-  //   // Geometri mengikuti brief: playfield 1600×728 (≈2.2:1), bola Ø30, rail kayu 56 + cushion 24.
-  //   // Catatan: brief menulis outer 1760×800, tetapi 728 + 2×(56+24) = 888. Ubah `rail`/`cushion` di sini bila ingin lain.
-  //   width: 1600, height: 800, rail: 52, cushion: 20, ballRadius: 15.0,
-  //   cornerMouth: 62, cornerThroat: 44, sideMouth: 58, sideThroat: 40,
-  //   headStringX: 400, footSpotX: 1200,
-  // },
- table: {
-  width: 1600, height: 700,
-  rail: 40,             // 60 → 30
-  cushion: 20,          // 28 → 17
-  ballRadius: 15,
-  cornerMouth: 60, cornerThroat: 55,
-  sideMouth: 60,  sideThroat: 58,
-  headStringX: 400, footSpotX: 1150,
-},
+  /* table diisi dari TABLE_PROFILES.standard (single source of truth). */
+  table: Object.assign({}, TABLE_PROFILES.standard.table),
+  tableId: 'standard',
+
   // physics: {
-  //   fixedStep: 1 / 240, maxStepsPerFrame: 14, maxTravelFraction: 0.4, maxSubsteps: 8,
-  //   slidingAccel: 1200,          // unit/s² saat bola meluncur di kain
-  //   rollingDecel: 72,            // perlambatan konstan saat menggelinding
-  //   rollingDrag: 0.45,           // perlambatan proporsional kecepatan (1/s)
-  //   stopSpeed: 7, slideEpsilon: 2.4,
-  //   sideSpinDecayConst: 30, sideSpinDecayRate: 0.7, sideSpinStopped: 7, sideSpinStop: 0.5,
-  //   ballRestitution: 0.96, ballFriction: 0.05,
-  //   cushionRestitution: 0.9, cushionSpeedLoss: 0.00005, cushionMinRestitution: 0.55,
-  //   cushionFriction: 0.15, cushionSpinKeep: 0.55,
-  //   maxShotSpeed: 4960, maxSpinOffset: 0.5,
+  //   // ============================================================
+  //   // CORE SIMULATION
+  //   // ============================================================
+  //   fixedStep: 1 / 300,
+  //   maxStepsPerFrame: 14,
+  //   maxTravelFraction: 0.4,
+  //   maxSubsteps: 8,
+
+  //   // ============================================================
+  //   // CLOTH / SLIDING
+  //   // Bola baru ditembak akan sedikit slip lalu masuk rolling.
+  //   // ============================================================
+  //   slidingAccel: 850,
+
+  //   // ============================================================
+  //   // ROLLING
+  //   // 28   = kehilangan kecepatan konstan
+  //   // 0.14 = drag berdasarkan kecepatan
+  //   // Kombinasi ini membuat bola terasa panjang tapi tetap berhenti natural.
+  //   // ============================================================
+  //   rollingDecel: 28,
+  //   rollingDrag: 0.14,
+  //   stopSpeed: 2.5,
+  //   slideEpsilon: 2.4,
+
+  //   // ============================================================
+  //   // SIDE SPIN
+  //   // ============================================================
+  //   sideSpinDecayConst: 20,
+  //   sideSpinDecayRate: 0.5,
+  //   sideSpinStopped: 6,
+  //   sideSpinStop: 0.4,
+
+  //   // ============================================================
+  //   // BALL COLLISION
+  //   // ============================================================
+  //   ballRestitution: 0.96,
+  //   ballFriction: 0.06,
+
+  //   // ============================================================
+  //   // CUSHION / RAIL
+  //   // ============================================================
+  //   cushionRestitution: 0.84,
+  //   cushionSpeedLoss: 0.000015,
+  //   cushionMinRestitution: 0.68,
+  //   cushionFriction: 0.17,
+  //   cushionSpinKeep: 0.58,
+
+  //   // ============================================================
+  //   // SHOT
+  //   // ============================================================
+  //   maxShotSpeed: 5800,
+  //   maxSpinOffset: 0.75,       // 0.5 = normal, 1.0 = ekstrem
   //   shotTimeoutSeconds: 30,
   // },
-//   physics: {
-//   fixedStep: 1 / 240, maxStepsPerFrame: 14, maxTravelFraction: 0.4, maxSubsteps: 8,
-//   slidingAccel: 700,           // 1200 → 900   (sliding lebih lama, spin lebih terasa)
-//   rollingDecel: 32,            // 72 → 42      (turun 42%, bola menggelinding lebih jauh)
-//   rollingDrag: 0.18,           // 0.45 → 0.28  (turun 38%, drag di kecepatan tinggi tidak "ngebut ngerem")
-//   stopSpeed: 2.5,              // 7 → 3.5      (bola lebih lama "merayap" sebelum mati)
-//   slideEpsilon: 2.4,           // biarkan
+  physics: {
+  // Physics 240 Hz sudah sangat halus untuk billiard
+  fixedStep: 1 / 240,
 
-//   sideSpinDecayConst: 20,      // 30 → 25
-//   sideSpinDecayRate: 0.5,      // 0.7 → 0.6
-//   sideSpinStopped: 6,
-//   sideSpinStop: 0.4,
+  // Jangan terlalu banyak mengejar physics ketika frame drop
+  maxStepsPerFrame: 8,
 
-//   ballRestitution: 0.96,
-//   ballFriction: 0.05,
+  // Collision tunneling protection
+  maxTravelFraction: 0.35,
+  maxSubsteps: 6,
 
-//   cushionRestitution: 0.88,    // 0.9 → 0.88
-//   cushionSpeedLoss: 0.00001,   // 0.00005 → 0.00003 (bola lebih "hidup" setelah bounce)
-//   cushionMinRestitution: 0.8,  // 0.55 → 0.6
+  // --------------------------------
+  // BALL MOVEMENT
+  // --------------------------------
 
-//   cushionFriction: 0.15,
-//   cushionSpinKeep: 0.55,
+  slidingAccel: 900,
 
-//   maxShotSpeed: 6000,          // biarkan
-//   maxSpinOffset: 1.0,
-//   shotTimeoutSeconds: 30,
-// },
-physics: {
-  // ============================================================
-  // CORE SIMULATION
-  // ============================================================
-  fixedStep: 1 / 300,
-  maxStepsPerFrame: 14,
-  maxTravelFraction: 0.4,
-  maxSubsteps: 8,
+  rollingDecel: 24,
 
-  // ============================================================
-  // CLOTH / SLIDING
-  // Bola baru ditembak akan sedikit slip lalu masuk rolling.
-  // ============================================================
-  slidingAccel: 850,
+  rollingDrag: 0.10,
 
-  // ============================================================
-  // ROLLING
-  // 28  = kehilangan kecepatan konstan
-  // 0.14 = drag berdasarkan kecepatan
-  // Kombinasi ini membuat bola terasa panjang tetapi tetap berhenti natural.
-  // ============================================================
-  rollingDecel: 28,
-  rollingDrag: 0.14,
+  stopSpeed: 1.5,
 
-  // Bola benar-benar berhenti ketika kecepatannya sangat kecil.
-  stopSpeed: 2.5,
+  slideEpsilon: 1.8,
 
-  // Batas perpindahan sliding -> rolling.
-  slideEpsilon: 2.4,
+  // --------------------------------
+  // SPIN
+  // --------------------------------
 
-  // ============================================================
-  // SIDE SPIN
-  // ============================================================
-  sideSpinDecayConst: 20,
-  sideSpinDecayRate: 0.5,
+  sideSpinDecayConst: 18,
 
-  // Saat bola sudah berhenti tetapi masih memiliki side spin,
-  // spin akan mati lebih cepat.
-  sideSpinStopped: 6,
-  sideSpinStop: 0.4,
+  sideSpinDecayRate: 0.45,
 
-  // ============================================================
+  sideSpinStopped: 4,
+
+  sideSpinStop: 0.25,
+
+  // --------------------------------
   // BALL COLLISION
-  // ============================================================
-  ballRestitution: 0.96,
+  // --------------------------------
 
-  // Friction antar bola.
-  // Sedikit lebih tinggi membuat collision terasa lebih "berisi".
-  ballFriction: 0.06,
+  ballRestitution: 0.97,
 
-  // ============================================================
-  // CUSHION / RAIL
-  // ============================================================
-  cushionRestitution: 0.84,
+  ballFriction: 0.045,
 
-  // Pengurangan restitution pada kecepatan tinggi.
-  cushionSpeedLoss: 0.000015,
+  // --------------------------------
+  // CUSHION
+  // --------------------------------
 
-  // Jangan terlalu tinggi agar bola tidak seperti memantul dari tembok.
-  cushionMinRestitution: 0.68,
+  cushionRestitution: 0.88,
 
-  // Gesekan tangensial dengan cushion.
-  cushionFriction: 0.17,
+  cushionSpeedLoss: 0.00001,
 
-  // Berapa banyak side spin yang dipertahankan setelah mengenai rail.
-  cushionSpinKeep: 0.58,
+  cushionMinRestitution: 0.72,
 
-  // ============================================================
+  cushionFriction: 0.12,
+
+  cushionSpinKeep: 0.62,
+
+  // --------------------------------
   // SHOT
-  // ============================================================
+  // --------------------------------
+
   maxShotSpeed: 5800,
 
-  // 0.5 = normal
-  // 1.0 = sangat ekstrem
-  // 0.75 = lebih realistis tetapi masih memberi kontrol spin.
   maxSpinOffset: 0.75,
 
-  // Pengaman jika shot/physics tidak selesai.
   shotTimeoutSeconds: 30,
 },
   rules: {
     turnSeconds: 35, breakSeconds: 45, foulBannerSeconds: 1.7,
-    breakMinCushionBalls: 4, matchmakingSeconds: { bot: 0.9, local: 0.4, online: 2.4 },
+    breakMinCushionBalls: 4,
+    matchmakingSeconds: { bot: 0.9, local: 0.4, online: 2.4 },
   },
-  aim: { pullMax: 90, cueLengthRatio: 0.75, cueGap: 5, cueAnimSeconds: 0.08, fineRate: 0.32, keyStep: 0.02, keyStepFine: 0.004 },
+
+  aim: {
+    pullMax: 90,
+    cueLengthRatio: 0.75,
+    cueGap: 5,
+    cueAnimSeconds: 0.08,
+    fineRate: 0.32,
+    keyStep: 0.02,
+    keyStepFine: 0.004,
+  },
+
   bots: {
-    easy:   { name: 'Dewi',  level: 2, aimSigma: 0.030, powerSigma: 0.14, think: [1.1, 2.0], pickTop: 3, breakPower: 0.82, reward: 60 },
-    medium: { name: 'Rio',   level: 5, aimSigma: 0.012, powerSigma: 0.07, think: [1.3, 2.4], pickTop: 2, breakPower: 0.95, reward: 100 },
-    hard:   { name: 'Bima',  level: 9, aimSigma: 0.004, powerSigma: 0.03, think: [1.5, 2.6], pickTop: 1, breakPower: 1.0,  reward: 160 },
+    easy:   { name: 'Dewi', level: 2, aimSigma: 0.030, powerSigma: 0.14, think: [1.1, 2.0], pickTop: 3, breakPower: 0.82, reward: 60 },
+    medium: { name: 'Rio',  level: 5, aimSigma: 0.012, powerSigma: 0.07, think: [1.3, 2.4], pickTop: 2, breakPower: 0.95, reward: 100 },
+    hard:   { name: 'Bima', level: 9, aimSigma: 0.004, powerSigma: 0.03, think: [1.5, 2.6], pickTop: 1, breakPower: 1.0,  reward: 160 },
   },
+
   onlineOpponents: ['Ayu_88', 'Kevin.R', 'Nadya', 'Fajar_pool', 'Tasya'],
+
   colors: {
     balls: [null, '#f2c21c', '#1f56c4', '#d92d2d', '#6a2fa0', '#ee7a1c', '#1f8f4e', '#7a1f2a', '#15131a'],
   },
 };
 
-/* ---------------- profil meja ----------------
-   Dua ukuran meja per pertandingan. `applyTableProfile` mengganti CONFIG.table/physics/aim di tempat; fisika (kecepatan,
-   percepatan gesek) diskalakan mengikuti panjang meja sehingga power 100% menempuh proporsi meja yang sama. */
-const TABLE_PROFILES = {
-  // standard: { id: 'standard', name: 'Standar', desc: 'Meja penuh 1600×728. Ukuran saat ini.',
-  //   table: { width: 1600, height: 728, rail: 56, cushion: 24, ballRadius: 15, cornerMouth: 58, cornerThroat: 44, sideMouth: 52, sideThroat: 34, headStringX: 400, footSpotX: 1200 } },
-  standard: {
-  id: 'standard',
-  name: '8 Ball Pool',
-  desc: 'Classic 8 Ball Pool style table.',
+/* ---------------------------------------------------------------------
+   applyTableProfile(id)
+   Mengganti CONFIG.table/physics/aim di tempat. Fisika linier (kecepatan,
+   percepatan gesek) diskalakan mengikuti panjang meja, sedangkan koefisien
+   tak berdimensi (restitution, friction) dibiarkan tetap.
+   --------------------------------------------------------------------- */
+const PHYSICS_BASE = Object.assign({}, CONFIG.physics);
+const AIM_BASE = Object.assign({}, CONFIG.aim);
 
-table: {
-  width: 1600, height: 700,
-  rail: 40,             // 60 → 30
-  cushion: 20,          // 28 → 17
-  ballRadius: 15,
-  
-  cornerMouth: 60, cornerThroat: 55,
-  sideMouth: 60,  sideThroat: 58,
-  headStringX: 400, footSpotX: 1150,
-},
-},
-  american: { id: 'american', name: 'American', desc: 'Meja sedang 880×400, kantong bundar (≥ 2× diameter bola, pas — tidak kebesaran) — dinamis dan tetap menantang.',
-    table: { width: 880, height: 440, rail: 31, cushion: 11, ballRadius: 13, cornerMouth: 30, cornerThroat: 24, sideMouth: 25, sideThroat: 35, headStringX: 220, footSpotX: 660 } },
-};
-const PHYSICS_BASE = Object.assign({}, CONFIG.physics), AIM_BASE = Object.assign({}, CONFIG.aim);
 function applyTableProfile(id) {
-  const p = TABLE_PROFILES[id] || TABLE_PROFILES.standard, k = p.table.width / TABLE_PROFILES.standard.table.width;
-  CONFIG.table = Object.assign({}, p.table); CONFIG.tableId = p.id;
+  const p = TABLE_PROFILES[id] || TABLE_PROFILES.standard;
+  const k = p.table.width / TABLE_PROFILES.standard.table.width;
+
+  CONFIG.table = Object.assign({}, p.table);
+  CONFIG.tableId = p.id;
+
   const P = Object.assign({}, PHYSICS_BASE);
-  for (const key of ['maxShotSpeed', 'slidingAccel', 'rollingDecel', 'stopSpeed', 'slideEpsilon']) P[key] = PHYSICS_BASE[key] * k;
+  for (const key of ['maxShotSpeed', 'slidingAccel', 'rollingDecel', 'stopSpeed', 'slideEpsilon']) {
+    P[key] = PHYSICS_BASE[key] * k;
+  }
   P.cushionSpeedLoss = PHYSICS_BASE.cushionSpeedLoss / k;
-  CONFIG.physics = P; CONFIG.aim = Object.assign({}, AIM_BASE, { pullMax: AIM_BASE.pullMax * k });
+  CONFIG.physics = P;
+
+  CONFIG.aim = Object.assign({}, AIM_BASE, { pullMax: AIM_BASE.pullMax * k });
+
   return CONFIG.table;
 }
-CONFIG.tableId = 'standard';
 
+/* ---------------------------------------------------------------------
+   UTIL — helper matematika kecil.
+   --------------------------------------------------------------------- */
 const Util = {
   clamp: (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v),
   lerp: (a, b, t) => a + (b - a) * t,
@@ -633,21 +1007,42 @@ const Util = {
   hexToRgb(hex) { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; },
 };
 
-/** PRNG deterministik (mulberry32) — dipakai agar rack identik di semua klien. */
+/* ---------------------------------------------------------------------
+   RNG deterministik (mulberry32) — dipakai agar rack identik di semua klien.
+   --------------------------------------------------------------------- */
 class Rng {
   constructor(seed) { this.s = seed >>> 0; }
+
   next() {
     this.s = (this.s + 0x6D2B79F5) | 0;
     let t = Math.imul(this.s ^ (this.s >>> 15), 1 | this.s);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
+
   range(a, b) { return a + (b - a) * this.next(); }
   int(n) { return Math.floor(this.next() * n); }
-  gauss() { let u = 0, v = 0; while (u === 0) u = this.next(); v = this.next(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
-  shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = this.int(i + 1); const t = arr[i]; arr[i] = arr[j]; arr[j] = t; } return arr; }
+
+  gauss() {
+    let u = 0, v = 0;
+    while (u === 0) u = this.next();
+    v = this.next();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+
+  shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = this.int(i + 1);
+      const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
 }
 
+/* ---------------------------------------------------------------------
+   CATATAN: THEME dideklarasikan di `13-ui.js` (BLACK CHROME — design tokens).
+   Jangan deklarasikan `const THEME` di sini — akan bentrok (redeclare const).
+   --------------------------------------------------------------------- */
 /* =====================================================================
    02 · CORE — state machine & event bus
    ===================================================================== */
@@ -730,7 +1125,13 @@ class Ball {
     this.x = 0; this.y = 0; this.vx = 0; this.vy = 0;
     this.rvx = 0; this.rvy = 0; this.wz = 0;
     this.orient = new Float32Array(9);
-    this.dirty = true; this.pocketIndex = -1; this.sinkT = 0; this.fallX = 0; this.fallY = 0; this.fallVx = 0; this.fallVy = 0; this.pocketSeq = 0;
+    this.dirty = true; this.pocketIndex = -1; this.sinkT = 0; this.fallX = 0; this.fallY = 0; this.fallVx = 0; this.fallVy = 0; this.pocketSeq = 0; this.wallHits = 0; this.sx = 0; this.sy = 0; this.svx = 0; this.svy = 0; this.sz = 0; this.sHit = false;
+    // === TAMBAHAN: kontrol animasi jatuh ===
+    this.sDownV = 0;       // kecepatan turun (z) — untuk drop yang lebih natural
+    this.sOrbit = 0;       // sudut orbit di dalam lubang (ngguling di dinding)
+    this.sOrbitV = 0;      // kecepatan orbit
+    this.sTilt = 0;        // sudut miring saat jatuh (bukan cuma lurus ke pusat)
+    // === END ===
     this.resetOrientation(null);
   }
   /** Bola objek: nomor menghadap kamera dengan putaran acak. Bola putih: identitas. */
@@ -763,323 +1164,57 @@ class EventQueue {
   clear() { this.count = 0; }
 }
 
-/** Membuat segmen garis kecil yang mengikuti busur lingkaran. */
-function addArcSegments(segs, cx, cy, radius, a1, a2, steps = 8) {
-  let px = cx + Math.cos(a1) * radius;
-  let py = cy + Math.sin(a1) * radius;
-
-  for (let i = 1; i <= steps; i++) {
-    const t = i / steps;
-    const a = a1 + (a2 - a1) * t;
-
-    const x = cx + Math.cos(a) * radius;
-    const y = cy + Math.sin(a) * radius;
-
-    segs.push(px, py, x, y);
-
-    px = x;
-    py = y;
-  }
-}
-
-
 
 /** Satu sumber kebenaran geometri meja: dipakai untuk collision DAN untuk digambar. */
-// function buildTableGeometry(T) {
-//   const W = T.width, H = T.height, ct = T.cushion, S2 = Math.SQRT2;
-//   const tc = T.cornerMouth / S2, cb = T.cornerThroat / S2 - ct;    // ujung nose & ujung dasar cushion di dekat corner
-//   const sn = T.sideMouth / 2, sb = T.sideThroat / 2;
-//   const mx = (p) => [W - p[0], p[1]], my = (p) => [p[0], H - p[1]];
-//   // urutan titik: nose-awal, nose-akhir, dasar-akhir, dasar-awal  (dasar lebih panjang dari nose → trapezoid)
-//   const top = [[tc, 0], [W / 2 - sn, 0], [W / 2 - sb, -ct], [cb, -ct]];
-//   const left = [[0, tc], [0, H - tc], [-ct, H - cb], [-ct, cb]];
-//   const cushions = [top, top.map(mx), top.map(my), top.map(mx).map(my), left, left.map(mx)];
-//   const segs = [];
-//   for (const P of cushions)
-//     for (const [a, b] of [[0, 1], [1, 2], [3, 0]])
-//       segs.push(
-//         P[a][0], P[a][1],
-//         P[b][0], P[b][1]
-//       );
-//   const n = segs.length / 4, segLen2 = new Float64Array(n);
-//   for (let i = 0; i < n; i++) { const ex = segs[4 * i + 2] - segs[4 * i], ey = segs[4 * i + 3] - segs[4 * i + 1]; segLen2[i] = ex * ex + ey * ey; }
-//   const shapes = [], pockets = [];
-//   const corner = (sx, sy_) => {
-//     const f = (p) => [sx < 0 ? W - p[0] : p[0], sy_ < 0 ? H - p[1] : p[1]];
-//     shapes.push({ tipA: f([tc, 0]), baseA: f([cb, -ct]), tipB: f([0, tc]), baseB: f([-ct, cb]), axis: [sx < 0 ? 1 : -1, sy_ < 0 ? 1 : -1].map((v) => v / S2), corner: true });
-//   };
-//   const side = (down) => {
-//     const f = (p) => [p[0], down ? H - p[1] : p[1]];
-//     shapes.push({ tipA: f([W / 2 - sn, 0]), baseA: f([W / 2 - sb, -ct]), tipB: f([W / 2 + sn, 0]), baseB: f([W / 2 + sb, -ct]), axis: [0, down ? 1 : -1], corner: false });
-//   };
-//   corner(1, 1); side(false); corner(-1, 1); corner(1, -1); side(true); corner(-1, -1);
-//   // Kantong dirender & ditangkap sebagai LINGKARAN sejati: pusat = titik tengah baseA–baseB (leher cushion),
-//   // radius = setengah jarak baseA–baseB — karena baseA & baseB simetris terhadap axis, keduanya otomatis
-//   // tepat berada di lingkaran ini (diametrically opposite), sehingga corong terlihat benar-benar bulat.
-// for (const sh of shapes) {
-//   const bax = sh.baseA[0];
-//   const bay = sh.baseA[1];
-//   const bbx = sh.baseB[0];
-//   const bby = sh.baseB[1];
-
-//   const ccx0 = (bax + bbx) / 2;
-//   const ccy0 = (bay + bby) / 2;
-
-//   const radius =
-//     Math.hypot(bax - bbx, bay - bby) / 2;
-
-// // Semua pocket digeser keluar menuju rail.
-// // Corner: menuju sudut.
-// // Side: menuju rail atas/bawah.
-// const pocketShift = T.ballRadius * 0.9;
-
-// const ccx =
-//   ccx0 + sh.axis[0] * pocketShift;
-
-// const ccy =
-//   ccy0 + sh.axis[1] * pocketShift;
-
-//   const a1 = Math.atan2(
-//     bay - ccy,
-//     bax - ccx
-//   );
-
-//   const a2 = Math.atan2(
-//     bby - ccy,
-//     bbx - ccx
-//   );
-
-//   const aOut = Math.atan2(
-//     sh.axis[1],
-//     sh.axis[0]
-//   );
-
-//   const norm = (a) => {
-//     let d = a;
-//     while (d <= -Math.PI) d += 2 * Math.PI;
-//     while (d > Math.PI) d -= 2 * Math.PI;
-//     return d;
-//   };
-
-//   const ccwSpan =
-//     norm(a2 - a1) >= 0
-//       ? norm(a2 - a1)
-//       : norm(a2 - a1) + 2 * Math.PI;
-
-//   const ccwMid =
-//     norm(a1 + ccwSpan / 2);
-
-//   const anticlockwise =
-//     Math.abs(norm(ccwMid - aOut)) > Math.PI / 2;
-
-//   Object.assign(sh, {
-//     cx: ccx,
-//     cy: ccy,
-//     radius,
-//     a1,
-//     a2,
-//     anticlockwise
-//   });
-
-//   pockets.push({
-//     x: ccx,
-//     y: ccy,
-//     r: radius,
-//     corner: sh.corner,
-//     cx: ccx,
-//     cy: ccy,
-//     radius
-//   });
-// }
-/** =====================================================================
- *  TABLE GEOMETRY
- *
- *  Pocket dibuat dengan:
- *  - throat/pocket tetap berbentuk lingkaran
- *  - jaw menuju pocket dibuat CURVED, bukan garis lurus
- *  - geometry yang sama dipakai untuk physics collision
- *  - 4 corner pocket + 2 side pocket
- * ===================================================================== */
 function buildTableGeometry(T) {
-  const W = T.width;
-  const H = T.height;
-  const ct = T.cushion;
-  const S2 = Math.SQRT2;
-
-  /*
-   * ---------------------------------------------------------------
-   * BASIC TABLE DIMENSIONS
-   * ---------------------------------------------------------------
-   */
-  const tc = T.cornerMouth / S2;
-  const cb = T.cornerThroat / S2 - ct;
-
-  const sn = T.sideMouth / 2;
-  const sb = T.sideThroat / 2;
-
-  const mx = (p) => [W - p[0], p[1]];
-  const my = (p) => [p[0], H - p[1]];
-
-
-  /*
-   * ---------------------------------------------------------------
-   * ORIGINAL CUSHION SHAPES
-   *
-   * Point order:
-   *
-   *     0 -------- 1
-   *     |          /
-   *     |         /
-   *     3 ------- 2
-   *
-   * Tetapi sisi 1->2 dan 3->0 nanti dibuat CURVED.
-   * ---------------------------------------------------------------
-   */
-  const top = [
-    [tc, 0],
-    [W / 2 - sn, 0],
-    [W / 2 - sb, -ct],
-    [cb, -ct]
-  ];
-
-  const left = [
-    [0, tc],
-    [0, H - tc],
-    [-ct, H - cb],
-    [-ct, cb]
-  ];
-
-  const cushions = [
-    top,
-    top.map(mx),
-    top.map(my),
-    top.map(mx).map(my),
-    left,
-    left.map(mx)
-  ];
-
-
-  /*
-   * ---------------------------------------------------------------
-   * POCKET SHAPES
-   * ---------------------------------------------------------------
-   */
-  const shapes = [];
-  const pockets = [];
-
-  const corner = (sx, sy) => {
-    const f = (p) => [
-      sx < 0 ? W - p[0] : p[0],
-      sy < 0 ? H - p[1] : p[1]
-    ];
-
-    shapes.push({
-      tipA: f([tc, 0]),
-      baseA: f([cb, -ct]),
-
-      tipB: f([0, tc]),
-      baseB: f([-ct, cb]),
-
-      axis: [
-        sx < 0 ? 1 : -1,
-        sy < 0 ? 1 : -1
-      ].map((v) => v / S2),
-
-      corner: true
-    });
+  const W = T.width, H = T.height, ct = T.cushion, S2 = Math.SQRT2;
+  const tc = T.cornerMouth / S2, cb = T.cornerThroat / S2 - ct;    // ujung nose & ujung dasar cushion di dekat corner
+  const sn = T.sideMouth / 2, sb = T.sideThroat / 2;
+  const mx = (p) => [W - p[0], p[1]], my = (p) => [p[0], H - p[1]];
+  // urutan titik: nose-awal, nose-akhir, dasar-akhir, dasar-awal  (dasar lebih panjang dari nose → trapezoid)
+  const top = [[tc, 0], [W / 2 - sn, 0], [W / 2 - sb, -ct], [cb, -ct]];
+  const left = [[0, tc], [0, H - tc], [-ct, H - cb], [-ct, cb]];
+  const cushions = [top, top.map(mx), top.map(my), top.map(mx).map(my), left, left.map(mx)];
+  const segs = [];
+  for (const P of cushions) for (const [a, b] of [[0, 1], [1, 2], [3, 0]]) segs.push(P[a][0], P[a][1], P[b][0], P[b][1]);
+  const n = segs.length / 4, segLen2 = new Float64Array(n);
+  for (let i = 0; i < n; i++) { const ex = segs[4 * i + 2] - segs[4 * i], ey = segs[4 * i + 3] - segs[4 * i + 1]; segLen2[i] = ex * ex + ey * ey; }
+  const shapes = [], pockets = [];
+  const corner = (sx, sy_) => {
+    const f = (p) => [sx < 0 ? W - p[0] : p[0], sy_ < 0 ? H - p[1] : p[1]];
+    shapes.push({ tipA: f([tc, 0]), baseA: f([cb, -ct]), tipB: f([0, tc]), baseB: f([-ct, cb]), axis: [sx < 0 ? 1 : -1, sy_ < 0 ? 1 : -1].map((v) => v / S2), corner: true });
   };
-
-
   const side = (down) => {
-    const f = (p) => [
-      p[0],
-      down ? H - p[1] : p[1]
-    ];
-
-    shapes.push({
-      tipA: f([W / 2 - sn, 0]),
-      baseA: f([W / 2 - sb, -ct]),
-
-      tipB: f([W / 2 + sn, 0]),
-      baseB: f([W / 2 + sb, -ct]),
-
-      axis: [
-        0,
-        down ? 1 : -1
-      ],
-
-      corner: false
-    });
+    const f = (p) => [p[0], down ? H - p[1] : p[1]];
+    shapes.push({ tipA: f([W / 2 - sn, 0]), baseA: f([W / 2 - sb, -ct]), tipB: f([W / 2 + sn, 0]), baseB: f([W / 2 + sb, -ct]), axis: [0, down ? 1 : -1], corner: false });
   };
-
-
-  /*
-   * Order harus sama dengan kode physics:
-   *
-   * 0 = top-left
-   * 1 = top-middle
-   * 2 = top-right
-   * 3 = bottom-left
-   * 4 = bottom-middle
-   * 5 = bottom-right
-   */
-  corner(1, 1);
-  side(false);
-  corner(-1, 1);
-
-  corner(1, -1);
-  side(true);
-  corner(-1, -1);
-
-
-  /*
-   * ---------------------------------------------------------------
-   * POCKET CIRCLE
-   * ---------------------------------------------------------------
-   */
+  corner(1, 1); side(false); corner(-1, 1); corner(1, -1); side(true); corner(-1, -1);
+  // Kantong dirender & ditangkap sebagai LINGKARAN sejati: pusat = titik tengah baseA–baseB (leher cushion),
+  // radius = setengah jarak baseA–baseB — karena baseA & baseB simetris terhadap axis, keduanya otomatis
+  // tepat berada di lingkaran ini (diametrically opposite), sehingga corong terlihat benar-benar bulat.
   for (const sh of shapes) {
-    const bax = sh.baseA[0];
-    const bay = sh.baseA[1];
+    const bax = sh.baseA[0], bay = sh.baseA[1];
+    const bbx = sh.baseB[0], bby = sh.baseB[1];
 
-    const bbx = sh.baseB[0];
-    const bby = sh.baseB[1];
+    // Titik tengah asli mulut/leher pocket
+    const baseCx = (bax + bbx) / 2;
+    const baseCy = (bay + bby) / 2;
 
-    /*
-     * Center pocket = midpoint baseA/baseB
-     */
-const baseCx = (bax + bbx) / 2;
-const baseCy = (bay + bby) / 2;
+    // =========================================================
+    // POSISI POCKET
+    // 4 CORNER POCKET  -> jauh lebih dekat ke titik sudut
+    // 2 SIDE POCKET    -> hanya bergeser sedikit
+    // =========================================================
+    const pocketShift = sh.corner
+      ? T.ballRadius * 1   // 4 lubang pojok
+      : T.ballRadius * 0.7;  // 2 lubang tengah
 
-    /*
-     * Radius pocket.
-     */
-    const radius =
-      Math.hypot(
-        bax - bbx,
-        bay - bby
-      ) / 2;
-    
-// ---------------------------------------------------------------
-// POCKET POSITION
-// ---------------------------------------------------------------
+    // sh.axis menunjuk ke arah LUAR meja / arah sudut pocket
+    const ccx = baseCx + sh.axis[0] * pocketShift;
+    const ccy = baseCy + sh.axis[1] * pocketShift;
 
+    const radius = Math.hypot(bax - bbx, bay - bby) / 2;
 
-
-// Corner pocket dibuat lebih dekat ke titik sudut.
-// Side pocket hanya digeser sedikit.
-const pocketShift = sh.corner
-  ? T.ballRadius * 1.4   // 4 lubang pojok
-  : T.ballRadius * 0.3;  // 2 lubang tengah
-
-const ccx =
-  baseCx + sh.axis[0] * pocketShift;
-
-const ccy =
-  baseCy + sh.axis[1] * pocketShift;
-   
-    /*
-     * Sudut awal / akhir lingkaran.
-     */
     const a1 = Math.atan2(
       bay - ccy,
       bax - ccx
@@ -1095,44 +1230,25 @@ const ccy =
       sh.axis[0]
     );
 
-
     const norm = (a) => {
       let d = a;
-
-      while (d <= -Math.PI) {
-        d += Math.PI * 2;
-      }
-
-      while (d > Math.PI) {
-        d -= Math.PI * 2;
-      }
-
+      while (d <= -Math.PI) d += 2 * Math.PI;
+      while (d > Math.PI) d -= 2 * Math.PI;
       return d;
     };
 
-
-    const rawSpan = norm(a2 - a1);
-
     const ccwSpan =
-      rawSpan >= 0
-        ? rawSpan
-        : rawSpan + Math.PI * 2;
+      norm(a2 - a1) >= 0
+        ? norm(a2 - a1)
+        : norm(a2 - a1) + 2 * Math.PI;
 
-    const ccwMid =
-      norm(
-        a1 + ccwSpan / 2
-      );
-
+    const ccwMid = norm(
+      a1 + ccwSpan / 2
+    );
 
     const anticlockwise =
-      Math.abs(
-        norm(ccwMid - aOut)
-      ) > Math.PI / 2;
+      Math.abs(norm(ccwMid - aOut)) > Math.PI / 2;
 
-
-    /*
-     * Simpan geometry pocket.
-     */
     Object.assign(sh, {
       cx: ccx,
       cy: ccy,
@@ -1142,326 +1258,19 @@ const ccy =
       anticlockwise
     });
 
-
     pockets.push({
       x: ccx,
       y: ccy,
       r: radius,
-
       corner: sh.corner,
-
       cx: ccx,
       cy: ccy,
       radius
     });
   }
-
-
-  /*
-   * ===============================================================
-   * ROUNDED JAW GENERATOR
-   * ===============================================================
-   *
-   * Membuat curve dari:
-   *
-   *     TIP
-   *       \
-   *        )
-   *       )
-   *      BASE
-   *
-   * bukan:
-   *
-   *     TIP
-   *       \
-   *        \
-   *         \
-   *        BASE
-   *
-   * Jadi jaw tidak lagi terlihat sebagai garis kotak.
-   */
-  const addRoundedJaw = (
-    segs,
-    start,
-    end,
-    pocketCenter,
-    amount = 0.18,
-    steps = 10
-  ) => {
-
-    const sx = start[0];
-    const sy = start[1];
-
-    const ex = end[0];
-    const ey = end[1];
-
-    const cx = pocketCenter[0];
-    const cy = pocketCenter[1];
-
-
-    /*
-     * Vektor dari start menuju center pocket.
-     */
-    let dx = cx - sx;
-    let dy = cy - sy;
-
-    const len = Math.hypot(dx, dy) || 1;
-
-    dx /= len;
-    dy /= len;
-
-
-    /*
-     * Vektor perpendicular.
-     */
-    const px = -dy;
-    const py = dx;
-
-
-    /*
-     * Midpoint antara start dan end.
-     */
-    const mx = (sx + ex) / 2;
-    const my = (sy + ey) / 2;
-
-
-    /*
-     * Control point.
-     *
-     * Amount menentukan seberapa bulat jaw.
-     */
-    const distance =
-      Math.hypot(
-        ex - sx,
-        ey - sy
-      );
-
-    const bend =
-      distance * amount;
-
-
-    /*
-     * Control point diarahkan sedikit
-     * ke arah pocket.
-     */
-    const controlX =
-      mx + dx * bend;
-
-    const controlY =
-      my + dy * bend;
-
-
-    /*
-     * Quadratic Bézier.
-     */
-    let px0 = sx;
-    let py0 = sy;
-
-    for (let i = 1; i <= steps; i++) {
-
-      const t = i / steps;
-      const inv = 1 - t;
-
-      const x =
-        inv * inv * sx +
-        2 * inv * t * controlX +
-        t * t * ex;
-
-      const y =
-        inv * inv * sy +
-        2 * inv * t * controlY +
-        t * t * ey;
-
-
-      segs.push(
-        px0,
-        py0,
-        x,
-        y
-      );
-
-
-      px0 = x;
-      py0 = y;
-    }
-  };
-
-
-  /*
-   * ===============================================================
-   * BUILD COLLISION SEGMENTS
-   * ===============================================================
-   *
-   * Jangan lagi menggunakan:
-   *
-   * [0,1], [1,2], [3,0]
-   *
-   * secara langsung untuk jaw.
-   *
-   * Sekarang:
-   *
-   * 0 -> 1 = straight nose
-   *
-   * 1 -> 2 = ROUNDED JAW
-   *
-   * 3 -> 0 = ROUNDED JAW
-   *
-   * 2 -> 3 tetap tidak ditutup karena pocket opening.
-   * ===============================================================
-   */
-
-  const segs = [];
-
-
-  /*
-   * Helper untuk menambahkan 3 bagian
-   * dari satu cushion.
-   */
-  const addCushion = (P, shapeIndex) => {
-
-    const sh = shapes[shapeIndex];
-
-
-    /*
-     * -----------------------------------------------------------
-     * NOSE
-     * -----------------------------------------------------------
-     *
-     * P0 -> P1
-     */
-    segs.push(
-      P[0][0],
-      P[0][1],
-      P[1][0],
-      P[1][1]
-    );
-
-
-    /*
-     * -----------------------------------------------------------
-     * JAW A
-     * -----------------------------------------------------------
-     *
-     * P1 -> P2
-     *
-     * dibuat curve.
-     */
-    addRoundedJaw(
-      segs,
-      P[1],
-      P[2],
-      [sh.cx, sh.cy],
-      0.99,
-      12
-    );
-
-
-    /*
-     * -----------------------------------------------------------
-     * JAW B
-     * -----------------------------------------------------------
-     *
-     * P3 -> P0
-     */
-    addRoundedJaw(
-      segs,
-      P[3],
-      P[0],
-      [sh.cx, sh.cy],
-      0.99,
-      12
-    );
-  };
-
-
-  /*
-   * Map cushion -> pocketShape
-   *
-   * cushions:
-   *
-   * 0 top
-   * 1 top mirrored
-   * 2 bottom
-   * 3 bottom mirrored
-   * 4 left
-   * 5 right
-   *
-   * pocketShapes:
-   *
-   * 0 corner
-   * 1 side
-   * 2 corner
-   * 3 corner
-   * 4 side
-   * 5 corner
-   */
-
-  addCushion(top, 1);
-  addCushion(top.map(mx), 2);
-  addCushion(top.map(my), 4);
-  addCushion(top.map(mx).map(my), 5);
-
-  addCushion(left, 0);
-  addCushion(left.map(mx), 3);
-
-
-  /*
-   * ---------------------------------------------------------------
-   * SEGMENT LENGTH CACHE
-   * ---------------------------------------------------------------
-   */
-  const n = segs.length / 4;
-
-  const segLen2 =
-    new Float64Array(n);
-
-
-  for (let i = 0; i < n; i++) {
-
-    const k = i * 4;
-
-    const ex =
-      segs[k + 2] -
-      segs[k];
-
-    const ey =
-      segs[k + 3] -
-      segs[k + 1];
-
-
-    segLen2[i] =
-      ex * ex +
-      ey * ey;
-  }
-
-
-  /*
-   * ---------------------------------------------------------------
-   * RETURN
-   * ---------------------------------------------------------------
-   *
-   * Struktur tetap kompatibel dengan PhysicsWorld.
-   * ---------------------------------------------------------------
-   */
-  return {
-    W,
-    H,
-
-    cushions,
-
-    segs:
-      new Float64Array(segs),
-
-    segLen2,
-
-    segCount: n,
-
-    pockets,
-
-    pocketShapes: shapes
-  };
+  return { W, H, cushions, segs: new Float64Array(segs), segLen2, segCount: n, pockets, pocketShapes: shapes };
 }
- 
+
 class PhysicsWorld {
   constructor(config) {
     this.cfg = config;
@@ -1637,52 +1446,501 @@ class PhysicsWorld {
     }
   }
 
-  /** Bola jatuh saat pusatnya masuk lingkaran kantong. Bola pelan selalu jatuh (toleransi lebih besar agar tak "macet" di bibir).
-   *  Bola CEPAT yang masuk menyamping ditolak oleh rahang (rattle) — lihat _jawRattle. */
-  _checkPockets(b) {
-    const R = this.R, slow = b.vx * b.vx + b.vy * b.vy < 8100;
+  /** Kantong = rahang (segmen cushion, tabrakan nyata) + rongga bundar dengan DINDING BELAKANG di setengah lingkaran sisi luar.
+   *  - Bola pelan (< 90 u/s) jatuh begitu pusatnya dekat bibir lubang.
+   *  - Bola lain meluncur masuk ke rongga sampai menabrak dinding belakang. Di titik itu diputuskan:
+   *      masuk  → _pocket (animasi "nabrak ujung lubang lalu menggelinding turun"),
+   *      ditolak → memantul keras dari dinding belakang dan keluar lagi (rattle); rahang bisa menahannya lagi.
+   *  - Keputusan memakai sudut masuk terhadap sumbu lubang, kecepatan, dan top/backspin (lihat _pocketAccepts).
+   *  - Bola yang sudah memantul ≥ 2× dari dinding belakang pasti jatuh (rattle yang akhirnya masuk). */
+  // _checkPockets(b) {
+  //   const R = this.R, P = this.cfg.physics, v2 = b.vx * b.vx + b.vy * b.vy, slow = v2 < 8100;
+  //   for (let p = 0; p < 6; p++) {
+  //     const k = this.pockets[p], dx = b.x - k.cx, dy = b.y - k.cy, d2 = dx * dx + dy * dy, r = k.radius;
+  //     if (slow) { const cap = r + 0.68 * R; if (d2 < cap * cap) { this._pocket(b, p); return; } continue; }
+  //     if (d2 >= r * r) { if (b.wallHits && d2 > (r + 2 * R) * (r + 2 * R)) b.wallHits = 0; continue; }
+  //     const sh = this.geo.pocketShapes[p];
+  //     if (dx * sh.axis[0] + dy * sh.axis[1] <= 0) continue;                       // masih di setengah depan (sisi meja)
+  //     const d = Math.sqrt(d2), rw = r * (P.pocketBackWall || 0.8);
+  //     if (d < rw) continue;
+  //     const nx = dx / d, ny = dy / d;
+  //     if (b.vx * nx + b.vy * ny <= 0) continue;                                     // sedang menjauhi dinding belakang
+  //     if (b.wallHits >= 2 || this._pocketAccepts(b, sh, Math.sqrt(v2))) { this._pocket(b, p, nx, ny); return; }
+  //     b.wallHits++; this._bounce(b, -nx, -ny, d - rw, P.pocketJawRestitution || 0.62);   // rattle: mental dari dinding belakang
+  //     return;
+  //   }
+  //   const m = this.R * 4;
+  //   if (b.x < -m || b.x > this.W + m || b.y < -m || b.y > this.H + m) {
+  //     let best = 0, bd = Infinity;
+  //     for (let p = 0; p < 6; p++) { const k = this.pockets[p], d = (b.x - k.x) ** 2 + (b.y - k.y) ** 2; if (d < bd) { bd = d; best = p; } }
+  //     this._pocket(b, best);
+  //   }
+  // }
+
+// _checkPockets(b) {
+//   const R = this.R, P = this.cfg.physics, v2 = b.vx * b.vx + b.vy * b.vy;
+//   // slow threshold lebih ketat: hanya bola yang benar-benar pelan (< 50 u/s) yang langsung masuk
+//   const slow = v2 < 2500;
+//   for (let p = 0; p < 6; p++) {
+//     const k = this.pockets[p], dx = b.x - k.cx, dy = b.y - k.cy, d2 = dx * dx + dy * dy, r = k.radius;
+
+//     // === BOLA PELAN: langsung masuk, tapi hanya jika benar-benar di dekat pusat lubang ===
+//     if (slow) {
+//       const cap = r + 0.35 * R;                    // ↓ dari 0.68 → 0.35 (lebih ketat)
+//       if (d2 < cap * cap) { this._pocket(b, p); return; }
+//       continue;
+//     }
+
+//     // === BOLA CEPAT: hanya jika benar-benar di dalam lubang ===
+//     if (d2 >= r * r) {
+//       if (b.wallHits && d2 > (r + 2 * R) * (r + 2 * R)) b.wallHits = 0;
+//       continue;
+//     }
+
+//     const sh = this.geo.pocketShapes[p];
+//     if (dx * sh.axis[0] + dy * sh.axis[1] <= 0) continue;    // masih di setengah depan (sisi meja)
+
+//     const d = Math.sqrt(d2);
+//     const rw = r * (P.pocketBackWall || 0.92);              // ↑ dari 0.8 → 0.92 (dinding lebih dekat bibir)
+//     if (d < rw) continue;
+//     const nx = dx / d, ny = dy / d;
+//     if (b.vx * nx + b.vy * ny <= 0) continue;                // sedang menjauhi dinding belakang
+
+//     if (b.wallHits >= 2 || this._pocketAccepts(b, sh, Math.sqrt(v2))) {
+//       this._pocket(b, p, nx, ny);
+//       return;
+//     }
+//     b.wallHits++;
+//     this._bounce(b, -nx, -ny, d - rw, P.pocketJawRestitution || 0.62);
+//     return;
+//   }
+
+//   // Fallback: bola nyasar keluar meja
+//   const m = this.R * 4;
+//   if (b.x < -m || b.x > this.W + m || b.y < -m || b.y > this.H + m) {
+//     let best = 0, bd = Infinity;
+//     for (let p = 0; p < 6; p++) {
+//       const k = this.pockets[p], d = (b.x - k.x) ** 2 + (b.y - k.y) ** 2;
+//       if (d < bd) { bd = d; best = p; }
+//     }
+//     this._pocket(b, best);
+//   }
+// }
+_checkPockets(b) {
+  const R = this.R;
+  const P = this.cfg.physics;
+
+  const vx = b.vx;
+  const vy = b.vy;
+
+  const speed = Math.hypot(vx, vy);
+
+  for (let p = 0; p < 6; p++) {
+    const k = this.pockets[p];
+    const sh = this.geo.pocketShapes[p];
+
+    const dx = b.x - k.cx;
+    const dy = b.y - k.cy;
+
+    const dist2 = dx * dx + dy * dy;
+    const dist = Math.sqrt(dist2);
+
+    /*
+     * Pocket radius berasal dari throat.
+     * Bola tidak langsung dianggap masuk hanya karena
+     * menyentuh lingkaran pocket.
+     */
+    const captureRadius = k.radius - R * 0.12;
+
+    if (dist > captureRadius) continue;
+
+    /*
+     * Arah bola menuju pocket.
+     */
+    const towardPocket =
+      speed > 0
+        ? (vx * (k.cx - b.x) + vy * (k.cy - b.y)) / speed
+        : 0;
+
+    /*
+     * Bola yang sudah sangat dekat dan hampir berhenti
+     * boleh jatuh.
+     */
+    if (speed < 55) {
+      if (dist < k.radius + R * 0.25) {
+        this._pocket(b, p);
+        return;
+      }
+
+      continue;
+    }
+
+    /*
+     * Bola harus benar-benar bergerak menuju pocket.
+     */
+    if (towardPocket <= 0) continue;
+
+    /*
+     * Arah masuk terhadap axis pocket.
+     */
+    const axisDot =
+      (vx * sh.axis[0] + vy * sh.axis[1]) / speed;
+
+    /*
+     * Semakin lurus masuk, semakin mudah diterima.
+     * Untuk bola yang sangat dekat, sudut sedikit miring
+     * tetap boleh masuk.
+     */
+    const angleLimit =
+      speed < 450
+        ? 0.15
+        : 0.28;
+
+    if (axisDot < angleLimit) continue;
+
+    /*
+     * Kalau pusat bola sudah cukup jauh masuk,
+     * langsung mulai animasi sink.
+     */
+    if (dist < k.radius - R * 0.25) {
+      this._pocket(b, p);
+      return;
+    }
+  }
+
+  /*
+   * Safety fallback.
+   */
+  const margin = R * 3;
+
+  if (
+    b.x < -margin ||
+    b.x > this.W + margin ||
+    b.y < -margin ||
+    b.y > this.H + margin
+  ) {
+    let best = 0;
+    let bestDist = Infinity;
+
     for (let p = 0; p < 6; p++) {
-      const k = this.pockets[p], dx = b.x - k.cx, dy = b.y - k.cy, d2 = dx * dx + dy * dy;
-      const cap = k.radius + (slow ? 0.68 : 0.14) * R;
-      if (d2 < cap * cap) { if (!slow && this._jawRattle(b, p, dx, dy, d2)) return; this._pocket(b, p); return; }
+      const k = this.pockets[p];
+
+      const dx = b.x - k.x;
+      const dy = b.y - k.y;
+
+      const d2 = dx * dx + dy * dy;
+
+      if (d2 < bestDist) {
+        bestDist = d2;
+        best = p;
+      }
     }
-    const m = this.R * 4;
-    if (b.x < -m || b.x > this.W + m || b.y < -m || b.y > this.H + m) {
-      let best = 0, bd = Infinity;
-      for (let p = 0; p < 6; p++) { const k = this.pockets[p], d = (b.x - k.x) ** 2 + (b.y - k.y) ** 2; if (d < bd) { bd = d; best = p; } }
-      this._pocket(b, best);
+
+    this._pocket(b, best);
+  }
+}
+  /** Apakah bola yang menabrak dinding belakang kantong jatuh? Batas kecepatan = pocketMaxSpeed × (1 + 3f²) × (1 + gain·spin),
+   *  f = seberapa lurus arah gerak terhadap sumbu lubang (0 pada ≥ 63° miring, 1 pada lurus), spin>0 = topspin (membantu), <0 = backspin. */
+  // _pocketAccepts(b, sh, sp) {
+  //   const P = this.cfg.physics, cosA = (b.vx * sh.axis[0] + b.vy * sh.axis[1]) / sp;
+  //   const base = P.pocketMaxSpeed || 0.3 * P.maxShotSpeed, f = Util.clamp((cosA - 0.45) / 0.55, 0, 1);
+  //   const rel = Util.clamp((b.rvx * b.vx + b.rvy * b.vy) / (sp * sp), -1, 1);   // 0 = meluncur tanpa putaran (netral), + topspin, − backspin
+  //   return sp <= base * (1 + 3 * f * f) * (1 + (P.pocketSpinGain === undefined ? 0.35 : P.pocketSpinGain) * rel);
+  // }
+
+  _pocketAccepts(b, sh, sp) {
+  const P = this.cfg.physics;
+  const cosA = (b.vx * sh.axis[0] + b.vy * sh.axis[1]) / sp;
+  // base lebih rendah → hanya bola yang benar-benar searah lubang yang diterima
+  const base = P.pocketMaxSpeed || 0.22 * P.maxShotSpeed;    // ↓ dari 0.3 → 0.22
+  const f = Util.clamp((cosA - 0.55) / 0.45, 0, 1);          // f jadi 0 saat < 56°, 1 saat searah
+  const rel = Util.clamp((b.rvx * b.vx + b.rvy * b.vy) / (sp * sp), -1, 1);
+  const gain = P.pocketSpinGain === undefined ? 0.35 : P.pocketSpinGain;
+  return sp <= base * (1 + 2 * f * f) * (1 + gain * rel);    // ↓ dari 3 → 2 (kurang toleran)
+}
+
+  /** Bola masuk: simpan keadaan awal untuk animasi jatuh (posisi, kecepatan terbatas, normal dinding yang ditabrak). */
+  // _pocket(b, index, nx, ny) {
+  //   const sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy), k = this.pockets[index], sh = this.geo.pocketShapes[index], R = this.R, vmax = R * 26;
+  //   b.state = BallState.POCKETED; b.pocketIndex = index; b.sinkT = 0; b.wallHits = 0;
+  //   b.fallX = b.x; b.fallY = b.y; b.fallVx = b.vx; b.fallVy = b.vy; b.pocketSeq = ++this.pocketCounter;
+  //   const q = sp > vmax ? vmax / sp : 1; b.sx = b.x; b.sy = b.y; b.svx = b.vx * q; b.svy = b.vy * q; b.sz = 0; b.sHit = false;
+  //   if (nx !== undefined) {                                                          // menabrak dinding belakang: pantul kecil ke dalam
+  //     const vn = b.svx * nx + b.svy * ny; b.svx -= 1.35 * vn * nx; b.svy -= 1.35 * vn * ny; b.sHit = true;
+  //   } else if (sp < 40) { b.svx += sh.axis[0] * 30; b.svy += sh.axis[1] * 30; }        // bola pelan: dorongan kecil melewati bibir
+  //   b.stop();
+  //   this.events.push(PhysicsEvent.POCKET, b.id, index, sp, k.x, k.y);
+  // }
+
+/** Bola masuk: simpan keadaan awal untuk animasi jatuh yang realistis.
+ *  Fase:
+ *   1. Ngguling (bola menyentuh bibir → geser ke dalam)
+ *   2. Turun di dinding lubang (z naik pelan)
+ *   3. Drop ke dasar (z → 1, fade out)
+ */
+// _pocket(b, index, nx, ny) {
+//   const sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+//   const k = this.pockets[index];
+//   const sh = this.geo.pocketShapes[index];
+//   const R = this.R;
+
+//   // Batasi kecepatan masuk biar animasi tetap terlihat (jangan skip fase)
+//   const vmax = R * 22;                                        // ~330 u/s untuk R=15
+//   const q = sp > vmax ? vmax / sp : 1;
+
+//   b.state = BallState.POCKETED;
+//   b.pocketIndex = index;
+//   b.sinkT = 0;
+//   b.wallHits = 0;
+//   b.fallX = b.x; b.fallY = b.y;
+//   b.fallVx = b.vx; b.fallVy = b.vy;
+//   b.pocketSeq = ++this.pocketCounter;
+
+//   // Setup posisi awal animasi
+//   b.sx = b.x;
+//   b.sy = b.y;
+//   b.svx = b.vx * q;
+//   b.svy = b.vy * q;
+//   b.sz = 0;
+//   b.sDownV = 0;
+//   b.sHit = false;
+
+//   // === Hitung arah orbit di dalam lubang ===
+//   // Bola yang masuk dengan sudut tertentu akan "ngguling" di dinding lubang
+//   const dxToCenter = k.cx - b.x;
+//   const dyToCenter = k.cy - b.y;
+//   const distToCenter = Math.sqrt(dxToCenter * dxToCenter + dyToCenter * dyToCenter) || 1;
+//   const ux = dxToCenter / distToCenter;
+//   const uy = dyToCenter / distToCenter;
+
+//   // Komponen kecepatan tegak lurus (tangensial) → jadi orbit
+//   const vTangential = b.vx * -uy + b.vy * ux;
+//   b.sOrbitV = vTangential / (R * 0.6);                       // kecepatan angular
+//   b.sOrbit = Math.atan2(b.y - k.cy, b.x - k.cx);             // sudut awal
+
+//   // Tilt awal = sudut masuk terhadap sumbu lubang (0..0.5 rad)
+//   const dotAxis = (b.vx * sh.axis[0] + b.vy * sh.axis[1]) / (sp || 1);
+//   b.sTilt = Math.acos(Math.max(-1, Math.min(1, dotAxis))) * 0.35;
+
+//   if (nx !== undefined) {
+//     // Bola menabrak dinding belakang → animasi micilpi
+//     const vn = b.svx * nx + b.svy * ny;
+//     b.svx -= 1.35 * vn * nx;
+//     b.svy -= 1.35 * vn * ny;
+//     b.sHit = true;
+//     b.sDownV = 0.15;                                          // mulai turun pelan
+//   } else if (sp < 40) {
+//     // Bola sangat pelan: dorongan kecil melewati bibir, langsung drop
+//     b.svx += sh.axis[0] * 20;
+//     b.svy += sh.axis[1] * 20;
+//     b.sDownV = 0.05;
+//   } else {
+//     // Bola sedang/cepat: sedikit "micilpi" di bibir
+//     b.sHit = sp > 60;
+//     b.sDownV = 0.02;
+//   }
+
+//   b.stop();
+//   this.events.push(PhysicsEvent.POCKET, b.id, index, sp, k.x, k.y);
+// }
+  /** Dipanggil Game.update tiap frame untuk bola yang sedang jatuh (sinkT 0→1). Simulasi kecil: meluncur, menabrak ujung/dinding
+   *  lubang, lalu menggelinding turun ke pusat lubang sambil "tenggelam" (sz 0→1). Mengembalikan true saat menabrak dinding (untuk suara). */
+
+_pocket(b, index, nx, ny) {
+  const k = this.pockets[index];
+  const sh = this.geo.pocketShapes[index];
+
+  const R = this.R;
+
+  const vx = b.vx;
+  const vy = b.vy;
+
+  const speed = Math.hypot(vx, vy);
+
+  b.state = BallState.POCKETED;
+
+  b.pocketIndex = index;
+  b.sinkT = 0;
+  b.wallHits = 0;
+
+  b.fallX = b.x;
+  b.fallY = b.y;
+
+  b.fallVx = vx;
+  b.fallVy = vy;
+
+  b.pocketSeq = ++this.pocketCounter;
+
+  /*
+   * Posisi animasi dimulai dari posisi sebenarnya.
+   */
+  b.sx = b.x;
+  b.sy = b.y;
+
+  /*
+   * Batasi velocity supaya bola tidak teleport
+   * ketika masuk pocket dengan power besar.
+   */
+  const MAX_POCKET_SPEED = R * 24;
+
+  const scale =
+    speed > MAX_POCKET_SPEED
+      ? MAX_POCKET_SPEED / speed
+      : 1;
+
+  b.svx = vx * scale;
+  b.svy = vy * scale;
+
+  /*
+   * Kedalaman pocket.
+   */
+  b.sz = 0;
+
+  /*
+   * State tambahan.
+   */
+  b.sDownV = 0;
+  b.sOrbit = 0;
+  b.sOrbitV = 0;
+
+  /*
+   * Sudut masuk.
+   */
+  const dot =
+    speed > 0
+      ? (vx * sh.axis[0] + vy * sh.axis[1]) / speed
+      : 1;
+
+  b.sTilt = Math.acos(
+    Math.max(-1, Math.min(1, dot))
+  );
+
+  /*
+   * Kalau datang dari arah dinding belakang,
+   * kurangi momentum sedikit.
+   */
+  if (nx !== undefined && ny !== undefined) {
+    const vn =
+      b.svx * nx +
+      b.svy * ny;
+
+    if (vn > 0) {
+      b.svx -= vn * 0.65 * nx;
+      b.svy -= vn * 0.65 * ny;
     }
   }
 
-  /** Rahang kantong (pocket jaw). Return true = bola TIDAK jatuh pada langkah ini.
-   *  - entry angle: cos antara arah laju dan garis ke pusat lubang (1 = lurus masuk).
-   *  - kecepatan maksimum yang masih jatuh = pocketMaxSpeed × (1 + 2.5·f²), f naik saat sudut makin lurus.
-   *  - topspin menaikkan batas (bola "merangkak" masuk), backspin menurunkannya (mudah memantul keluar).
-   *  - jika terlalu cepat/miring: bola dipantulkan oleh rahang sisi tempat ia menabrak (restitusi pocketJawRestitution);
-   *    gesekan tangensial di _bounce yang membuat sidespin membantu / melempar bola keluar.
-   *  Param opsional di CONFIG.physics: pocketMaxSpeed, pocketJawRestitution, pocketSpinGain, pocketJawAngle. */
-  _jawRattle(b, p, dx, dy, d2) {
-    const P = this.cfg.physics, sh = this.geo.pocketShapes[p], ax = sh.axis[0], ay = sh.axis[1];
-    if (dx * ax + dy * ay > 0) return false;                                    // sudah melewati pusat menuju dinding belakang: jatuh
-    const sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy), d = Math.sqrt(d2) || 1e-3;
-    const cosA = (b.vx * (-dx / d) + b.vy * (-dy / d)) / sp;
-    if (cosA < 0.05) return true;                                               // menjauh / menyamping di bibir: belum masuk
-    const base = P.pocketMaxSpeed || 0.5 * P.maxShotSpeed, f = Util.clamp((cosA - 0.5) / 0.5, 0, 1);
-    const rollAlong = (b.rvx * b.vx + b.rvy * b.vy) / sp, rel = Util.clamp((rollAlong - sp) / sp, -1, 1);   // >0 topspin, <0 backspin
-    const allow = base * (1 + 2.5 * f * f) * (1 + (P.pocketSpinGain === undefined ? 0.35 : P.pocketSpinGain) * rel);
-    if (sp <= allow) return false;                                              // cukup pelan / cukup lurus: jatuh
-    const tx = -ay, ty = ax, side = dx * tx + dy * ty >= 0 ? 1 : -1, ja = P.pocketJawAngle || 0.9;     // sisi rahang yang terkena
-    const nx = -ax * Math.cos(ja) - side * tx * Math.sin(ja), ny = -ay * Math.cos(ja) - side * ty * Math.sin(ja);
-    this._bounce(b, nx, ny, 0, P.pocketJawRestitution || 0.8);
-    return true;
+  /*
+   * Bola pelan mendapat dorongan kecil
+   * menuju pusat pocket.
+   */
+  if (speed < 80) {
+    b.svx += sh.axis[0] * 18;
+    b.svy += sh.axis[1] * 18;
   }
 
-  _pocket(b, index) {
-    const sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
-    b.state = BallState.POCKETED; b.pocketIndex = index; b.sinkT = 0;
-    b.fallX = b.x; b.fallY = b.y; b.fallVx = b.vx; b.fallVy = b.vy; b.pocketSeq = ++this.pocketCounter; b.stop();
-    this.events.push(PhysicsEvent.POCKET, b.id, index, sp, this.pockets[index].x, this.pockets[index].y);
+  b.stop();
+
+  this.events.push(
+    PhysicsEvent.POCKET,
+    b.id,
+    index,
+    speed,
+    k.x,
+    k.y
+  );
+}
+  /** Animasi bola jatuh ke lubang — 3 fase realistis (mirip 8 Ball Pool):
+ *   Fase 1 (t = 0.00 – 0.25)  : ngguling di bibir, muter di dinding
+ *   Fase 2 (t = 0.25 – 0.75)  : turun pelan di dalam lubang (z naik)
+ *   Fase 3 (t = 0.75 – 1.00)  : drop cepat ke dasar, fade out
+ */
+stepSink(b, dt) {
+  if (b.sinkT >= 1) return false;
+
+  const k  = this.pockets[b.pocketIndex];
+  const sh = this.geo.pocketShapes[b.pocketIndex];
+  const R  = this.R;
+
+  // Total durasi animasi (lebih lama dari sebelumnya)
+  const DUR = 0.95;
+
+  let hit = false;
+  b.sinkT = Math.min(1, b.sinkT + dt / DUR);
+
+  // Substep untuk akurasi tinggi
+  const n = Math.max(1, Math.ceil(dt / (1 / 120)));
+  const h = dt / n;
+
+  const rw   = k.radius * 0.88;              // radius dinding dalam
+  const tNow = b.sinkT;                      // 0..1
+
+  // === FASE TRANSISI ===
+  // f1: 0→1 saat t 0.00–0.25 (ngguling di bibir)
+  // f2: 0→1 saat t 0.25–0.75 (turun pelan)
+  // f3: 0→1 saat t 0.75–1.00 (drop ke dasar)
+  const f1 = Math.min(1, Math.max(0, tNow / 0.25));
+  const f2 = Math.min(1, Math.max(0, (tNow - 0.25) / 0.50));
+  const f3 = Math.min(1, Math.max(0, (tNow - 0.75) / 0.25));
+
+  for (let i = 0; i < n; i++) {
+    // === FASE 1: ngguling ===
+    // Geser posisi dari titik masuk ke dalam lubang (menuju pusat)
+    // Damping rendah supaya bola masih "hidup"
+    const damp1 = Math.exp(-2.5 * h);
+    b.svx *= damp1;
+    b.svy *= damp1;
+
+    // === FASE 2 & 3: tarikan ke pusat + orbit ===
+    if (tNow > 0.20) {
+      const pullStrength = 320 * f2 + 800 * f3;
+      b.svx += (k.cx - b.sx) * pullStrength * h;
+      b.svy += (k.cy - b.sy) * pullStrength * h;
+
+      // Orbit: bola ngguling di dinding lubang
+      b.sOrbit += b.sOrbitV * h;
+      b.sOrbitV *= Math.exp(-3.0 * h);                 // orbit melambat
+
+      // Tarik posisi ke lingkaran orbit dengan radius yang mengecil
+      const orbitR = rw * (0.85 - 0.55 * f2 - 0.25 * f3);   // 0.85 → 0.05 (mengecil)
+      const orbX = k.cx + Math.cos(b.sOrbit) * orbitR;
+      const orbY = k.cy + Math.sin(b.sOrbit) * orbitR;
+      const blend = Math.min(1, 3.5 * f2);             // blend dari gerak lurus ke orbit
+      b.sx = b.sx * (1 - blend) + orbX * blend;
+      b.sy = b.sy * (1 - blend) + orbY * blend;
+    }
+
+    // === KEDALAMAN (z) ===
+    // Naik pelan di fase 2, cepat di fase 3
+    const zSpeed = 0.35 * f2 + 1.8 * f3;
+    b.sz = Math.min(1, b.sz + zSpeed * h);
+
+    // Update posisi (masih ada momentum)
+    b.sx += b.svx * h;
+    b.sy += b.svy * h;
+
+    // === TABRAKAN DENGAN UJUNG LUBANG (untuk efek micilpi) ===
+    const dx = b.sx - k.cx, dy = b.sy - k.cy, d = Math.sqrt(dx * dx + dy * dy);
+    if (!b.sHit && d > rw && dx * sh.axis[0] + dy * sh.axis[1] > 0) {
+      const nx = dx / d, ny = dy / d, vn = b.svx * nx + b.svy * ny;
+      if (vn > 0) {
+        b.svx -= 1.45 * vn * nx;
+        b.svy -= 1.45 * vn * ny;
+      }
+      b.sx = k.cx + nx * rw;
+      b.sy = k.cy + ny * rw;
+      b.sHit = true;
+      hit = true;
+    }
+
+    // Rotasi bola (ngguling di dinding)
+    const rollScale = 1 + 2 * f2 + 4 * f3;
+    rotateOrientation(b.orient, b.svy / R, -b.svx / R, b.sOrbitV * 0.5, h * rollScale);
   }
+
+  b.dirty = true;
+  return hit;
+}
 }
 
 /** Ray-cast untuk garis bidik: bola pertama yang kena atau cushion pertama. */
@@ -2131,7 +2389,7 @@ class Game {
   _respotBall(id) {
     const T = this.cfg.table, R = T.ballRadius, b = this.world.balls[id], y = T.height / 2;
     const free = (x) => this.world.balls.every((o) => o === b || o.state !== BallState.ON_TABLE || Math.hypot(o.x - x, o.y - y) >= 2 * R + 1);
-    b.state = BallState.ON_TABLE; b.sinkT = 0; b.stop(); b.resetOrientation(this.rng); b.y = y; b.dirty = true;
+    b.state = BallState.ON_TABLE; b.sinkT = 0; b.stop(); b.resetOrientation(this.rng); b.y = y; b.dirty = true; b.pocketSeq = 0;
     for (let x = T.footSpotX; x <= T.width - R; x += 2) if (free(x)) { b.x = x; return; }
     for (let x = T.footSpotX; x >= R; x -= 2) if (free(x)) { b.x = x; return; }
     b.x = T.footSpotX;
@@ -2277,7 +2535,7 @@ class Game {
     this.time += dt;
     this.particles.update(dt);
     if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 2.4);
-    for (let i = 0; i < 16; i++) { const b = this.world.balls[i]; if (b.state === BallState.POCKETED && b.sinkT < 1) b.sinkT += dt / 0.6; }
+    for (let i = 0; i < 16; i++) { const b = this.world.balls[i]; if (b.state === BallState.POCKETED && b.sinkT < 1 && this.world.stepSink(b, dt)) this.audio.play('cushion', 0.3); }
     if (this.paused) return;
     switch (this.sm.state) {
       case GameState.MENU: this._updateAttract(dt); break;
@@ -3083,7 +3341,7 @@ class BallSprites {
     sp.ctx.putImageData(sp.img, 0, 0); ball.dirty = false;
   }
 }
-
+ 
 /* ---------------- pembangun layer meja (dipakai game, toko, dan pratinjau Developer) ---------------- */
 function loadThemeImages(theme, onLoad) {
   const imgs = { cloth: null, rail: null }; let pending = 0;
@@ -3098,7 +3356,7 @@ function drawCover(c, img, x, y, w, h) {
   const r = Math.max(w / img.width, h / img.height), iw = w / r, ih = h / r;
   c.drawImage(img, (img.width - iw) / 2, (img.height - ih) / 2, iw, ih, x, y, w, h);
 }
-
+ 
 function renderTableLayer(theme, T, geo, s, rot, imgs) {
   imgs = imgs || {};
   const W = T.width, H = T.height, ct = T.cushion, rail = T.rail, ext = ct + rail, pad = 46, tx = ext + pad, u = rail / 56, wu = W / 1600;   // u, wu: skala hiasan untuk meja berukuran lain
@@ -3113,43 +3371,76 @@ function renderTableLayer(theme, T, geo, s, rot, imgs) {
   const along = (stops) => { const g = c.createLinearGradient(cxw - GX * half, cyw - GY * half, cxw + GX * half, cyw + GY * half); for (const [o, col] of stops) g.addColorStop(o, col); return g; };
   const outer = () => rrect(-ext, -ext, W + 2 * ext, H + 2 * ext, 30 * u);
   const ringClip = () => { c.beginPath(); c.rect(-ct, -ct, W + 2 * ct, H + 2 * ct); c.rect(-ext - 5, -ext - 5, W + 2 * ext + 10, H + 2 * ext + 10); c.clip('evenodd'); };
- const pocketClip = (grow) => {
-  grow = grow === undefined ? CONFIG.table.ballRadius * 0.9 : grow;   // <-- default radius bola × 0.9
-  c.beginPath();
-  c.rect(-ext - 8, -ext - 8, W + 2 * ext + 16, H + 2 * ext + 16);
-  for (const sh of geo.pocketShapes) {
-    c.moveTo(sh.cx + sh.radius + grow, sh.cy);
-    c.arc(sh.cx, sh.cy, sh.radius + grow, 0, Math.PI * 2);
+  c.save(); c.shadowColor = 'rgba(0,0,0,0.6)'; c.shadowBlur = 30 * u * s; c.shadowOffsetX = GX * 12 * u * s; c.shadowOffsetY = GY * 12 * u * s; c.fillStyle = '#20080a'; outer(); c.fill(); c.restore();
+ 
+  if (imgs.rail) { c.save(); outer(); c.clip(); c.drawImage(imgs.rail, -ext, -ext, W + 2 * ext, H + 2 * ext); c.restore(); } else if (rt.style === 'neon') {
+  c.fillStyle = along([[0, '#231733'], [1, rt.bg || '#160f1f']]);
+  outer(); c.fill();
+
+  c.save();
+  outer(); c.clip(); ringClip();
+  c.shadowColor = rt.glow;
+  c.shadowBlur = 16 * s;
+  c.strokeStyle = rt.glow;
+  c.lineWidth = 3.4;
+
+  const o1 = 12 * u, o2 = 9 * u;
+
+  // outer neon line
+  rrect(-ext + o1, -ext + o1, W + 2 * ext - 2 * o1, H + 2 * ext - 2 * o1, 20 * u);
+  c.stroke();
+
+  // inner neon line
+  c.lineWidth = 2.2 * Math.max(u, 0.6);
+  rrect(-ct - o2, -ct - o2, W + 2 * ct + 2 * o2, H + 2 * ct + 2 * o2, 12 * u);
+  c.stroke();
+
+  c.shadowBlur = 0;
+  c.fillStyle = 'rgba(255,255,255,0.05)';
+  for (let i = 0; i < 90; i++) {
+    c.fillRect(rng.range(-ext, W + ext), rng.range(-ext, H + ext), 24, 1.3);
   }
-  c.clip('evenodd');
-};
-  c.save(); 
-    pocketClip();                                   // <-- tambah ini
 
-  c.shadowColor = 'rgba(0,0,0,0.6)'; 
-  c.shadowBlur = 30 * u * s; 
-  c.shadowOffsetX = GX * 12 * u * s; 
-  c.shadowOffsetY = GY * 12 * u * s; 
-  c.fillStyle = '#20080a'; outer(); 
-  c.fill(); 
   c.restore();
-
-  if (imgs.rail) { c.save(); outer(); c.clip(); c.drawImage(imgs.rail, -ext, -ext, W + 2 * ext, H + 2 * ext); c.restore(); }
-  else if (rt.style === 'neon') {
-    c.fillStyle = along([[0, '#231733'], [1, rt.bg || '#160f1f']]); outer(); c.fill();
-    c.save(); outer(); c.clip(); ringClip(); c.shadowColor = rt.glow; c.shadowBlur = 16 * s; c.strokeStyle = rt.glow; c.lineWidth = 3.4;
-    const o1 = 12 * u, o2 = 9 * u; rrect(-ext + o1, -ext + o1, W + 2 * ext - 2 * o1, H + 2 * ext - 2 * o1, 20 * u); c.stroke(); c.lineWidth = 2.2 * Math.max(u, 0.6); c.strokeRect(-ct - o2, -ct - o2, W + 2 * ct + 2 * o2, H + 2 * ct + 2 * o2);
-    c.shadowBlur = 0; c.fillStyle = 'rgba(255,255,255,0.05)'; for (let i = 0; i < 90; i++) c.fillRect(rng.range(-ext, W + ext), rng.range(-ext, H + ext), 24, 1.3); c.restore();
-  } else if (rt.style === 'ornate') {
-    c.fillStyle = along([[0, rt.bg], [1, rt.bg]]); outer(); c.fill();
-    const pc = document.createElement('canvas'); pc.width = pc.height = 28; const p = pc.getContext('2d');
-    p.strokeStyle = rt.ink; p.lineWidth = 2; p.beginPath(); p.moveTo(14, 1); p.lineTo(27, 14); p.lineTo(14, 27); p.lineTo(1, 14); p.closePath(); p.stroke();
-    p.fillStyle = rt.spot; p.beginPath(); p.arc(14, 14, 3.6, 0, 7); p.fill(); p.fillStyle = rt.ink; for (const [x, y] of [[0, 0], [28, 0], [0, 28], [28, 28]]) { p.beginPath(); p.arc(x, y, 3, 0, 7); p.fill(); }
-    const pat = c.createPattern(pc, 'repeat'); if (pat.setTransform && typeof DOMMatrix !== 'undefined') pat.setTransform(new DOMMatrix([u, 0, 0, u, 0, 0]));
-    c.save(); outer(); c.clip(); ringClip(); c.fillStyle = pat; c.fillRect(-ext, -ext, W + 2 * ext, H + 2 * ext);
-    const o7 = 7 * u; c.strokeStyle = rt.edge || rt.ink; c.lineWidth = 4 * Math.max(u, 0.6); rrect(-ext + o7, -ext + o7, W + 2 * ext - 2 * o7, H + 2 * ext - 2 * o7, 24 * u); c.stroke(); c.strokeRect(-ct - o7, -ct - o7, W + 2 * ct + 2 * o7, H + 2 * ct + 2 * o7);
-    c.fillStyle = along([[0, 'rgba(255,255,255,0.28)'], [0.5, 'rgba(255,255,255,0)'], [1, 'rgba(0,0,0,0.38)']]); c.fillRect(-ext, -ext, W + 2 * ext, H + 2 * ext); c.restore();
-  } else if (rt.style === 'metal') {
+} else if (rt.style === 'ornate') {
+  c.fillStyle = along([[0, rt.bg], [1, rt.bg]]); outer(); c.fill();          // ✅ base bg, rounded
+  const pc = document.createElement('canvas'); pc.width = pc.height = 28; 
+  const p = pc.getContext('2d');
+  p.strokeStyle = rt.ink; p.lineWidth = 2; 
+  p.beginPath(); p.moveTo(14, 1); p.lineTo(27, 14); p.lineTo(14, 27); 
+  p.lineTo(1, 14); p.closePath(); p.stroke();
+  p.fillStyle = rt.spot; p.beginPath(); p.arc(14, 14, 3.6, 0, 7); p.fill(); 
+  p.fillStyle = rt.ink; 
+  for (const [x, y] of [[0, 0], [28, 0], [0, 28], [28, 28]]) { 
+    p.beginPath(); p.arc(x, y, 3, 0, 7); p.fill(); 
+  }
+  // ↑ pattern diamond + titik, dibuat di canvas terpisah (bukan elemen meja) — boleh kotak 28×28
+  
+  const pat = c.createPattern(pc, 'repeat'); 
+  if (pat.setTransform && typeof DOMMatrix !== 'undefined') 
+    pat.setTransform(new DOMMatrix([u, 0, 0, u, 0, 0]));
+  
+  c.save(); outer(); c.clip(); ringClip();                                    // ✅ clip rounded + cushion
+  c.fillStyle = pat; 
+  c.fillRect(-ext, -ext, W + 2*ext, H + 2*ext);                              // ✅ pattern overlay (di dalam clip)
+  
+  const o7 = 7 * u;
+  c.strokeStyle = rt.edge || rt.ink;
+  c.lineWidth = 4 * Math.max(u, 0.6);
+  
+  rrect(-ext + o7, -ext + o7, W + 2*ext - 2*o7, H + 2*ext - 2*o7, 24*u);    // ✅ outer line rounded
+  c.stroke();
+  
+  rrect(-ct - o7, -ct - o7, W + 2*ct + 2*o7, H + 2*ct + 2*o7, 12 * u);      // ✅ inner line rounded (pakai o7)
+  c.stroke();
+  
+  c.fillStyle = along([[0, 'rgba(255,255,255,0.28)'], 
+                       [0.5, 'rgba(255,255,255,0)'], 
+                       [1, 'rgba(0,0,0,0.38)']]);
+  c.fillRect(-ext, -ext, W + 2*ext, H + 2*ext);                              // ✅ gradient overlay (di dalam clip)
+  
+  c.restore();                                                                // ✅ menutup c.save()
+}else if (rt.style === 'metal') {
     c.fillStyle = along([[0, rt.a], [0.5, rt.b], [1, rt.c]]); outer(); c.fill();
     c.save(); outer(); c.clip(); ringClip(); for (let i = 0; i < 260; i++) { c.strokeStyle = rng.next() < 0.5 ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)'; c.lineWidth = rng.range(0.4, 1.2); c.beginPath(); const y = rng.range(-ext, H + ext), x = rng.range(-ext, W); c.moveTo(x, y); c.lineTo(x + rng.range(80, 500) * wu, y); c.stroke(); } c.restore();
   } else {                                                                     // wood
@@ -3163,105 +3454,211 @@ function renderTableLayer(theme, T, geo, s, rot, imgs) {
     }
     c.restore();
   }
-  let g = c.createLinearGradient(cxw + LX * half, cyw + LY * half, cxw - LX * half, cyw - LY * half);   // bevel luar
-  g.addColorStop(0, 'rgba(255,235,225,0.6)'); 
-  g.addColorStop(0.5, 'rgba(255,255,255,0.04)'); 
-  g.addColorStop(1, 'rgba(0,0,0,0.65)');
-  c.strokeStyle = g; c.lineWidth = 3 * u; 
-  rrect(-ext + 1.5 * u, -ext + 1.5 * u, W + 2 * ext - 3 * u, H + 2 * ext - 3 * u, 29 * u); c.stroke();
+// Bevel luar dengan clip inverse pocket
+c.save();
+c.beginPath();
+c.rect(-ext - 4, -ext - 4, W + 2 * ext + 8, H + 2 * ext + 8);
+for (const sh of geo.pocketShapes) {
+  c.moveTo(sh.cx + sh.radius + 0.5, sh.cy);
+  c.arc(sh.cx, sh.cy, sh.radius + 0.5, 0, Math.PI * 2);
+}
+c.clip('evenodd');
 
-  // kain: gradient dari tengah + vignette; gambar kustom di-cover lalu diberi pencahayaan
-  if (imgs.cloth) {
-    c.save(); c.beginPath(); c.rect(-ct, -ct, W + 2 * ct, H + 2 * ct); c.clip(); drawCover(c, imgs.cloth, -ct, -ct, W + 2 * ct, H + 2 * ct);
-    g = c.createRadialGradient(W / 2, H / 2, 40, W / 2, H / 2, W * 0.62); g.addColorStop(0, 'rgba(255,255,255,0.14)'); g.addColorStop(1, 'rgba(0,0,0,0.30)'); c.fillStyle = g; c.fillRect(-ct, -ct, W + 2 * ct, H + 2 * ct); c.restore();
-  } else {
-    g = c.createRadialGradient(W / 2, H / 2, 40, W / 2, H / 2, W * 0.62); g.addColorStop(0, cl.a); g.addColorStop(0.5, cl.b); g.addColorStop(1, cl.c);
-    c.fillStyle = g; c.fillRect(-ct, -ct, W + 2 * ct, H + 2 * ct);
-    for (let i = 0, n = Math.round(9000 * wu * (H / 728)); i < n; i++) { c.fillStyle = rng.next() < 0.5 ? 'rgba(255,255,255,0.035)' : 'rgba(0,30,60,0.05)'; c.fillRect(rng.range(0, W), rng.range(0, H), 1.1, 1.1); }
-  }
-  const glow = (x0, y0, x1, y1, rx, ry, rw, rh) => { const gr = c.createLinearGradient(x0, y0, x1, y1); gr.addColorStop(0, 'rgba(255,255,255,0.15)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = gr; c.fillRect(rx, ry, rw, rh); };
-  const gl = 70 * u; glow(0, 0, 0, gl, 0, 0, W, gl); glow(0, H, 0, H - gl, 0, H - gl, W, gl); glow(0, 0, gl, 0, 0, 0, gl, H); glow(W, 0, W - gl, 0, W - gl, 0, gl, H);
+let g = c.createLinearGradient(cxw + LX * half, cyw + LY * half, cxw - LX * half, cyw - LY * half);  // ← dekat pemakaian
+g.addColorStop(0, 'rgba(255,235,225,0.6)'); 
+g.addColorStop(0.5, 'rgba(255,255,255,0.04)'); 
+g.addColorStop(1, 'rgba(0,0,0,0.65)');
+c.strokeStyle = g; 
+c.lineWidth = 3 * u; 
+rrect(-ext + 1.5 * u, -ext + 1.5 * u, W + 2 * ext - 3 * u, H + 2 * ext - 3 * u, 29 * u);
+c.stroke();
+
+c.restore();
+ 
+  // kain: warna dasar (gradient dari tengah) + tekstur kain yang diperkuat (tanpa pencahayaan)
+if (imgs.cloth) {
+  c.save();
+  c.beginPath(); c.rect(-ct, -ct, W + 2 * ct, H + 2 * ct); c.clip();
+  drawCover(c, imgs.cloth, -ct, -ct, W + 2 * ct, H + 2 * ct);
+  c.restore();
+} else {
+  g = c.createRadialGradient(W / 2, H / 2, 40, W / 2, H / 2, W * 0.62);
+  g.addColorStop(0, cl.a); g.addColorStop(0.5, cl.b); g.addColorStop(1, cl.c);
+  c.fillStyle = g; c.fillRect(-ct, -ct, W + 2 * ct, H + 2 * ct);
+}
+
+/* ====== TEKSTUR KAIN DIPERKUAT ====== */
+c.save();
+c.beginPath(); c.rect(-ct, -ct, W + 2 * ct, H + 2 * ct); c.clip();
+
+// --- 1) WEAVE halus: grid silang 1px, alpha rendah ---
+// Skala grid ikut ukuran meja (wu = W/1600) supaya konsisten
+const weaveStep = Math.max(2, Math.round(3 * wu));
+c.globalCompositeOperation = 'overlay';
+for (let y = -ct; y < H + ct; y += weaveStep) {
+  c.fillStyle = (Math.floor(y / weaveStep) & 1) ? 'rgba(255,255,255,0.045)' : 'rgba(0,30,60,0.05)';
+  c.fillRect(-ct, y, W + 2 * ct, 1);
+}
+for (let x = -ct; x < W + ct; x += weaveStep) {
+  c.fillStyle = (Math.floor(x / weaveStep) & 1) ? 'rgba(255,255,255,0.04)' : 'rgba(0,30,60,0.045)';
+  c.fillRect(x, -ct, 1, H + 2 * ct);
+}
+
+// --- 2) NOISE grain: bintik acak lebih padat & sedikit lebih tegas ---
+c.globalCompositeOperation = 'overlay';
+const noiseN = Math.round(22000 * wu * (H / 728));
+for (let i = 0; i < noiseN; i++) {
+  const r = rng.next();
+  c.fillStyle = r < 0.45 ? 'rgba(255,255,255,0.055)'
+              : r < 0.9  ? 'rgba(0,30,60,0.06)'
+              :            'rgba(0,0,0,0.05)';
+  const px = rng.range(-ct, W + ct);
+  const py = rng.range(-ct, H + ct);
+  const s = rng.next() < 0.85 ? 1 : 1.6;
+  c.fillRect(px, py, s, s);
+}
+
+// --- 3) FIBER streaks: garis tipis panjang, searah, sangat halus ---
+// Memberi kesan serat kain (bukan hanya noise titik)
+c.globalCompositeOperation = 'overlay';
+const fibersN = Math.round(700 * wu);
+for (let i = 0; i < fibersN; i++) {
+  const horiz = rng.next() < 0.5;
+  const len = rng.range(60, 320) * wu;
+  const x0 = rng.range(-ct, W + ct);
+  const y0 = rng.range(-ct, H + ct);
+  c.strokeStyle = rng.next() < 0.5
+    ? 'rgba(255,255,255,0.035)'
+    : 'rgba(0,30,60,0.045)';
+  c.lineWidth = rng.range(0.5, 1.1);
+  c.beginPath();
+  if (horiz) { c.moveTo(x0, y0); c.lineTo(x0 + len, y0 + rng.range(-1, 1)); }
+  else       { c.moveTo(x0, y0); c.lineTo(x0 + rng.range(-1, 1), y0 + len); }
+  c.stroke();
+}
+
+c.globalCompositeOperation = 'source-over';
+c.restore();
+/* ====== AKHIR TEKSTUR KAIN ====== */
+
+// (blok glow(...) DIHAPUS — user tidak mau pencahayaan tambahan)
+
   for (const P of geo.cushions) {
     const ex = P[1][0] - P[0][0], ey = P[1][1] - P[0][1], el = Math.hypot(ex, ey); let nx = -ey / el, ny = ex / el; if (nx * (W / 2 - P[0][0]) + ny * (H / 2 - P[0][1]) < 0) { nx = -nx; ny = -ny; }
     const sw = 16 * u, gr = c.createLinearGradient(P[0][0], P[0][1], P[0][0] + nx * sw, P[0][1] + ny * sw); gr.addColorStop(0, 'rgba(0,25,50,0.38)'); gr.addColorStop(1, 'rgba(0,25,50,0)');
     c.fillStyle = gr; c.beginPath(); c.moveTo(P[0][0], P[0][1]); c.lineTo(P[1][0], P[1][1]); c.lineTo(P[1][0] + nx * sw, P[1][1] + ny * sw); c.lineTo(P[0][0] + nx * sw, P[0][1] + ny * sw); c.closePath(); c.fill();
   }
- // MENJADI:
-const hg = c.createLinearGradient(0, 0, 0, H);
-hg.addColorStop(0,    'rgba(255,255,255,0)');
-hg.addColorStop(0.07, 'rgba(255,255,255,0.30)');
-hg.addColorStop(0.93, 'rgba(255,255,255,0.30)');
-hg.addColorStop(1,    'rgba(255,255,255,0)');
-c.strokeStyle = hg; c.lineWidth = 1.4;
-c.beginPath(); c.moveTo(T.headStringX, 2); c.lineTo(T.headStringX, H - 2); 
-c.stroke();
-// 2) Garis luar area kain — INI YANG BIKIN KOTAK DI GAMBAR KAMU
-c.save(); pocketClip();
-g = c.createLinearGradient(cxw + LX*half, cyw + LY*half, cxw - LX*half, cyw - LY*half);
-g.addColorStop(0, 'rgba(15,0,0,0.6)');
-g.addColorStop(1, 'rgba(255,225,210,0.35)');
-c.strokeStyle = g; c.lineWidth = 2.4;
-c.strokeRect(-ct - 1, -ct - 1, W + 2*ct + 2, H + 2*ct + 2);
-c.restore();
-
-// 3) Garis head-string — ujungnya sekarang lumer di lubang
-c.save(); pocketClip(CONFIG.table.ballRadius * 0.4);
-c.strokeStyle = 'rgba(255,255,255,0.28)'; c.lineWidth = 1.4;
-c.beginPath(); c.moveTo(T.headStringX, 2); c.lineTo(T.headStringX, H - 2); c.stroke();
-c.restore();
-  c.fillStyle = 'rgba(255,255,255,0.32)'; for (const x of [T.headStringX, W / 2, T.footSpotX]) 
-    { c.beginPath(); c.arc(x, H / 2, 3.2, 0, 7); c.fill(); }
-
- if (bandsOn) {
+  c.strokeStyle = 'rgba(255,255,255,0.28)'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(T.headStringX, 2); c.lineTo(T.headStringX, H - 2); c.stroke();
+  c.fillStyle = 'rgba(255,255,255,0.32)'; for (const x of [T.headStringX, W / 2, T.footSpotX]) { c.beginPath(); c.arc(x, H / 2, 3.2, 0, 7); c.fill(); }
+ 
+ // shading rail: merah terang tepat di sisi cushion → makin gelap ke tepi luar (referensi 8 Ball Pool)
+if (bandsOn) {
   c.save();
-  pocketClip(CONFIG.table.ballRadius * 0.9);          // <-- clip pakai radius lubang
-  c.lineJoin = 'miter'; const N = 16;
-  for (let n = 0; n < N; n++) {
-    const t0 = n / N, t1 = (n + 1) / N, tm = (t0 + t1) / 2, d0 = rail * t0, d1 = rail * t1, mid = ct + (d0 + d1) / 2;
-    const bright = Math.max(0, 1 - tm / 0.4) * 0.5, dark = Math.max(0, (tm - 0.5) / 0.5) * 0.55;
-    c.strokeStyle = bright >= dark ? 'rgba(255,50,20,' + bright.toFixed(3) + ')' : 'rgba(45,0,0,' + dark.toFixed(3) + ')';
-    c.lineWidth = d1 - d0 + 0.6; c.strokeRect(-mid, -mid, W + 2 * mid, H + 2 * mid);
+  c.lineJoin = 'miter';
+
+  // === Clip inverse: rail hanya digambar DI LUAR lingkaran pocket ===
+  // Setiap pocket menghasilkan lubang di rail (rail tidak menutupi bola yang jatuh).
+  c.beginPath();
+  // 1) path luar (persegi besar yang menutupi seluruh rail)
+  c.rect(-ext - 2, -ext - 2, W + 2 * ext + 4, H + 2 * ext + 4);
+  // 2) 6 lingkaran pocket (evenodd → lubang)
+  for (const sh of geo.pocketShapes) {
+    // radius lubang pada rail = radius pocket + sedikit margin
+    // corner dan side punya radius sama dengan pocketShapes[k].radius
+    // kita tambah 0.5 supaya tepi tajam, bukan pecah pixel
+    c.moveTo(sh.cx + sh.radius + 0.5, sh.cy);
+    c.arc(sh.cx, sh.cy, sh.radius + 0.5, 0, Math.PI * 2);
   }
+  c.clip('evenodd');
+
+  // === Rail bands (gradient merah → gelap) ===
+  const N = 16;
+  for (let n = 0; n < N; n++) {
+    const t0 = n / N, t1 = (n + 1) / N, tm = (t0 + t1) / 2;
+    const d0 = rail * t0, d1 = rail * t1, mid = ct + (d0 + d1) / 2;
+    const bright = Math.max(0, 1 - tm / 0.4) * 0.5;
+    const dark = Math.max(0, (tm - 0.5) / 0.5) * 0.55;
+    c.strokeStyle = bright >= dark
+      ? 'rgba(255,50,20,' + bright.toFixed(3) + ')'
+      : 'rgba(45,0,0,' + dark.toFixed(3) + ')';
+    c.lineWidth = d1 - d0 + 0.6;
+    rrect(-mid, -mid, W + 2*mid, H + 2*mid, Math.max(0, 30 * u + (mid - ext)));
+    c.stroke();
+  }
+
+  // === Highlight tipis di tepi dalam rail ===
   c.strokeStyle = 'rgba(255,70,40,0.75)';
   c.lineWidth = 1.4 * kk;
-  c.strokeRect(-ct - 0.7 * kk, -ct - 0.7 * kk, W + 2 * ct + 1.4 * kk, H + 2 * ct + 1.4 * kk);
+  rrect(-ct - 0.7 * kk, -ct - 0.7 * kk, W + 2*ct + 1.4 * kk, H + 2*ct + 1.4 * kk, 18 * u);
+  c.stroke();
   c.restore();
 }
-
   // pocket ala 8 Ball Pool: bayangan di kain → plat sudut lavender (corner) → lubang bundar hitam→marun
   for (const sh of geo.pocketShapes) {
     const x = sh.cx, y = sh.cy, r = sh.radius, ax = sh.axis[0], ay = sh.axis[1];
     c.save(); c.beginPath(); c.rect(-ct, -ct, W + 2 * ct, H + 2 * ct); c.clip();                    // bayangan lubang di atas kain
-    g = c.createRadialGradient(
-      x, 
-      y, 
-      r * 0.8, 
-      x, 
-      y, 
-      r * 1.9
-    ); 
-    g.addColorStop(0, 'rgba(0,8,20,0.62)'); 
-    g.addColorStop(1, 'rgba(0,8,20,0)');
-    c.fillStyle = g; 
-    c.fillRect(x - r * 2, y - r * 2, r * 4, r * 4); 
-    c.restore();
-
-    if (sh.corner && !imgs.rail && rt.style !== 'neon') {                                            // plat sudut
+    g = c.createRadialGradient(x, y, r * 0.8, x, y, r * 1.9); g.addColorStop(0, 'rgba(0,8,20,0.62)'); g.addColorStop(1, 'rgba(0,8,20,0)');
+    c.fillStyle = g; c.fillRect(x - r * 2, y - r * 2, r * 4, r * 4); c.restore();
+    if (sh.corner && !imgs.rail && rt.style !== 'neon') 
+      {                                            
+        // plat sudut
       const ox = ax < 0 ? -1 : 1, oy = ay < 0 ? -1 : 1, ex = ox < 0 ? -ext : W + ext, ey = oy < 0 ? -ext : H + ext;
       const xt = x - ox * r, yt = y - oy * r, xc = ox < 0 ? -ct : W + ct, yc = oy < 0 ? -ct : H + ct;
-      c.save(); outer(); c.clip(); c.beginPath(); c.moveTo(ex, ey); c.lineTo(xt, ey); c.lineTo(xt, yc); c.lineTo(xc, yc); c.lineTo(xc, yt); c.lineTo(ex, yt); c.closePath(); c.clip();
-      g = c.createLinearGradient(cxw + LX * half, cyw + LY * half, cxw - LX * half, cyw - LY * half); g.addColorStop(0, '#ddd3e6'); g.addColorStop(0.45, '#9d8fab'); g.addColorStop(1, '#4a4154');
-      c.fillStyle = g; c.fillRect(-ext - 4, -ext - 4, W + 2 * ext + 8, H + 2 * ext + 8);
-      const pg = c.createRadialGradient(x, y, r, x, y, r * 2.4); pg.addColorStop(0, 'rgba(255,255,255,0.28)'); pg.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = pg; c.fillRect(-ext - 4, -ext - 4, W + 2 * ext + 8, H + 2 * ext + 8);
-      outer(); c.strokeStyle = 'rgba(196,166,214,0.9)'; c.lineWidth = 7 * kk; c.stroke();            // tepi luar membulat
-      c.strokeStyle = 'rgba(255,255,255,0.6)'; c.lineWidth = 1.6 * kk; c.beginPath(); c.moveTo(xt, ey); c.lineTo(xt, yc); c.moveTo(xc, yt); c.lineTo(ex, yt); c.stroke();   // tepi dalam plat
+      c.save(); 
+      outer(); 
+      c.clip(); 
+      c.beginPath(); 
+      c.moveTo(ex, ey); 
+      c.lineTo(xt, ey); 
+      c.lineTo(xt, yc); 
+      c.lineTo(xc, yc); 
+      c.lineTo(xc, yt); 
+      c.lineTo(ex, yt); 
+      c.closePath(); 
+      c.clip();
+          // === TAMBAHKAN: clip inverse lubang pocket ===
+      c.beginPath();
+      c.rect(-ext - 4, -ext - 4, W + 2 * ext + 8, H + 2 * ext + 8);
+      c.moveTo(x + r + 0.5, y);
+      c.arc(x, y, r + 0.5, 0, Math.PI * 2);
+      c.clip('evenodd');
+
+      g = c.createLinearGradient(cxw + LX * half, cyw + LY * half, cxw - LX * half, cyw - LY * half); 
+      g.addColorStop(0, '#ddd3e6'); 
+      g.addColorStop(0.45, '#9d8fab'); 
+      g.addColorStop(1, '#4a4154');
+      // Sesudah:
+      c.fillStyle = g;
+      rrect(-ext - 4, -ext - 4, W + 2 * ext + 8, H + 2 * ext + 8, 30 * u);  // ← rounded
+      c.fill();
+      const pg = c.createRadialGradient(x, y, r, x, y, r * 2.4); 
+      pg.addColorStop(0, 'rgba(255,255,255,0.28)'); 
+      pg.addColorStop(1, 'rgba(255,255,255,0)'); 
+      c.fillStyle = pg;
+      rrect(-ext - 4, -ext - 4, W + 2*ext + 8, H + 2*ext + 8, 30 * u);
+      c.fill();
+      outer(); 
+      c.strokeStyle = 'rgba(196,166,214,0.9)'; 
+      c.lineWidth = 7 * kk; c.stroke();            // tepi luar membulat
+      c.strokeStyle = 'rgba(255,255,255,0.6)'; 
+      c.lineWidth = 1.6 * kk; 
+      c.beginPath(); 
+      c.moveTo(xt, ey); 
+      c.lineTo(xt, yc); 
+      c.moveTo(xc, yt); 
+      c.lineTo(ex, yt); 
+      c.stroke();   // tepi dalam plat
       c.restore();
     }
     g = c.createRadialGradient(x - ax * 0.38 * r, y - ay * 0.38 * r, r * 0.05, x + ax * 0.1 * r, y + ay * 0.1 * r, r * 1.08);   // hitam di sisi kain, marun ke sisi luar
-    g.addColorStop(0, '#000'); g.addColorStop(0.42, '#000'); g.addColorStop(0.78, '#3b0000'); g.addColorStop(1, '#5e0707');
-    c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, 7); c.fill();
+    g.addColorStop(0, '#000'); 
+    g.addColorStop(0.42, '#000'); 
+    g.addColorStop(0.78, '#3b0000'); 
+    g.addColorStop(1, '#5e0707');
+    c.fillStyle = g; 
+    c.beginPath(); c.arc(x, y, r, 0, 7);
+     c.fill();
   }
-
   // cushion trapesium bertepi 3D; cahaya dari kiri-atas layar
   for (const P of geo.cushions) {
     const ex = P[1][0] - P[0][0], ey = P[1][1] - P[0][1], el = Math.hypot(ex, ey); let nx = -ey / el, ny = ex / el; if (nx * (W / 2 - P[0][0]) + ny * (H / 2 - P[0][1]) < 0) { nx = -nx; ny = -ny; }
@@ -3271,26 +3668,49 @@ c.restore();
     const edge = (p, q, en) => { const lit = en[0] * LX + en[1] * LY; c.strokeStyle = lit > 0 ? 'rgba(245,252,255,' + (0.3 + 0.5 * lit).toFixed(2) + ')' : 'rgba(0,25,50,' + (0.25 - 0.4 * lit).toFixed(2) + ')'; c.lineWidth = 2.2; c.beginPath(); c.moveTo(p[0], p[1]); c.lineTo(q[0], q[1]); c.stroke(); };
     edge(P[0], P[1], [nx, ny]);
     for (const [a, b] of [[1, 2], [3, 0]]) { const dx = P[b][0] - P[a][0], dy = P[b][1] - P[a][1], dl = Math.hypot(dx, dy); let jx = -dy / dl, jy = dx / dl; const mx = (P[0][0] + P[1][0] + P[2][0] + P[3][0]) / 4 - (P[a][0] + P[b][0]) / 2, my = (P[0][1] + P[1][1] + P[2][1] + P[3][1]) / 4 - (P[a][1] + P[b][1]) / 2; if (jx * mx + jy * my > 0) { jx = -jx; jy = -jy; } edge(P[a], P[b], [jx, jy]); }
-    c.strokeStyle = 'rgba(0,20,40,0.5)'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(P[3][0], P[3][1]); c.lineTo(P[2][0], P[2][1]); c.stroke();
-     if (rt.style === 'neon' && !imgs.rail) {
-    c.save(); c.shadowColor = rt.glow; c.shadowBlur = 10 * s;
-    c.strokeStyle = rt.glow; c.lineWidth = 1.6;
-    c.beginPath(); c.moveTo(P[0][0], P[0][1]); c.lineTo(P[1][0], P[1][1]); c.stroke(); c.restore();
+    c.strokeStyle = 'rgba(0,20,40,0.5)'; 
+    c.lineWidth = 1.6; 
+    c.beginPath(); 
+    c.moveTo(P[3][0], P[3][1]); 
+    c.lineTo(P[2][0], P[2][1]); 
+    c.stroke();
+    if (rt.style === 'neon' && !imgs.rail) { c.save(); 
+      c.shadowColor = rt.glow; 
+      c.shadowBlur = 10 * s; 
+      c.strokeStyle = rt.glow; 
+      c.lineWidth = 1.6; c.beginPath(); 
+      c.moveTo(P[0][0], P[0][1]); 
+      c.lineTo(P[1][0], P[1][1]); 
+      c.stroke(); 
+      c.restore(); }
   }
-  c.restore();                                    // <-- tambah ini
 
-  }
-  g = c.createLinearGradient(cxw + LX * half, cyw + LY * half, cxw - LX * half, cyw - LY * half); g.addColorStop(0, 'rgba(15,0,0,0.6)'); g.addColorStop(1, 'rgba(255,225,210,0.35)');
-  c.strokeStyle = g; c.lineWidth = 2.4; c.strokeRect(-ct - 1, -ct - 1, W + 2 * ct + 2, H + 2 * ct + 2);
+c.save();
+c.beginPath();
+c.rect(-ct - 4, -ct - 4, W + 2 * ct + 8, H + 2 * ct + 8);
+for (const sh of geo.pocketShapes) {
+  c.moveTo(sh.cx + sh.radius + 0.5, sh.cy);
+  c.arc(sh.cx, sh.cy, sh.radius + 0.5, 0, Math.PI * 2);
+}
+c.clip('evenodd');
+
+g = c.createLinearGradient(cxw + LX * half, cyw + LY * half, cxw - LX * half, cyw - LY * half);
+g.addColorStop(0, 'rgba(15,0,0,0.6)'); 
+g.addColorStop(1, 'rgba(255,225,210,0.35)');
+// Sesudah:
+c.strokeStyle = g; 
+c.lineWidth = 2.4; 
+rrect(-ct - 1, -ct - 1, W + 2 * ct + 2, H + 2 * ct + 2, 18 * u);   // ← rounded
+c.stroke();
+
+c.restore();
   // bibir lubang: corner = cincin ungu tipis; side = busur biru cushion di sisi kain & garis gelap di sisi rail
   for (const sh of geo.pocketShapes) {
     const x = sh.cx, y = sh.cy, r = sh.radius, ao = Math.atan2(sh.axis[1], sh.axis[0]), neon = rt.style === 'neon' && !imgs.rail;
     c.lineCap = 'round';
     if (sh.corner) {
       c.beginPath(); c.arc(x, y, r + 0.8 * kk, 0, 7); c.strokeStyle = neon ? rt.glow : 'rgba(70,48,84,0.95)'; c.lineWidth = 2 * kk; c.stroke();
-      c.beginPath(); c.arc(x, y, r + 2.6 * kk, ao + Math.PI * 0.6, ao + Math.PI * 1.4); 
-      c.strokeStyle = 'rgba(255,255,255,0.35)'; 
-      c.lineWidth = 4 * kk; c.stroke();
+      c.beginPath(); c.arc(x, y, r + 2.6 * kk, ao + Math.PI * 0.6, ao + Math.PI * 1.4); c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 1.2 * kk; c.stroke();
     } else {
       c.beginPath(); c.arc(x, y, r + 0.4 * kk, ao + Math.PI / 2, ao + Math.PI * 1.5); c.strokeStyle = neon ? rt.glow : cu.nose; c.lineWidth = 2.2 * kk; c.stroke();     // sisi kain
       c.beginPath(); c.arc(x, y, r + 0.6 * kk, ao - Math.PI / 2, ao + Math.PI / 2); c.strokeStyle = 'rgba(25,0,0,0.9)'; c.lineWidth = 2 * kk; c.stroke();                    // sisi rail
@@ -3298,7 +3718,7 @@ c.restore();
   }
   // sight logam / neon dengan jarak konsisten
   const sight = (x, y) => {
-    if (rt.style === 'neon' && !imgs.rail) { c.save(); c.shadowColor = rt.glow; c.shadowBlur = 10 * s; c.strokeStyle = theme.sight; c.lineWidth = 4.2; c.beginPath(); c.arc(x, y, 6, 0, 7); c.stroke(); c.fillStyle = theme.sight; c.beginPath(); c.arc(x, y, 2.2, 0, 7); c.fill(); c.restore(); return; }
+    if (rt.style === 'neon' && !imgs.rail) { c.save(); c.shadowColor = rt.glow; c.shadowBlur = 10 * s; c.strokeStyle = theme.sight; zc.lineWidth = 2.2; c.beginPath(); c.arc(x, y, 6, 0, 7); c.stroke(); c.fillStyle = theme.sight; c.beginPath(); c.arc(x, y, 2.2, 0, 7); c.fill(); c.restore(); return; }
     c.fillStyle = 'rgba(0,0,0,0.42)'; c.beginPath(); c.arc(x + 0.8, y + 1.2, 3.6, 0, 7); c.fill();
     c.fillStyle = theme.sight; c.beginPath(); c.arc(x, y, 3.4, 0, 7); c.fill();
     const rg = c.createRadialGradient(x - 1, y - 1, 0.3, x, y, 3.6); rg.addColorStop(0, 'rgba(255,255,255,0.95)'); rg.addColorStop(0.6, 'rgba(255,255,255,0)'); rg.addColorStop(1, 'rgba(0,0,0,0.35)'); c.fillStyle = rg; c.beginPath(); c.arc(x, y, 3.4, 0, 7); c.fill();
@@ -3308,7 +3728,7 @@ c.restore();
   for (const k of [1, 2, 3]) { sight(-off, H * k / 4); sight(W + off, H * k / 4); }
   return { canvas: cv, pad: tx, s };
 }
-
+ 
 const PREVIEW_GEO = {};
 /** Pratinjau meja (toko & halaman Developer); `kind` = 'standard' | 'american'. */
 function renderTablePreview(theme, widthPx, imgs, kind) {
@@ -3316,7 +3736,7 @@ function renderTablePreview(theme, widthPx, imgs, kind) {
   const tx = T.rail + T.cushion + 46;
   return renderTableLayer(theme, T, PREVIEW_GEO[T.width], widthPx / (T.width + 2 * tx), 0, imgs).canvas;
 }
-
+ 
 /* ---------------- renderer ---------------- */
 class Renderer {
   constructor(canvas, game, store) {
@@ -3329,6 +3749,7 @@ class Renderer {
     this.cueFX = new CueballFX();
     this.applyTheme(true); this.applyCueSkin(); this.resize();
   }
+
   /** Margin (px) yang dicadangkan HUD per layout; disamakan dengan CSS. */
   static layoutFor(vw, vh) {
     // Kiri: power bar. Kanan: roda spin (+ tombol bidik halus di compact/portrait).
@@ -3342,7 +3763,7 @@ class Renderer {
   }
   applyTheme(skipBuild) {
     this.theme = this.store.themeDef(this.store.data.tables.equipped);
-
+ 
     this.themeImgs = loadThemeImages(this.theme, (imgs) => { this.themeImgs = imgs; if (this.vw) this._buildTable(); });
     if (!skipBuild && this.vw) this._buildTable();
   }
@@ -3375,7 +3796,7 @@ class Renderer {
     const r = renderTableLayer(this.theme, T, this.geo, s, this.rot, this.themeImgs);
     this.tableLayer = r.canvas; this.tablePad = r.pad; this.tableS = r.s;
   }
-
+ 
   _visible(zoom) { const k = this.scale * zoom; return this.rot ? { wx: this.rh / k, wy: this.rw / k } : { wx: this.rw / k, wy: this.rh / k }; }
   _clamp(cam) {
     const T = CONFIG.table, ext = T.rail + T.cushion, v = this._visible(cam.zoom), lo = -ext * 0.9, hiX = T.width + ext * 0.9, hiY = T.height + ext * 0.9;
@@ -3399,7 +3820,7 @@ class Renderer {
     const k = this.scale * this.cam.zoom, cs = Math.cos(this.rot), sn = Math.sin(this.rot), dx = px - this.rcx, dy = py - this.rcy;
     this.tmp.x = this.cam.cx + (dx * cs + dy * sn) / k; this.tmp.y = this.cam.cy + (-dx * sn + dy * cs) / k; return this.tmp;
   }
-
+ 
   render(dt) {
     this.time += dt; this._updateCamera(dt);
     const g = this.game, c = this.ctx, world = g.world, R = CONFIG.table.ballRadius, D = this.dpr;
@@ -3410,7 +3831,7 @@ class Renderer {
     c.drawImage(this.tableLayer, -pad, -pad, this.tableLayer.width / s, this.tableLayer.height / s);
     const inMatch = g.state !== GameState.MENU && g.state !== GameState.MATCHMAKING;
     if (g.canPlace() && g.ballInHandZone === 'head') { c.fillStyle = 'rgba(255,255,255,0.07)'; c.fillRect(0, 0, CONFIG.table.headStringX, CONFIG.table.height); }
-
+ 
     const sp = this.sprites, half = sp.size / (2 * sp.ppu), cs = Math.cos(this.rot), sn = Math.sin(this.rot);
     const ox = (R * 0.3) * cs + (R * 0.42) * sn, oy = -(R * 0.3) * sn + (R * 0.42) * cs;     // bayangan jatuh ke kanan-bawah LAYAR
     c.fillStyle = 'rgba(0,25,50,0.34)';
@@ -3429,31 +3850,76 @@ class Renderer {
     if (g.canPlace()) { const cue = world.balls[0], pulse = 0.5 + 0.5 * Math.sin(this.time * 6); c.strokeStyle = 'rgba(244,197,66,' + (0.55 + 0.35 * pulse).toFixed(2) + ')'; c.lineWidth = 2 / this.k; c.beginPath(); c.arc(cue.x, cue.y, R + 4 + pulse * 2, 0, 7); c.stroke(); }
     const P = g.particles;
     for (let k = 0; k < P.n; k++) { if (P.life[k] <= 0) continue; const a = P.life[k] / P.max[k]; c.fillStyle = P.tone[k] ? 'rgba(255,90,95,' + (a * 0.9).toFixed(2) + ')' : 'rgba(230,248,255,' + (a * 0.9).toFixed(2) + ')'; c.beginPath(); c.arc(P.x[k], P.y[k], P.size[k] * (0.4 + 0.6 * a), 0, 7); c.fill(); }
-    if (inMatch) this._drawTray(c);
+    if (inMatch) this._drawTray(c, dt);
+  }
+ 
+  /** Bola jatuh: posisi/skala berasal dari simulasi nyata World.stepSink (meluncur → menabrak ujung lubang → menggelinding turun ke
+   *  pusat sambil tenggelam). Bola dipotong lingkaran lubang yang mengecil sehingga tampak masuk di bawah bibir lubang. */
+/** Bola jatuh: 3 fase animasi real.
+ *  - Fase 1 (sinkT < 0.35): bola masih penuh, terpotong oleh lingkaran lubang.
+ *  - Fase 2 (0.35 – 0.75): bola mengecil pelan, warnanya makin gelap.
+ *  - Fase 3 (> 0.75): bola mengecil cepat + fade out.
+ *  Bola "digambar di atas" dulu saat awal (masih menyentuh bibir), lalu
+ *  di-clip oleh lingkaran lubang yang mengecil.
+ */
+_drawSinking(c, b, i, sp, half) {
+  const k = this.game.world.pockets[b.pocketIndex];
+  const R = CONFIG.table.ballRadius;
+  const z = b.sz, t = b.sinkT;
+
+  if (b.dirty) sp.render(b);
+
+  // Skala mengecil: pelan di fase 1, sedang di fase 2, cepat di fase 3
+  let scale;
+  if (t < 0.35)      scale = 1.0;                                        // masih penuh
+  else if (t < 0.75) scale = 1.0 - 0.35 * ((t - 0.35) / 0.40);           // 1.0 → 0.65
+  else               scale = 0.65 - 0.45 * ((t - 0.75) / 0.25);          // 0.65 → 0.20
+  scale = Math.max(0.15, scale);
+
+  // Alpha: hanya fade di fase 3
+  const alpha = t < 0.75 ? 1.0 : 1.0 - (t - 0.75) / 0.25;
+
+  // Kegelapan: bola makin gelap saat masuk lubang
+  const darkness = Math.min(0.95, z * 1.2);
+
+  c.save();
+
+  // Clip ke lingkaran lubang yang mengecil (supaya bola terlihat "di bawah bibir")
+  // Radius clip mengecil lebih cepat dari skala bola → efek "tenggelam"
+  const clipR = k.radius * (1 - 0.6 * z);
+  c.beginPath();
+  c.arc(k.cx, k.cy, clipR, 0, 7);
+  c.clip();
+
+  // Gambar bola
+  c.globalAlpha = alpha;
+  const drawHalf = half * scale;
+  c.drawImage(sp.sprites[i].cv, b.sx - drawHalf, b.sy - drawHalf, 2 * drawHalf, 2 * drawHalf);
+
+  // Overlay gelap (bola makin tenggelam)
+  if (darkness > 0.05) {
+    c.globalAlpha = alpha * darkness;
+    c.fillStyle = '#000';
+    c.beginPath();
+    c.arc(b.sx, b.sy, drawHalf * 0.98, 0, 7);
+    c.fill();
   }
 
-  /** Bola jatuh ke lubang: meluncur ke ujung (dinding belakang) lubang, memantul kecil, lalu "menggelinding turun" —
-   *  mengecil, menggelap, dan lenyap di dalam lubang. Sisi pantulan mengikuti arah laju bola saat masuk. */
-  _drawSinking(c, b, i, sp, half) {
-    const world = this.game.world, k = world.pockets[b.pocketIndex], sh = this.geo.pocketShapes[b.pocketIndex], R = CONFIG.table.ballRadius;
-    if (b.dirty) sp.render(b);
-    const t = b.sinkT, r = k.radius, ax = sh.axis[0], ay = sh.axis[1], tx = -ay, ty = ax;
-    const v = Math.hypot(b.fallVx || 0, b.fallVy || 0), sd = v > 1 ? Util.clamp(((b.fallVx || 0) * tx + (b.fallVy || 0) * ty) / v, -1, 1) : 0;
-    const wx = k.cx + ax * r * 0.5 + tx * sd * r * 0.35, wy = k.cy + ay * r * 0.5 + ty * sd * r * 0.35;       // ujung lubang yang ditabrak
-    let x, y, sc, a = 1, dark;
-    if (t < 0.38) {
-      const u = Util.easeOutCubic(t / 0.38); x = Util.lerp(b.fallX, wx, u); y = Util.lerp(b.fallY, wy, u); sc = 1 - 0.1 * u; dark = 0.3 * u;
-    } else {
-      const u = Util.smooth((t - 0.38) / 0.62), bounce = Math.sin(Math.PI * Util.clamp(u * 1.7, 0, 1)) * 0.14 * r;      // pantul kecil lalu jatuh
-      x = wx + ax * r * 0.25 * u + tx * sd * r * 0.2 * u - ax * bounce; y = wy + ay * r * 0.25 * u + ty * sd * r * 0.2 * u - ay * bounce;
-      sc = 0.9 - 0.42 * u; dark = 0.3 + 0.65 * u; a = 1 - Util.smooth((t - 0.72) / 0.28);
-    }
-    c.save(); c.beginPath(); c.arc(k.cx, k.cy, r + R * (1 - Util.smooth(Math.min(1, t / 0.3))), 0, 7); c.clip();    // bola tertutup tepi lubang
-    c.globalAlpha = a; c.drawImage(sp.sprites[i].cv, x - half * sc, y - half * sc, 2 * half * sc, 2 * half * sc);
-    if (dark > 0) { c.globalAlpha = a * dark; c.fillStyle = '#000'; c.beginPath(); c.arc(x, y, half * sc * 0.97, 0, 7); c.fill(); }
+  c.restore();
+
+  // Bibir lubang menutup bola saat sudah dalam (z > 0.3)
+  if (z > 0.3) {
+    c.save();
+    c.globalAlpha = Math.min(1, (z - 0.3) * 2.5) * alpha;
+    c.strokeStyle = 'rgba(0,0,0,0.85)';
+    c.lineWidth = 3.5;
+    c.beginPath();
+    c.arc(k.cx, k.cy, k.radius + 1, 0, 7);
+    c.stroke();
     c.restore();
   }
-
+}
+ 
   /** Tray bola masuk (rel krom seperti 8 Ball Pool). Digambar di ruang layar, tepat di bawah meja. Nonaktifkan lewat this.trayCfg.enabled. */
   _buildTray() {
     this.trayCfg = this.trayCfg || { enabled: true, gap: 4, maxH: 46 }; this.trayT0 = this.trayT0 || {}; this.tray = null;
@@ -3470,7 +3936,7 @@ class Renderer {
     c.strokeStyle = 'rgba(190,205,225,0.28)'; c.lineWidth = 1;                                                                                                       // palang silang
     for (let x = curve + d * 2.5; x < w - d; x += d * 3.2) { c.beginPath(); c.moveTo(x, pad * 0.9); c.lineTo(x, h - pad * 0.9); c.stroke(); }
     const chrome = (yy, lw) => { const gg = c.createLinearGradient(0, yy - lw, 0, yy + lw); gg.addColorStop(0, '#f5f8fb'); gg.addColorStop(0.5, '#9aa6b4'); gg.addColorStop(1, '#4f5b6a'); return gg; };
-    const rad = (h - 2 * pad * 0.5) / 2;
+    
     for (const [inset, lw] of [[pad * 0.35, 2.4], [pad * 0.95, 1.5]]) {                      // dua rel krom bersarang + lengkung masuk di kiri
       const yt = inset, yb = h - inset, rr2 = (yb - yt) / 2;
       c.beginPath(); c.moveTo(w - 3, yt); c.lineTo(rr2 + 3, yt); c.arc(rr2 + 3, yt + rr2, rr2, -Math.PI / 2, Math.PI / 2, true); c.lineTo(w - 3, yb);
@@ -3478,30 +3944,44 @@ class Renderer {
     }
     this.tray = { cv, x0, y0: top, w, h, d, startX: x0 + curve * 0.55, endX: x0 + w - pad * 1.4 - d / 2, cy: top + h / 2, step: d * 1.012 };
   }
-  _drawTray(c) {
+  /** Bola masuk muncul di ujung kiri lorong setelah animasi jatuh selesai, lalu MENGGELINDING (berputar sungguhan, nomor ikut
+   *  berputar) dipercepat oleh kemiringan lorong, menumbuk tumpukan, memantul kecil, dan berhenti dengan nomor menghadap kamera. */
+  _drawTray(c, dt) {
     const T = this.tray; if (!T) return;
-    const world = this.game.world, sp = this.sprites, D = this.dpr, ids = [];
+    const world = this.game.world, sp = this.sprites, D = this.dpr, ids = [], st = this.trayB = this.trayB || {};
+    dt = Math.min(0.05, dt || 0);
     for (let i = 1; i < 16; i++) {
       const b = world.balls[i];
-      if (b.state === BallState.POCKETED && b.pocketSeq > 0) {
-        ids.push(i);
-        if (this.trayT0[i] === undefined) { this.trayT0[i] = b.sinkT >= 1 ? -99 : this.time + 0.42; b.orient.set([0, 0, 1, 0, 1, 0, -1, 0, 0]); b.dirty = true; }   // nomor menghadap kamera
-      } else if (this.trayT0[i] !== undefined) delete this.trayT0[i];
+      if (b.state === BallState.POCKETED && b.pocketSeq > 0) ids.push(i); else if (st[i]) delete st[i];
     }
-    c.setTransform(D, 0, 0, D, 0, 0); c.drawImage(T.cv, T.x0, T.y0, T.w, T.h);
     ids.sort((a, b) => world.balls[a].pocketSeq - world.balls[b].pocketSeq);
-    const S = sp.size, k = T.d * S / Math.max(1, S - 2);
+    const Rr = T.d / 2, dirx = Math.cos(this.rot), diry = -Math.sin(this.rot), acc = Math.max(320, (T.endX - T.startX) * 2.2), face = [0, 0, 1, 0, 1, 0, -1, 0, 0];
+    c.setTransform(D, 0, 0, D, 0, 0); c.drawImage(T.cv, T.x0, T.y0, T.w, T.h);
+    const S = sp.size, kk = T.d * S / Math.max(1, S - 2);
     for (let n = 0; n < ids.length; n++) {
-      const i = ids[n], b = world.balls[i], tx = T.endX - n * T.step, u = (this.time - this.trayT0[i]) / (0.28 + 0.0016 * Math.abs(T.startX - tx));
-      if (u <= 0) continue;
-      const e = Math.min(1, u), x = Util.lerp(T.startX, tx, e * e);                          // makin cepat seperti menuruni lorong
+      const i = ids[n], b = world.balls[i], prev = n > 0 ? st[ids[n - 1]] : null, tx = T.endX - n * T.step;
+      let s = st[i];
+      if (!s) {
+        if (b.sinkT < 1 || (prev === undefined) || (n > 0 && (!prev || this.time - prev.t0 < 0.3))) continue;      // antre: tunggu jatuh selesai & jeda antar bola
+        s = st[i] = { x: T.startX, v: 40, t0: this.time, ph: 0 };
+        b.orient.set(face); rotateOrientation(b.orient, diry, -dirx, 0, -(tx - T.startX) / Rr); b.dirty = true;       // pra-putar agar nomor menghadap kamera saat berhenti
+      }
+      const lim = n === 0 ? T.endX : Math.max(T.startX, st[ids[n - 1]].x - T.step), target = Math.min(tx, lim), x0 = s.x;
+      if (s.x < target - 0.5 || s.v !== 0) {
+        s.v += acc * dt; s.x += s.v * dt;
+        if (s.x >= target) { s.x = target; if (s.v > 30) s.v = -s.v * 0.28; else s.v = 0; }
+        if (s.x < T.startX) { s.x = T.startX; s.v = 0; }
+        if (Math.abs(s.v) < 4 && s.x >= target - 0.5) s.v = 0;
+      }
+      const dx = s.x - x0; if (dx !== 0) { rotateOrientation(b.orient, diry, -dirx, 0, dx / Rr); b.dirty = true; }
       if (b.dirty) sp.render(b);
-      c.save(); c.translate(x, T.cy); c.rotate(this.rot); c.globalAlpha = Math.min(1, u * 6);
+      const e = Math.min(1, (this.time - s.t0) / 0.12);
+      c.save(); c.translate(s.x, T.cy); c.rotate(this.rot); c.globalAlpha = e;
       c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(1, 1.5, T.d * 0.5, T.d * 0.46, 0, 0, 7); c.fill();
-      c.drawImage(sp.sprites[i].cv, -k / 2, -k / 2, k, k); c.restore();
+      c.drawImage(sp.sprites[i].cv, -kk / 2, -kk / 2, kk, kk); c.restore();
     }
   }
-
+ 
   _cueIdFor(seat) {
     const g = this.game;
     if (g.mode === 'local') return 'maple';
@@ -3551,45 +4031,455 @@ class Renderer {
     }
   }
 }
+ 
 /* =====================================================================
    13 · UI CORE — navigasi, HUD, efek, input. Halaman ada di 14-pages.js & 15-dev.js
    ===================================================================== */
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
-const COIN_SVG = '<svg class="coin" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="#F4C542"/><circle cx="11" cy="11" r="6.5" fill="none" stroke="#b8850c" stroke-width="1.6"/></svg>';
-const SHIELD_SVG = '<svg viewBox="0 0 30 34"><path d="M15 1l12 4.5v10.2c0 8.1-5.3 14.4-12 17.3C8.3 30.1 3 23.8 3 15.7V5.5L15 1z" fill="#3b2a00" stroke="#F7C948" stroke-width="2"/><rect x="13" y="9" width="4" height="4" rx="1" fill="#F7C948"/><rect x="13.5" y="14" width="3" height="10" rx="1.2" fill="#F7C948"/></svg>';
-const ICONS = {
-  gift: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9h18v4H3zM4 14h16v7H4zM11 9h2v12h-2z" opacity=".95"/><path d="M12 9C9 9 7 7.5 7.5 5.8 8.2 3.8 11 5 12 9zM12 9c3 0 5-1.5 4.5-3.2C15.8 3.8 13 5 12 9z"/></svg>',
-  rank: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 21h5V11H3zM9.5 21h5V4h-5zM16 21h5v-7h-5z"/></svg>',
-  table: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 7h20v10H2z" opacity=".55"/><path d="M4 9h16v6H4z"/><circle cx="4" cy="9" r="1.6"/><circle cx="20" cy="9" r="1.6"/><circle cx="4" cy="15" r="1.6"/><circle cx="20" cy="15" r="1.6"/></svg>',
-  cue: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M3.5 20.5L19 5"/><path d="M19.5 4.5l1-1" stroke-width="3.4"/></svg>',
-  user: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4.2"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z"/></svg>',
-  gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1" stroke-linecap="round"/></svg>',
-  friend: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8" cy="8" r="3.4"/><path d="M2 20c0-3.6 2.8-5.8 6-5.8s6 2.2 6 5.8z"/><circle cx="17.5" cy="9" r="2.6" opacity=".7"/><path d="M22 20c0-2.7-1.9-4.6-4.3-5.2 1.5 1.2 2.3 2.9 2.3 5.2z" opacity=".7"/></svg>',
-  market: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 8l1.5-4h15L21 8z" opacity=".7"/><path d="M4 8h16v12H4z" opacity=".3"/><path d="M4 8h16v2.2A3 3 0 0114 10a3 3 0 01-6 0 3 3 0 01-6 .2z"/></svg>',
-  dev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4L2 12l6 8M16 4l6 8-6 8"/></svg>',
+/* =====================================================================
+   BLACK CHROME — design tokens (WAJIB ada sebelum injectBlackChrome)
+   ===================================================================== */
+
+
+   const THEME = {
+  bg:        '#060B14',
+  surface:   '#0E1624',
+  surface2:  '#131D2D',
+  stroke:    'rgba(90,170,255,0.35)',
+  strokeSoft:'rgba(90,170,255,0.18)',
+  strokeGold:'rgba(242,193,78,0.42)',
+  primary:   '#3BA8FF',
+  glow:      '#4FC3FF',
+  gold:      '#F2C14E',
+  success:   '#32D583',
+  danger:    '#FF5A6A',
+  text:      '#FFFFFF',
+  textDim:   '#9FB3C8',
+  glass:     'rgba(14,22,36,0.72)',
+  chromeHi:  'rgba(120,180,255,0.12)',
+  vignette:  'radial-gradient(120% 80% at 50% 0%, transparent 40%, rgba(0,0,0,0.55) 100%)',
+  bloom:     '0 0 24px rgba(79,195,255,0.35), 0 0 60px rgba(59,168,255,0.18)',
+  bloomGold: '0 0 20px rgba(242,193,78,0.35), 0 0 48px rgba(242,193,78,0.15)',
+  shadow:    '0 18px 48px rgba(0,0,0,0.55), 0 4px 12px rgba(0,0,0,0.45)',
+  shadowSm:  '0 8px 22px rgba(0,0,0,0.45)',
+  fontHead:  "'Orbitron','Rajdhani',system-ui,sans-serif",
+  fontBody:  "'Inter',system-ui,-apple-system,sans-serif",
+  fontNum:   "'Rajdhani','Inter',system-ui,sans-serif",
+  r: { sm:10, md:14, lg:18, xl:22, pill:999 },
+  ease:      'cubic-bezier(.2,.9,.25,1)',
+  durFast:   '120ms',
+  dur:       '200ms',
+  durSlow:   '320ms',
 };
-function avatarHTML(av, size, badgeId) {
-  const col = AVATAR_COLORS[(av.color | 0) % AVATAR_COLORS.length], fr = FRAMES[av.frame] || FRAMES.none, b = badgeId ? BADGE_DEFS.find((x) => x.id === badgeId) : null;
-  return '<div class="avx" data-frame="' + (av.frame || 'none') + '" style="' + (size ? '--s:' + size + 'px;' : '') + '--c1:' + col[0] + ';--c2:' + col[1] + ';--frame:' + fr.color + '"><svg class="sym" viewBox="0 0 24 24">' + (SYMBOLS[av.sym] || SYMBOLS.ball8) + '</svg>' + (b ? '<span class="bdg">' + badgeHTML(b, '100%') + '</span>' : '') + '</div>';
+
+/* ---- sinkronkan CONFIG.colors.table dengan palet baru ---- */
+if (typeof CONFIG !== 'undefined' && CONFIG.colors && CONFIG.colors.balls) {
+  CONFIG.colors.table = {
+    felt:   '#0E4C7A',
+    feltHi: '#1567A8',
+    rail:   '#2A1510',
+    railHi: '#3E1F16',
+    pocket: '#05080D',
+    cloth:  '#0E4C7A',
+  };
 }
+/* =====================================================================
+   BLACK CHROME — theme injector
+   ===================================================================== */
+(function injectBlackChrome() {
+  if (document.getElementById('bc-theme')) return;
+  const s = document.createElement('style'); s.id = 'bc-theme';
+  s.textContent = `
+  
+
+  :root{
+    --bc-bg:${THEME.bg}; --bc-surface:${THEME.surface}; --bc-surface2:${THEME.surface2};
+    --bc-stroke:${THEME.stroke}; --bc-stroke-soft:${THEME.strokeSoft}; --bc-stroke-gold:${THEME.strokeGold};
+    --bc-primary:${THEME.primary}; --bc-glow:${THEME.glow}; --bc-gold:${THEME.gold};
+    --bc-success:${THEME.success}; --bc-danger:${THEME.danger};
+    --bc-text:${THEME.text}; --bc-text-dim:${THEME.textDim};
+    --bc-glass:${THEME.glass}; --bc-shadow:${THEME.shadow}; --bc-r:${THEME.r.xl}px;
+
+    /* ---- override token lama (agar seluruh app ikut) ---- */
+    --bg:${THEME.bg}; --panel:${THEME.surface}; --panel-2:${THEME.surface2};
+    --gold:${THEME.gold}; --ok:${THEME.success}; --bad:${THEME.danger};
+    --text:${THEME.text}; --muted:${THEME.textDim};
+    --cloth:${THEME.primary};
+    --f-head:${THEME.fontHead}; --f-body:${THEME.fontBody};
+  }
+
+  html,body{background:var(--bc-bg);color:var(--bc-text);font-family:${THEME.fontBody};-webkit-font-smoothing:antialiased;}
+
+  body::before{
+    content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:
+      radial-gradient(60% 40% at 50% 0%, rgba(79,195,255,0.08), transparent 70%),
+      radial-gradient(80% 60% at 50% 120%, rgba(59,168,255,0.06), transparent 70%),
+      ${THEME.vignette};
+  }
+
+  /* ---------- headings & numbers ---------- */
+  .logo,.panel h2,.pg-head h2,.mode-card b,.btn,.hud-menu,
+  .cue-panel h3,.tb-info h4,.rw-lv,.res-row,.mm h2,.lu h2,
+  .pname,#turnChip,.lvl-big,.lu-num,.pod b,.lb-rank,.lb-val{
+    font-family:${THEME.fontHead};letter-spacing:.04em;
+  }
+  #pot b,.res-row b,.stat-c b,.lb-val,.chip.coins,.lu-num{
+    font-family:${THEME.fontNum};font-weight:700;
+  }
+
+  /* ---------- glass ---------- */
+  .panel,.chip,.tile,.mode-card,.bet,.stat-c,.tb-card,.dev-item,
+  .lb-row,.set-row,.cue-panel,.cue-preview,.bdg-card,.pick,.rw-row,
+  .day,.pod{
+    background:linear-gradient(180deg,${THEME.chromeHi},transparent 40%),${THEME.glass};
+    border:1px solid var(--bc-stroke-soft);
+    box-shadow:${THEME.shadowSm};
+    backdrop-filter:blur(12px) saturate(140%);
+    -webkit-backdrop-filter:blur(12px) saturate(140%);
+    transition:transform ${THEME.dur} ${THEME.ease},
+               box-shadow ${THEME.dur} ${THEME.ease},
+               border-color ${THEME.dur} ${THEME.ease};
+  }
+  .tile:hover,.tb-card:hover,.bdg-card:hover,.pick:hover{
+    transform:translateY(-4px);border-color:var(--bc-primary);
+    box-shadow:${THEME.shadowSm},${THEME.bloom};
+  }
+
+  /* ---------- CTA ---------- */
+  .btn{
+    border:1px solid rgba(180,225,255,.45);
+    background:linear-gradient(180deg,rgba(120,180,255,.10),rgba(0,0,0,.55));
+    color:var(--bc-text);font-weight:700;letter-spacing:.05em;
+    border-radius:${THEME.r.xl}px;
+    box-shadow:${THEME.shadowSm},inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .btn:hover:not(:disabled){filter:brightness(1.1);box-shadow:${THEME.shadowSm},${THEME.bloom};}
+  .btn.primary{
+    background:linear-gradient(180deg,#4FB6FF 0%,#2A8FE8 55%,#1E6FBD 100%);
+    color:#04121F;border-color:rgba(180,225,255,.55);
+    box-shadow:${THEME.bloom},0 10px 24px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.5);
+  }
+  .btn.green{
+    background:linear-gradient(180deg,#4ee89a 0%,#32D583 60%,#1e8c56 100%);
+    color:#04120a;border-color:rgba(140,255,200,.5);
+    box-shadow:0 0 22px rgba(50,213,131,.35),inset 0 1px 0 rgba(255,255,255,.45);
+  }
+  .btn.danger{
+    background:linear-gradient(180deg,#ff7a86 0%,#FF5A6A 60%,#a02e3b 100%);
+    color:#1a0308;border-color:rgba(255,160,170,.5);
+    box-shadow:0 0 22px rgba(255,90,106,.35),inset 0 1px 0 rgba(255,255,255,.35);
+  }
+
+  /* ---------- capsule / coins / pot ---------- */
+  .chip.coins,.pot,.capsule{
+    background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(0,0,0,.45));
+    border:1px solid var(--bc-stroke-gold);
+    color:var(--bc-gold);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 4px 12px rgba(0,0,0,.4);
+  }
+  .chip.coins{font-family:${THEME.fontNum};font-weight:700;}
+
+  /* ---------- segmented control ---------- */
+  .seg{background:rgba(14,22,36,.7);border:1px solid var(--bc-stroke-soft);}
+  .seg button{color:var(--bc-text-dim);}
+  .seg button[aria-pressed=true]{
+    background:linear-gradient(180deg,#4FB6FF,#2A8FE8);
+    color:#04121F;box-shadow:${THEME.bloom};
+  }
+
+  /* ---------- mode / bet cards ---------- */
+  .mode-card[aria-pressed=true]{
+    border-color:var(--bc-primary);background:rgba(30,46,72,.55);
+    box-shadow:${THEME.shadowSm},${THEME.bloom};
+  }
+  .bet[aria-pressed=true]{
+    border-color:var(--bc-gold);color:var(--bc-gold);
+    background:rgba(242,193,78,.08);
+    box-shadow:inset 0 0 0 1px rgba(242,193,78,.35);
+  }
+
+  /* ---------- HUD ---------- */
+  #hudTop{background:linear-gradient(180deg,rgba(6,11,20,.94),rgba(6,11,20,.72));
+    border-bottom:1px solid var(--bc-stroke-soft);}
+  #turnChip{background:rgba(14,22,36,.85);border:1px solid var(--bc-stroke);
+    font-family:${THEME.fontHead};letter-spacing:.06em;box-shadow:${THEME.shadowSm};}
+  #turnChip.mine{background:linear-gradient(180deg,rgba(50,213,131,.85),rgba(30,140,86,.85));
+    border-color:rgba(50,213,131,.6);}
+  #turnChip.foul{background:linear-gradient(180deg,rgba(255,90,106,.9),rgba(160,40,44,.9));
+    border-color:rgba(255,90,106,.6);}
+  #tracker,#toast{background:rgba(14,22,36,.85);border:1px solid var(--bc-stroke-soft);
+    backdrop-filter:blur(6px);}
+
+  /* ---------- power / spin / fine ---------- */
+  #powerTrack{background:linear-gradient(180deg,#0d2340,#12305a);
+    border:2px solid rgba(90,170,255,.25);
+    box-shadow:inset 0 3px 8px rgba(0,0,0,.6),0 0 18px rgba(79,195,255,.15);}
+  #powerFill{background:linear-gradient(180deg,#32D583 0%,#4FC3FF 50%,#FF5A6A 100%);}
+  #spin{background:radial-gradient(circle at 35% 30%,#ffffff,#b8c8d8 70%,#6a7a8a);
+    border:3px solid #0A101A;
+    box-shadow:0 0 0 1px rgba(79,195,255,.4),${THEME.shadowSm};}
+  #fine button{background:rgba(14,22,36,.85);border:1px solid var(--bc-stroke);
+    border-radius:14px;box-shadow:${THEME.shadowSm};}
+
+  /* ---------- XP ---------- */
+  .xpbar{background:rgba(255,255,255,.06);border:1px solid var(--bc-stroke-soft);}
+  .xpfill{background:linear-gradient(90deg,#2A8FE8,#4FC3FF);
+    box-shadow:0 0 12px rgba(79,195,255,.55);}
+  .xp-track{position:relative;height:6px;border-radius:999px;background:rgba(255,255,255,.06);
+    border:1px solid var(--bc-stroke-soft);overflow:hidden;}
+  .xp-fill{height:100%;border-radius:999px;
+    background:linear-gradient(90deg,#2A8FE8,#4FC3FF);
+    box-shadow:0 0 12px rgba(79,195,255,.55);
+    transition:width ${THEME.durSlow} ${THEME.ease};}
+
+  /* ---------- cue screen ---------- */
+  .cue-panel{
+    background:linear-gradient(180deg,rgba(120,180,255,.06),rgba(14,22,36,.9));
+    border:1px solid var(--bc-stroke);border-radius:18px;
+  }
+  .cells i{background:rgba(90,170,255,.12);}
+  .cells i.on{background:${THEME.glow};box-shadow:0 0 6px rgba(79,195,255,.6);}
+  .cp-box{border-color:var(--bc-stroke-gold);background:rgba(242,193,78,.05);}
+  .cp-box .cp-title{background:rgba(0,0,0,.4);color:var(--bc-gold);letter-spacing:.06em;}
+
+  /* ---------- switch ---------- */
+  .switch{background:rgba(90,170,255,.18);border:1px solid var(--bc-stroke-soft);}
+  .switch[aria-checked=true]{
+    background:linear-gradient(90deg,#2A8FE8,#4FC3FF);
+    box-shadow:0 0 14px rgba(79,195,255,.5);
+  }
+  .switch[aria-checked=true]::after{transform:translateX(22px);background:#fff;}
+
+  /* ---------- avatar ring ---------- */
+  .avx{box-shadow:inset 0 -4px 8px rgba(0,0,0,.35),inset 0 2px 4px rgba(255,255,255,.22);}
+  .avx[data-frame=neon],.avx[data-frame=diamond],.avx[data-frame=gold]{
+    box-shadow:
+      0 0 0 calc(var(--s)*.07) var(--frame),
+      0 0 0 calc(var(--s)*.105) rgba(0,0,0,.4),
+      0 0 calc(var(--s)*.4) var(--frame);
+  }
+
+  /* ---------- primitives ---------- */
+  .glass{
+    background:linear-gradient(180deg,${THEME.chromeHi},transparent 40%),${THEME.glass};
+    border:1px solid var(--bc-stroke-soft);border-radius:var(--bc-r);
+    box-shadow:${THEME.shadow};
+    backdrop-filter:blur(14px) saturate(140%);
+    -webkit-backdrop-filter:blur(14px) saturate(140%);
+  }
+  .cta{
+    background:linear-gradient(180deg,#4FB6FF 0%,#2A8FE8 55%,#1E6FBD 100%);
+    color:#04121F;font-family:${THEME.fontHead};font-weight:800;
+    letter-spacing:.06em;text-transform:uppercase;
+    border:1px solid rgba(180,225,255,.55);border-radius:${THEME.r.xl}px;
+    box-shadow:${THEME.bloom},0 10px 24px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.5);
+  }
+  .cta-ghost{
+    background:linear-gradient(180deg,rgba(120,180,255,.10),rgba(0,0,0,.55));
+    color:var(--bc-text);font-family:${THEME.fontHead};font-weight:700;
+    letter-spacing:.06em;text-transform:uppercase;
+    border:1px solid var(--bc-stroke);border-radius:${THEME.r.xl}px;
+    box-shadow:${THEME.shadowSm},inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .capsule{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:6px 14px;border-radius:${THEME.r.pill};
+    background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(0,0,0,.45));
+    border:1px solid var(--bc-stroke-gold);
+    font-family:${THEME.fontNum};font-weight:700;color:var(--bc-gold);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 4px 12px rgba(0,0,0,.4);
+  }
+  .num{font-family:${THEME.fontNum};font-weight:700;letter-spacing:.02em;}
+  .head{font-family:${THEME.fontHead};font-weight:800;letter-spacing:.08em;}
+
+  /* ---------- utility ---------- */
+  .neon-line{
+    height:1px;background:linear-gradient(90deg,transparent,var(--bc-primary),transparent);
+    box-shadow:0 0 12px var(--bc-glow);opacity:.6;
+  }
+  @keyframes bc-pulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(79,195,255,.45);}
+    50%    {box-shadow:0 0 0 8px rgba(79,195,255,0);}
+  }
+  .tab.selected{animation:bc-pulse 2s ${THEME.ease} infinite;}
+
+  /* ---------- scrollbar halus ---------- */
+  .pg-body::-webkit-scrollbar,
+  .panel::-webkit-scrollbar,
+  .menu-wrap::-webkit-scrollbar{width:8px}
+  .pg-body::-webkit-scrollbar-thumb,
+  .panel::-webkit-scrollbar-thumb,
+  .menu-wrap::-webkit-scrollbar-thumb{
+    background:rgba(90,170,255,.35);border-radius:8px;
+  }
+
+  /* ---------- level-up (gold chrome) ---------- */
+  .lu-ring{
+    background:radial-gradient(circle at 35% 30%,#FFF3C4,#F2C14E 55%,#8A6A16);
+    box-shadow:0 0 0 8px rgba(0,0,0,.3),0 0 60px rgba(242,193,78,.55);
+  }
+  .lu-num{color:#04121F;font-family:${THEME.fontNum};}
+  .lvl-big{
+    background:radial-gradient(circle at 35% 30%,#FFF3C4,#F2C14E 55%,#8A6A16);
+    color:#04121F;
+  }
+  .pod.p1{background:linear-gradient(#2a2418,#131D2D);border:1px solid rgba(242,193,78,.5);}
+  .lb-row.you{background:rgba(242,193,78,.08);border:1px solid rgba(242,193,78,.55);}
+
+  button{font-family:inherit;}
+  button:active{transform:scale(.97);}
+`;
+  document.head.appendChild(s);
+})();
+
+
+
 function badgeHTML(def, size) {
-  return '<svg class="bdgx" width="' + size + '" height="' + size + '" viewBox="0 0 32 32"><path d="M16 2l12 4.5v9c0 7.5-5 12.6-12 15.5C9 28.1 4 23 4 15.5v-9z" fill="' + TIER_COLOR[def.tier] + '" stroke="rgba(0,0,0,.45)" stroke-width="1.6"/><g transform="translate(8 7.5) scale(.67)" style="color:#2a1c00">' + SYMBOLS[def.icon] + '</g></svg>';
+  return (
+    '<svg class="bdgx" width="' + size + '" height="' + size + '" viewBox="0 0 32 32">'
+      + '<path d="M16 2l12 4.5v9c0 7.5-5 12.6-12 15.5C9 28.1 4 23 4 15.5v-9z"'
+      + ' fill="' + (TIER_COLOR[def.tier] || THEME.primary) + '"'
+      + ' stroke="rgba(0,0,0,.55)" stroke-width="1.4"/>'
+      + '<path d="M16 5l9 3.4v7.6c0 5.6-3.7 9.5-9 11.5C10.7 25.5 7 21.6 7 16V8.4z"'
+      + ' fill="none" stroke="rgba(255,255,255,.35)" stroke-width=".8"/>'
+      + '<g transform="translate(8 7.5) scale(.67)" style="color:#0A101A">' + SYMBOLS[def.icon] + '</g>'
+    + '</svg>'
+  );
 }
+// const COIN_SVG = '<svg class="coin" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="#F4C542"/><circle cx="11" cy="11" r="6.5" fill="none" stroke="#b8850c" stroke-width="1.6"/></svg>';
+const COIN_SVG = `
+<svg class="coin" viewBox="0 0 22 22" aria-hidden="true">
+  <defs>
+    <radialGradient id="bcCoinG" cx="35%" cy="30%" r="75%">
+      <stop offset="0" stop-color="#FFE9A8"/>
+      <stop offset=".5" stop-color="#F2C14E"/>
+      <stop offset="1" stop-color="#8A6A16"/>
+    </radialGradient>
+    <linearGradient id="bcCoinRim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF3C4"/>
+      <stop offset="1" stop-color="#7A5A12"/>
+    </linearGradient>
+  </defs>
+  <circle cx="11" cy="11" r="10" fill="url(#bcCoinG)" stroke="url(#bcCoinRim)" stroke-width="1.2"/>
+  <circle cx="11" cy="11" r="6.6" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="1"/>
+  <path d="M11 6.5l1.4 2.9 3.1.4-2.3 2.2.6 3.1L11 13.6 8.2 15l.6-3.1L6.5 9.8l3.1-.4z" fill="rgba(0,0,0,.35)"/>
+</svg>`;
+
+const SHIELD_SVG = `
+<svg viewBox="0 0 30 34" aria-hidden="true">
+  <path d="M15 1l12 4.5v10.2c0 8.1-5.3 14.4-12 17.3C8.3 30.1 3 23.8 3 15.7V5.5L15 1z"
+        fill="rgba(10,16,26,.9)" stroke="#F2C14E" stroke-width="1.6"/>
+  <path d="M15 4l9 3.4v8.2c0 6-3.9 10.7-9 12.9C9.9 26.3 6 21.6 6 15.6V7.4z"
+        fill="none" stroke="rgba(242,193,78,.35)" stroke-width=".8"/>
+</svg>`;
+// const SHIELD_SVG = '<svg viewBox="0 0 30 34"><path d="M15 1l12 4.5v10.2c0 8.1-5.3 14.4-12 17.3C8.3 30.1 3 23.8 3 15.7V5.5L15 1z" fill="#3b2a00" stroke="#F7C948" stroke-width="2"/><rect x="13" y="9" width="4" height="4" rx="1" fill="#F7C948"/><rect x="13.5" y="14" width="3" height="10" rx="1.2" fill="#F7C948"/></svg>';
+// const ICONS = {
+//   gift: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9h18v4H3zM4 14h16v7H4zM11 9h2v12h-2z" opacity=".95"/><path d="M12 9C9 9 7 7.5 7.5 5.8 8.2 3.8 11 5 12 9zM12 9c3 0 5-1.5 4.5-3.2C15.8 3.8 13 5 12 9z"/></svg>',
+//   rank: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 21h5V11H3zM9.5 21h5V4h-5zM16 21h5v-7h-5z"/></svg>',
+//   table: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 7h20v10H2z" opacity=".55"/><path d="M4 9h16v6H4z"/><circle cx="4" cy="9" r="1.6"/><circle cx="20" cy="9" r="1.6"/><circle cx="4" cy="15" r="1.6"/><circle cx="20" cy="15" r="1.6"/></svg>',
+//   cue: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M3.5 20.5L19 5"/><path d="M19.5 4.5l1-1" stroke-width="3.4"/></svg>',
+//   user: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4.2"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z"/></svg>',
+//   gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1" stroke-linecap="round"/></svg>',
+//   friend: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8" cy="8" r="3.4"/><path d="M2 20c0-3.6 2.8-5.8 6-5.8s6 2.2 6 5.8z"/><circle cx="17.5" cy="9" r="2.6" opacity=".7"/><path d="M22 20c0-2.7-1.9-4.6-4.3-5.2 1.5 1.2 2.3 2.9 2.3 5.2z" opacity=".7"/></svg>',
+//   market: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 8l1.5-4h15L21 8z" opacity=".7"/><path d="M4 8h16v12H4z" opacity=".3"/><path d="M4 8h16v2.2A3 3 0 0114 10a3 3 0 01-6 0 3 3 0 01-6 .2z"/></svg>',
+//   dev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4L2 12l6 8M16 4l6 8-6 8"/></svg>',
+// };
+
+const ICONS = {
+  gift:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M3 12h18M12 8v13"/><path d="M8 8a3 3 0 1 1 4-3 3 3 0 1 1 4 3"/></svg>',
+  rank:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+  table:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="6" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg>',
+  cue:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l14-14"/><path d="M17 7l3-3"/><circle cx="20" cy="4" r="1.2"/></svg>',
+  user:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>',
+  gear:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+  friend: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.4"/><path d="M2 20c0-3.6 3-6 7-6s7 2.4 7 6"/><path d="M16 5.5a3 3 0 0 1 0 5.8"/><path d="M22 20c0-2.6-1.8-4.6-4-5.4"/></svg>',
+  market: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l1.5-4h15L21 8"/><path d="M4 8h16v12H4z"/><path d="M4 12h16"/></svg>',
+  dev:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4L2 12l6 8M16 4l6 8-6 8"/></svg>',
+  inbox:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9 6 9-6"/><rect x="3" y="5" width="18" height="14" rx="2"/></svg>',
+  club:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v6c0 4-3.5 7.5-8 8-4.5-.5-8-4-8-8V7z"/></svg>',
+  chat:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 1 1-3.2-6.4L21 4l-1 4.2A8 8 0 0 1 21 12z"/></svg>',
+  balls:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="9" r="1" fill="currentColor"/></svg>',
+  skills: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 5 5.5.8-4 3.9.9 5.5L12 15.6 7.1 18.2 8 12.7 4 8.8 9.5 8z"/></svg>',
+  trophy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 5H4a3 3 0 0 0 3 4M17 5h3a3 3 0 0 1-3 4"/><path d="M10 20h4M12 14v6"/></svg>',
+  spin:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>',
+  cart:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.6"/><circle cx="18" cy="20" r="1.6"/><path d="M3 4h2l2.4 11h11l2-8H6"/></svg>',
+  play:   '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l12 7-12 7z"/></svg>',
+};
+
+// function avatarHTML(av, size, badgeId) {
+//   const col = AVATAR_COLORS[(av.color | 0) % AVATAR_COLORS.length], fr = FRAMES[av.frame] || FRAMES.none, b = badgeId ? BADGE_DEFS.find((x) => x.id === badgeId) : null;
+//   return '<div class="avx" data-frame="' + (av.frame || 'none') + '" style="' + (size ? '--s:' + size + 'px;' : '') + '--c1:' + col[0] + ';--c2:' + col[1] + ';--frame:' + fr.color + '"><svg class="sym" viewBox="0 0 24 24">' + (SYMBOLS[av.sym] || SYMBOLS.ball8) + '</svg>' + (b ? '<span class="bdg">' + badgeHTML(b, '100%') + '</span>' : '') + '</div>';
+// }
+// function badgeHTML(def, size) {
+//   return '<svg class="bdgx" width="' + size + '" height="' + size + '" viewBox="0 0 32 32"><path d="M16 2l12 4.5v9c0 7.5-5 12.6-12 15.5C9 28.1 4 23 4 15.5v-9z" fill="' + TIER_COLOR[def.tier] + '" stroke="rgba(0,0,0,.45)" stroke-width="1.6"/><g transform="translate(8 7.5) scale(.67)" style="color:#2a1c00">' + SYMBOLS[def.icon] + '</g></svg>';
+// }
+// function countUp(el, from, to, ms, fmt) {
+//   const t0 = performance.now(); fmt = fmt || fmtCoins;
+//   const step = (now) => { const k = Util.easeOutCubic((now - t0) / ms); el.textContent = fmt(from + (to - from) * k); if (k < 1) requestAnimationFrame(step); else el.textContent = fmt(to); };
+//   requestAnimationFrame(step);
+// }
+
 function countUp(el, from, to, ms, fmt) {
-  const t0 = performance.now(); fmt = fmt || fmtCoins;
-  const step = (now) => { const k = Util.easeOutCubic((now - t0) / ms); el.textContent = fmt(from + (to - from) * k); if (k < 1) requestAnimationFrame(step); else el.textContent = fmt(to); };
+  const t0 = performance.now();
+  fmt = fmt || fmtCoins;
+  el.classList.add('num'); // Rajdhani SemiBold
+  const step = (now) => {
+    const k = Util.easeOutCubic((now - t0) / ms);
+    el.textContent = fmt(from + (to - from) * k);
+    if (k < 1) requestAnimationFrame(step);
+    else el.textContent = fmt(to);
+  };
   requestAnimationFrame(step);
+}
+
+function avatarHTML(av, size, badgeId) {
+  const col = AVATAR_COLORS[(av.color | 0) % AVATAR_COLORS.length];
+  const fr  = FRAMES[av.frame] || FRAMES.none;
+  const b   = badgeId ? BADGE_DEFS.find((x) => x.id === badgeId) : null;
+  return (
+    '<div class="avx" data-frame="' + (av.frame || 'none') + '" style="'
+      + (size ? '--s:' + size + 'px;' : '')
+      + '--c1:' + col[0] + ';--c2:' + col[1] + ';--frame:' + (fr.color || THEME.primary) + '">'
+      + '<svg class="sym" viewBox="0 0 24 24">' + (SYMBOLS[av.sym] || SYMBOLS.ball8) + '</svg>'
+      + (b ? '<span class="bdg">' + badgeHTML(b, '100%') + '</span>' : '')
+      + '</div>'
+  );
 }
 
 /** Konfeti ringan (satu canvas overlay, berhenti otomatis). */
 class Fx {
   constructor(canvas) { this.cv = canvas; this.ctx = canvas.getContext('2d'); this.p = []; this.on = false; }
+  // burst(x, y, n, spread) {
+  //   const cols = ['#F4C542', '#fff2b0', '#32D74B', '#57BFEA', '#FF5A5F', '#d99cff'];
+  //   for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, s = (2 + Math.random() * 9) * (spread || 1); this.p.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 4, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4, w: 5 + Math.random() * 6, h: 3 + Math.random() * 5, life: 1, c: cols[i % cols.length] }); }
+  //   if (!this.on) { this.on = true; this._resize(); requestAnimationFrame((t) => this._loop(t)); }
+  // }
   burst(x, y, n, spread) {
-    const cols = ['#F4C542', '#fff2b0', '#32D74B', '#57BFEA', '#FF5A5F', '#d99cff'];
-    for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, s = (2 + Math.random() * 9) * (spread || 1); this.p.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 4, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4, w: 5 + Math.random() * 6, h: 3 + Math.random() * 5, life: 1, c: cols[i % cols.length] }); }
-    if (!this.on) { this.on = true; this._resize(); requestAnimationFrame((t) => this._loop(t)); }
+  const cols = [
+    '#F2C14E', '#FFE9A8',   // gold highlights
+    '#3BA8FF', '#4FC3FF',   // blue chrome
+    '#9FB3C8',              // silver
+    '#FFFFFF',              // specular
+  ];
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const s = (2 + Math.random() * 9) * (spread || 1);
+    this.p.push({
+      x, y,
+      vx: Math.cos(a) * s,
+      vy: Math.sin(a) * s - 4,
+      r: Math.random() * Math.PI,
+      vr: (Math.random() - 0.5) * 0.4,
+      w: 4 + Math.random() * 6,
+      h: 2 + Math.random() * 4,
+      life: 1,
+      c: cols[i % cols.length],
+    });
   }
+  if (!this.on) { this.on = true; this._resize(); requestAnimationFrame((t) => this._loop(t)); }
+}
   _resize() { const d = Math.min(window.devicePixelRatio || 1, 2); this.cv.width = innerWidth * d; this.cv.height = innerHeight * d; this.d = d; }
   _loop() {
     const c = this.ctx, d = this.d; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, this.cv.width, this.cv.height); c.setTransform(d, 0, 0, d, 0, 0);
@@ -3661,6 +4551,19 @@ class UI {
   }
   _renderPage(name) {
     if (this.current === 'screenDev' && name !== 'dev' && this.dev && this.dev.preview) this.dev.preview.stop();
+
+    // 👇 map nama halaman → id tab bottom-nav
+  const TAB_MAP = {
+    menu:     'chat',
+    cues:     'cue',
+    tables:   'table',
+    rewards:  'balls',
+    profile:  'skills',
+    board:    'rankings',
+  };
+  this._setTab(TAB_MAP[name] || '');
+
+
     if (name === 'menu') this.refreshMenu();
     else if (name === 'settings') this.syncSettings();
     else if (this['render_' + name]) this['render_' + name]();
@@ -3669,13 +4572,65 @@ class UI {
     const s = this.store.data.settings; document.querySelectorAll('.switch').forEach((sw) => sw.setAttribute('aria-checked', String(!!s[sw.dataset.set])));
     document.querySelectorAll('#zoomSeg button').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.z === (s.aimZoom | 0))));
   }
+  // refreshMenu() {
+  //   const p = this.store.data.profile, acc = this.backend && this.backend.currentUser();
+  //   if (acc) { $('menuAv').innerHTML = this.accountAvatarHTML(acc, 34); $('menuName').textContent = acc.name; $('menuLevel').textContent = (acc.role === 'admin' ? 'Admin · ' : '') + 'Level ' + this.store.level(); }
+  //   else { $('menuAv').innerHTML = avatarHTML(p.avatar, 34, p.badge); $('menuName').textContent = p.name; $('menuLevel').textContent = 'Tamu — ketuk untuk masuk'; }
+  //   $('menuCoins').textContent = fmtCoins(p.coins);
+  //   $('dotRewards').hidden = !this.store.hasClaimable(); $('btnHelp').hidden = !this.store.helpAvailable();
+  //   $('tileDev').hidden = !(this.backend && this.backend.isAdmin());
+  // }
+
   refreshMenu() {
-    const p = this.store.data.profile, acc = this.backend && this.backend.currentUser();
-    if (acc) { $('menuAv').innerHTML = this.accountAvatarHTML(acc, 34); $('menuName').textContent = acc.name; $('menuLevel').textContent = (acc.role === 'admin' ? 'Admin · ' : '') + 'Level ' + this.store.level(); }
-    else { $('menuAv').innerHTML = avatarHTML(p.avatar, 34, p.badge); $('menuName').textContent = p.name; $('menuLevel').textContent = 'Tamu — ketuk untuk masuk'; }
-    $('menuCoins').textContent = fmtCoins(p.coins);
-    $('dotRewards').hidden = !this.store.hasClaimable(); $('btnHelp').hidden = !this.store.helpAvailable();
-    $('tileDev').hidden = !(this.backend && this.backend.isAdmin());
+  const p = this.store.data.profile;
+  const acc = this.backend && this.backend.currentUser();
+
+  // Avatar + name + level badge
+  if (acc) {
+    $('menuAv').innerHTML = this.accountAvatarHTML(acc, 52);
+    $('menuName').textContent = acc.name;
+    $('menuLevel').innerHTML =
+      '<span class="capsule">' +
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 4v6c0 4-3.5 7.5-8 8-4.5-.5-8-4-8-8V7z"/></svg>' +
+        (acc.role === 'admin' ? 'ADMIN' : 'LV ' + this.store.level()) +
+      '</span>';
+  } else {
+    $('menuAv').innerHTML = avatarHTML(p.avatar, 52, p.badge);
+    $('menuName').textContent = p.name;
+    $('menuLevel').innerHTML = '<span class="capsule">GUEST</span>';
+  }
+
+  // Currency capsules — gold / cash / gems
+  const coins = fmtCoins(p.coins);
+  $('menuCoins').innerHTML =
+    '<span class="capsule">' + COIN_SVG + '<span class="num">' + coins + '</span></span>';
+  if ($('menuCash')) $('menuCash').innerHTML =
+    '<span class="capsule" style="color:#9FB3C8;border-color:rgba(159,179,200,.35)">' +
+      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>' +
+      '<span class="num">' + fmtCoins(p.cash || 0) + '</span></span>';
+  if ($('menuGems')) $('menuGems').innerHTML =
+    '<span class="capsule" style="color:#4FC3FF;border-color:rgba(79,195,255,.45)">' +
+      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12l3 6-9 12L3 9z"/></svg>' +
+      '<span class="num">' + fmtCoins(p.gems || 0) + '</span></span>';
+
+  // XP bar
+  if ($('menuXp')) {
+    const lv = this.store.level();
+    const xp = this.store.xpProgress ? this.store.xpProgress() : 0; // 0..1
+    $('menuXp').innerHTML =
+      '<div class="xp-track"><div class="xp-fill" style="width:' + (xp * 100).toFixed(1) + '%"></div></div>';
+  }
+
+  // Dots
+  $('dotRewards').hidden = !this.store.hasClaimable();
+  $('btnHelp').hidden = !this.store.helpAvailable();
+  $('tileDev').hidden = !(this.backend && this.backend.isAdmin());
+}
+// 👇 TAMBAHKAN DI SINI — sebelum callback Game
+  _setTab(id) {
+    document.querySelectorAll('[data-tab]').forEach((el) =>
+      el.classList.toggle('selected', el.dataset.tab === id)
+    );
   }
 
   /* ------------------------------ callback dari Game ------------------------------ */

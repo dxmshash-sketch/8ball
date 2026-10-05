@@ -306,8 +306,8 @@ ok(
     TS.width === 1600 &&
     TS.height === 728 &&
     TS.ballRadius === 15 &&
-    TS.rail === 56 &&
-    TS.cushion === 24 &&
+    TS.rail === 40 &&
+    TS.cushion === 20 &&
     Math.abs(dA(cS.tipA, cS.tipB) - TS.cornerMouth) < 0.1
   );
   const freshT = (id) => { applyTableProfile(id); const w = new PhysicsWorld(CONFIG); for (const b of w.balls) { b.state = 1; b.stop(); } return w; };

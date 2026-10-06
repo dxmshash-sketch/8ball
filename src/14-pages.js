@@ -13,12 +13,95 @@ Object.assign(UI.prototype, {
     };
   },
   /** Isi pratinjau meja ke elemen [data-theme]. */
-  fillPreviews(root, width) {
-    root.querySelectorAll('[data-theme]').forEach((slot) => {
-      const th = this.store.themeDef(slot.dataset.theme), kind = slot.dataset.tableKind || 'standard';
-      loadThemeImages(th, (imgs) => { slot.innerHTML = ''; slot.appendChild(renderTablePreview(th, width || 300, imgs, kind)); });
+/** Isi pratinjau meja ke elemen [data-theme] — dengan cache + lazy render. */
+fillPreviews(root, width) {
+  if (!root) return;
+  const slots = root.querySelectorAll('[data-theme]');
+  if (!slots.length) return;
+
+  if (!this._previewCache) this._previewCache = new Map();
+  if (this._previewIO) { this._previewIO.disconnect(); this._previewIO = null; }
+
+  const st = this.store;
+  const themes = new Map(st.allThemes().map(t => [t.id, t]));
+  const imgs = this.renderer ? this.renderer.themeImgs : null;
+
+  // ── Antrian: proses 1 slot per frame ──
+  const queue = [];
+  let rafPending = false;
+
+  const renderSlot = (slot) => {
+    if (slot.dataset.rendered === '1') return;
+    slot.dataset.rendered = '1';
+
+    const theme = themes.get(slot.dataset.theme);
+    if (!theme) { slot.classList.remove('skeleton'); return; }
+    const kind = slot.dataset.tableKind || 'standard';
+    const key = theme.id + '|' + kind + '|' + width;
+
+    let cv = this._previewCache.get(key);
+    if (!cv) {
+      try {
+        // ↓↓↓ KUNCI: isPreview = true
+        cv = renderTablePreview(theme, width, imgs, kind, true);
+      } catch (err) {
+        console.warn('[fillPreviews]', theme.id, err);
+        slot.classList.remove('skeleton');
+        return;
+      }
+      if (!cv || !cv.width) { slot.classList.remove('skeleton'); return; }
+      this._previewCache.set(key, cv);
+    }
+
+    const clone = document.createElement('canvas');
+    clone.width = cv.width;
+    clone.height = cv.height;
+    clone.getContext('2d').drawImage(cv, 0, 0);
+    clone.style.cssText = 'width:100%;height:auto;display:block';
+    slot.classList.remove('skeleton');
+    slot.innerHTML = '';
+    slot.appendChild(clone);
+  };
+
+  const processQueue = () => {
+    rafPending = false;
+    const slot = queue.shift();
+    if (!slot) return;
+    renderSlot(slot);
+    if (queue.length) scheduleQueue();
+  };
+  const scheduleQueue = () => {
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(processQueue);
+  };
+
+  if (typeof IntersectionObserver === 'undefined') {
+    slots.forEach(s => queue.push(s));
+    scheduleQueue();
+    return;
+  }
+
+  this._previewIO = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      this._previewIO.unobserve(e.target);
+      queue.push(e.target);
+    }
+    scheduleQueue();
+  }, { rootMargin: '100px', threshold: 0 });
+
+  slots.forEach(s => this._previewIO.observe(s));
+
+  // Fallback: paksa render setelah 1.2s kalau ada yang belum
+  clearTimeout(this._previewFallback);
+  this._previewFallback = setTimeout(() => {
+    root.querySelectorAll('[data-theme]:not([data-rendered])').forEach(s => {
+      if (!queue.includes(s)) queue.push(s);
     });
-  },
+    scheduleQueue();
+  }, 1200);
+},
   mergeItems(items) {
     let coins = 0; const out = [];
     for (const it of items) if (it.type === 'coins') coins += it.amount; else out.push(it);
@@ -126,38 +209,226 @@ Object.assign(UI.prototype, {
     });
     this.fillPreviews(el, 160);
   },
-  _chipHTML(it) {
-    if (it.type === 'coins') return COIN_SVG + ' ' + fmtShort(it.amount);
-    if (it.type === 'cue') return '<img alt="" src="' + this.store.cueDefById(it.id).image + '">' + esc(this.store.cueDefById(it.id).name);
-    if (it.type === 'table') return '<span data-theme="' + it.id + '"></span>' + esc(this.store.themeDef(it.id).name);
-    const [k, v] = it.id.split(':'); return avatarHTML({ sym: k === 'sym' ? v : 'crown', color: 2, frame: k === 'frame' ? v : 'none' }, 26) + (k === 'sym' ? SYMBOL_NAMES[v] : FRAMES[v].name);
-  },
+_chipHTML(it) {
+  if (it.type === 'coins') return COIN_SVG + ' ' + fmtShort(it.amount);
+  if (it.type === 'cue') return '<img alt="" src="' + this.store.cueDefById(it.id).image + '">' + esc(this.store.cueDefById(it.id).name);
+  if (it.type === 'table') return '<span class="skeleton" data-theme="' + it.id + '" style="min-width:60px;min-height:28px;display:inline-block"></span>' + esc(this.store.themeDef(it.id).name);
+  const [k, v] = it.id.split(':');
+  return avatarHTML({ sym: k === 'sym' ? v : 'crown', color: 2, frame: k === 'frame' ? v : 'none' }, 26) + (k === 'sym' ? SYMBOL_NAMES[v] : FRAMES[v].name);
+},
 
   /** Modal hadiah generik: dipakai untuk naik level, hadiah level, dan hadiah harian. */
-  showRewardModal(o) {
-    const el = $('pageLevelUp'), st = this.store, merged = this.mergeItems(o.items), before = st.coins;
-    el.innerHTML = '<div class="lu-ring"><span class="lu-num" id="luNum">' + o.ring + '</span></div><h2>' + esc(o.title) + '</h2><p class="sub" id="luSub">' + esc(o.sub || '') + '</p>' +
-      '<div class="lu-rewards">' + merged.map((it, i) => '<div class="lu-card" style="animation-delay:' + (0.35 + 0.14 * i).toFixed(2) + 's">' + this.rewardCardHTML(it) + '</div>').join('') + '</div>' +
-      '<div id="luWallet" class="muted" style="min-height:22px"></div><button class="btn primary big" id="luBtn">Klaim hadiah</button>';
-    this.fillPreviews(el, 190);
-    if (o.countFrom) countUp($('luNum'), o.countFrom, +o.ring, 900, (v) => String(Math.round(v)));
-    this.overlayReturn = this.current; this.show('screenLevelUp'); this.audio.play(o.sound || 'win', 0.6);
-    this.fx.burst(innerWidth / 2, innerHeight * 0.32, 90, 1);
-    let claimed = false;
-    $('luBtn').onclick = () => {
-      this.audio.unlock();
-      if (!claimed) {
-        claimed = true; o.claim(); el.querySelectorAll('.lu-card').forEach((c) => c.classList.add('claimed'));
-        this.fx.burst(innerWidth / 2, innerHeight * 0.55, 130, 1.3); this.audio.play('pocket', 0.8);
-        $('luWallet').innerHTML = 'Saldo ' + COIN_SVG + ' <b class="gold" id="luBal">' + fmtCoins(before) + '</b>'; countUp($('luBal'), before, st.coins, 1100);
-        $('luBtn').textContent = 'Lanjut'; this.refreshMenu();
-      } else {
-        this.show(this.overlayReturn || 'screenMenu', true); if (o.onClose) o.onClose();
-        if (this.current === 'screenRewards') this.render_rewards();
-      }
-    };
-  },
+  // showRewardModal(o) {
+  //   const el = $('pageLevelUp'), st = this.store, merged = this.mergeItems(o.items), before = st.coins;
+  //   el.innerHTML = '<div class="lu-ring"><span class="lu-num" id="luNum">' + o.ring + '</span></div><h2>' + esc(o.title) + '</h2><p class="sub" id="luSub">' + esc(o.sub || '') + '</p>' +
+  //     '<div class="lu-rewards">' + merged.map((it, i) => '<div class="lu-card" style="animation-delay:' + (0.35 + 0.14 * i).toFixed(2) + 's">' + this.rewardCardHTML(it) + '</div>').join('') + '</div>' +
+  //     '<div id="luWallet" class="muted" style="min-height:22px"></div><button class="btn primary big" id="luBtn">Klaim hadiah</button>';
+  //   this.fillPreviews(el, 190);
+  //   if (o.countFrom) countUp($('luNum'), o.countFrom, +o.ring, 900, (v) => String(Math.round(v)));
+  //   this.overlayReturn = this.current; this.show('screenLevelUp'); this.audio.play(o.sound || 'win', 0.6);
+  //   this.fx.burst(innerWidth / 2, innerHeight * 0.32, 90, 1);
+  //   let claimed = false;
+  //   $('luBtn').onclick = () => {
+  //     this.audio.unlock();
+  //     if (!claimed) {
+  //       claimed = true; o.claim(); el.querySelectorAll('.lu-card').forEach((c) => c.classList.add('claimed'));
+  //       this.fx.burst(innerWidth / 2, innerHeight * 0.55, 130, 1.3); this.audio.play('pocket', 0.8);
+  //       $('luWallet').innerHTML = 'Saldo ' + COIN_SVG + ' <b class="gold" id="luBal">' + fmtCoins(before) + '</b>'; countUp($('luBal'), before, st.coins, 1100);
+  //       $('luBtn').textContent = 'Lanjut'; this.refreshMenu();
+  //     } else {
+  //       this.show(this.overlayReturn || 'screenMenu', true); if (o.onClose) o.onClose();
+  //       if (this.current === 'screenRewards') this.render_rewards();
+  //     }
+  //   };
+  // },
 
+/** Modal hadiah generik: dipakai untuk naik level, hadiah level, dan hadiah harian. */
+/** Modal hadiah — versi Pandora Box yang meledak. */
+showRewardModal(o) {
+  const el = $('pageLevelUp'), st = this.store;
+  const merged = this.mergeItems(o.items), before = st.coins;
+
+  // Bersihkan flash lama
+  document.querySelectorAll('.lu-flash').forEach(n => n.remove());
+
+  el.innerHTML =
+    '<div class="lu-box-stage">' +
+      '<div class="lu-box" id="luBox">' +
+        '<div class="lu-box-beam"></div>' +
+        '<div class="lu-box-glow"></div>' +
+        '<div class="lu-box-body">' +
+          '<div class="lu-box-band"></div>' +
+          '<div class="lu-box-lock"></div>' +
+        '</div>' +
+        '<div class="lu-box-lid"></div>' +
+      '</div>' +
+    '</div>' +
+    '<h2 id="luTitle" style="opacity:0">' + esc(o.title) + '</h2>' +
+    '<p class="sub" id="luSub" style="opacity:0">' + esc(o.sub || '') + '</p>' +
+    '<div class="lu-rewards" id="luRewards">' +
+      merged.map((it, i) =>
+        '<div class="lu-card" data-idx="' + i + '">' +
+          this.rewardCardHTML(it) +
+        '</div>'
+      ).join('') +
+    '</div>' +
+    '<div id="luWallet" class="muted" style="min-height:22px"></div>' +
+    '<button class="btn primary big" id="luBtn" style="opacity:0;pointer-events:none">Klaim hadiah</button>';
+
+  this.fillPreviews(el, 190);
+
+  this.overlayReturn = this.current;
+  this.show('screenLevelUp');
+  this.audio.play(o.sound || 'win', 0.6);
+
+  const box = $('luBox');
+  const flash = document.createElement('div');
+  flash.className = 'lu-flash';
+
+  // ── Ukur posisi kartu DULU untuk kalkulasi --from-x/y ──
+  // Card sudah ada di DOM dengan layout natural (visibility:hidden)
+  const cards = Array.from(el.querySelectorAll('.lu-card'));
+  const boxRect = box.getBoundingClientRect();
+  const boxCx = boxRect.left + boxRect.width / 2;
+  const boxCy = boxRect.top + boxRect.height / 2 + 20;   // sedikit di atas pusat
+
+  cards.forEach((card, i) => {
+    const r = card.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const dx = boxCx - cx;
+    const dy = boxCy - cy;
+    card.style.setProperty('--from-x', dx.toFixed(1) + 'px');
+    card.style.setProperty('--from-y', dy.toFixed(1) + 'px');
+    card.style.setProperty('--from-r', (Math.random() * 60 - 30).toFixed(1) + 'deg');
+  });
+
+  // ── Timeline ──
+
+  // Fase 1 (150ms): kotak mulai getar
+  setTimeout(() => {
+    box.classList.add('shaking');
+    this.audio.play('ui', 0.4);
+  }, 150);
+
+ // Fase 2 (700ms): MELEDAK
+setTimeout(() => {
+  box.classList.remove('shaking');
+  box.classList.add('burst');
+
+  // ── COIN RAIN MASUK KE BOX ──
+  // Koin-koin terbang dari bawah/samping menuju kotak dulu
+  this._coinRainToBox(box, 16);
+
+  // Flash 3 lapis
+  const flash = document.createElement('div');
+  flash.className = 'lu-flash';
+  document.body.appendChild(flash);
+  requestAnimationFrame(() => flash.classList.add('on'));
+
+  const ambient = document.createElement('div');
+  ambient.className = 'lu-flash-ambient';
+  document.body.appendChild(ambient);
+  requestAnimationFrame(() => ambient.classList.add('on'));
+
+  setTimeout(() => flash.remove(), 800);
+  setTimeout(() => {
+    ambient.classList.remove('on');
+    setTimeout(() => ambient.remove(), 800);
+  }, 1000);
+
+  // Confetti ledakan (tunda 400ms supaya koin masuk dulu)
+  setTimeout(() => {
+    this.fx.burst(boxCx, boxCy - 20, 90, 1.7);
+    setTimeout(() => this.fx.burst(boxCx - 60, boxCy - 40, 40, 1.3), 60);
+    setTimeout(() => this.fx.burst(boxCx + 60, boxCy - 40, 40, 1.3), 120);
+    setTimeout(() => this.fx.rain(30), 280);
+  }, 500);
+
+  this.audio.play('pocket', 0.9);
+}, 700);
+
+  // Fase 3 (900ms): kartu hadiah terbang keluar
+  setTimeout(() => {
+    cards.forEach((card, i) => {
+      setTimeout(() => {
+        card.classList.add('explode');
+        const r = card.getBoundingClientRect();
+        // Burst kecil di lokasi kartu saat mendarat
+        setTimeout(() => {
+          this.fx.burst(
+            r.left + r.width / 2,
+            r.top + r.height / 2,
+            14, 1.1
+          );
+        }, 480);
+      }, i * 130);
+    });
+  }, 900);
+
+  // Fase 4 (1200ms): judul + subtitle fade in
+  setTimeout(() => {
+    const t = $('luTitle'); if (t) t.classList.add('lu-title-in');
+    if (o.countFrom) {
+      const numEl = $('luNum');
+    }
+  }, 1200);
+  setTimeout(() => {
+    const s = $('luSub'); if (s) s.classList.add('lu-title-in');
+  }, 1320);
+
+  // Fase 5 (1550ms): button muncul
+  setTimeout(() => {
+    const b = $('luBtn');
+    if (b) {
+      b.style.transition = 'opacity .4s ease, transform .4s cubic-bezier(.2,1.6,.4,1)';
+      b.style.opacity = '1';
+      b.style.transform = 'scale(1)';
+      b.style.pointerEvents = 'auto';
+      b.style.transform = 'scale(0.85)';
+      requestAnimationFrame(() => { b.style.transform = 'scale(1)'; });
+    }
+  }, 1550);
+
+  // ── Klik Klaim ──
+  let claimed = false;
+  $('luBtn').onclick = () => {
+    this.audio.unlock();
+    if (!claimed) {
+      claimed = true;
+      o.claim();
+
+      // Tiap kartu burst sendiri + bounce
+      cards.forEach((c, i) => {
+        setTimeout(() => {
+          c.classList.add('claimed');
+          const r = c.getBoundingClientRect();
+          this.fx.burst(r.left + r.width / 2, r.top + r.height / 2, 24, 1.4);
+          this.audio.play('pocket', 0.55 + i * 0.08);
+        }, i * 95);
+      });
+
+      // Burst pusat setelah semua kartu
+      setTimeout(() => {
+        this.fx.burst(innerWidth / 2, innerHeight * 0.52, 90, 1.7);
+        this.fx.rain(34);
+      }, cards.length * 95 + 120);
+
+      // Wallet count-up
+      $('luWallet').innerHTML =
+        'Saldo ' + COIN_SVG + ' <b class="gold" id="luBal">' + fmtCoins(before) + '</b>';
+      const balEl = $('luBal');
+      setTimeout(() => countUp(balEl, before, st.coins, 1100), 280);
+
+      $('luBtn').textContent = 'Lanjut';
+      this.refreshMenu();
+    } else {
+      this.show(this.overlayReturn || 'screenMenu', true);
+      if (o.onClose) o.onClose();
+      if (this.current === 'screenRewards') this.render_rewards();
+    }
+  };
+},
   /* ------------------------------ peringkat ------------------------------ */
   render_board() {
     const kind = this.lbKind || 'coins', el = $('pageBoard'), rows = this.board.fetch(kind), you = rows.find((r) => r.isYou);
@@ -172,19 +443,43 @@ Object.assign(UI.prototype, {
   },
 
   /* ------------------------------ toko meja ------------------------------ */
-  render_tables() {
-    const st = this.store, el = $('pageTables'), eq = st.data.tables.equipped;
-    el.innerHTML = this._head('Meja', this._wallet()) + '<div class="pg-body"><p class="note" style="margin-top:0">Tema meja berlaku untuk kedua ukuran meja. Pilih ukuran meja saat memulai pertandingan (halaman Pilih permainan).</p><div class="tb-grid">' + st.allThemes().map((t) => {
-      const owned = st.themeOwned(t.id), on = eq === t.id;
-      return '<div class="tb-card' + (on ? ' equipped' : '') + '"><div class="tb-prev two"><span data-theme="' + t.id + '" data-table-kind="standard"></span><span data-theme="' + t.id + '" data-table-kind="american"></span></div><div class="tb-info"><h4>' + esc(t.name) + '<span class="rar ' + t.rarity + '">' + t.rarity + '</span></h4>' +
-        (owned ? '<button class="btn small ' + (on ? '' : 'primary') + '" data-act="equip" data-v="' + t.id + '"' + (on ? ' disabled' : '') + '>' + (on ? 'Dipakai' : 'Pakai') + '</button>' : '<button class="btn small green" data-act="buy" data-v="' + t.id + '"' + (st.coins < t.price ? ' disabled' : '') + '>Beli · ' + COIN_SVG + ' ' + fmtShort(t.price) + '</button>') + '</div></div>';
-    }).join('') + '</div><p class="note">Meja kustom (dari halaman Developer) muncul di sini dengan label Kustom.</p></div>';
-    this._bind(el, {
-      equip: (d) => { st.equipTable(d.v); this.render_tables(); },
-      buy: (d) => { if (st.buyTable(d.v)) { this.toast('Meja dibeli', 'ok'); this.fx.burst(innerWidth / 2, innerHeight / 2, 70); } else this.toast('Koin tidak cukup', 'foul'); this.render_tables(); },
-    });
-    this.fillPreviews(el, 145);
-  },
+render_tables() {
+  const st = this.store, el = $('pageTables'), eq = st.data.tables.equipped;
+  el.innerHTML = this._head('Meja', this._wallet()) +
+    '<div class="pg-body"><p class="note" style="margin-top:0">Tema meja berlaku untuk kedua ukuran meja. Pilih ukuran meja saat memulai pertandingan (halaman Pilih permainan).</p>' +
+    '<div class="tb-grid">' +
+      st.allThemes().map((t) => {
+        const owned = st.themeOwned(t.id), on = eq === t.id;
+        // Cek cache: kalau sudah ada, tidak perlu skeleton
+        const cache = this._previewCache || new Map();
+        const hasStd = cache.has(t.id + '|standard|145');
+        const hasAme = cache.has(t.id + '|american|145');
+        const clsStd = hasStd ? '' : ' skeleton';
+        const clsAme = hasAme ? '' : ' skeleton';
+
+        return '<div class="tb-card' + (on ? ' equipped' : '') + '">' +
+          '<div class="tb-prev two">' +
+            '<span class="' + clsStd.trim() + '" data-theme="' + t.id + '" data-table-kind="standard"></span>' +
+            '<span class="' + clsAme.trim() + '" data-theme="' + t.id + '" data-table-kind="american"></span>' +
+          '</div>' +
+          '<div class="tb-info">' +
+            '<h4>' + esc(t.name) + '<span class="rar ' + t.rarity + '">' + t.rarity + '</span></h4>' +
+            (owned
+              ? '<button class="btn small ' + (on ? '' : 'primary') + '" data-act="equip" data-v="' + t.id + '"' + (on ? ' disabled' : '') + '>' + (on ? 'Dipakai' : 'Pakai') + '</button>'
+              : '<button class="btn small green" data-act="buy" data-v="' + t.id + '"' + (st.coins < t.price ? ' disabled' : '') + '>Beli · ' + COIN_SVG + ' ' + fmtShort(t.price) + '</button>') +
+          '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>' +
+    '<p class="note">Meja kustom (dari halaman Developer) muncul di sini dengan label Kustom.</p></div>';
+
+  this._bind(el, {
+    equip: (d) => { st.equipTable(d.v); this.render_tables(); },
+    buy: (d) => { if (st.buyTable(d.v)) { this.toast('Meja dibeli', 'ok'); this.fx.burst(innerWidth / 2, innerHeight / 2, 70); } else this.toast('Koin tidak cukup', 'foul'); this.render_tables(); },
+  });
+
+  this.fillPreviews(el, 145);
+},
 
   /* ------------------------------ Cue Collection ------------------------------ */
   render_cues() {

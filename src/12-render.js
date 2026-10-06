@@ -78,7 +78,7 @@ function drawCover(c, img, x, y, w, h) {
   c.drawImage(img, (img.width - iw) / 2, (img.height - ih) / 2, iw, ih, x, y, w, h);
 }
  
-function renderTableLayer(theme, T, geo, s, rot, imgs) {
+function renderTableLayer(theme, T, geo, s, rot, imgs, isPreview) {
   imgs = imgs || {};
   const W = T.width, H = T.height, ct = T.cushion, rail = T.rail, ext = ct + rail, pad = 46, tx = ext + pad, u = rail / 56, wu = W / 1600;   // u, wu: skala hiasan untuk meja berukuran lain
   const cv = document.createElement('canvas'); cv.width = Math.ceil((W + 2 * tx) * s); cv.height = Math.ceil((H + 2 * tx) * s);
@@ -92,17 +92,37 @@ function renderTableLayer(theme, T, geo, s, rot, imgs) {
   const along = (stops) => { const g = c.createLinearGradient(cxw - GX * half, cyw - GY * half, cxw + GX * half, cyw + GY * half); for (const [o, col] of stops) g.addColorStop(o, col); return g; };
   const outer = () => rrect(-ext, -ext, W + 2 * ext, H + 2 * ext, 30 * u);
   const ringClip = () => { c.beginPath(); c.rect(-ct, -ct, W + 2 * ct, H + 2 * ct); c.rect(-ext - 5, -ext - 5, W + 2 * ext + 10, H + 2 * ext + 10); c.clip('evenodd'); };
-  c.save(); c.shadowColor = 'rgba(0,0,0,0.6)'; c.shadowBlur = 30 * u * s; c.shadowOffsetX = GX * 12 * u * s; c.shadowOffsetY = GY * 12 * u * s; c.fillStyle = '#20080a'; outer(); c.fill(); c.restore();
+ if (!isPreview) {
+  c.save();
+  c.shadowColor = 'rgba(0,0,0,0.6)';
+  c.shadowBlur = 30 * u * s;
+  c.shadowOffsetX = GX * 12 * u * s;
+  c.shadowOffsetY = GY * 12 * u * s;
+  c.fillStyle = '#20080a';
+  outer();
+  c.fill();
+  c.restore();
+} else {
+  // Preview: solid, tanpa blur
+  c.fillStyle = 'rgba(0,0,0,0.35)';
+  outer();
+  c.fill();
+};
  
-  if (imgs.rail) { c.save(); outer(); c.clip(); c.drawImage(imgs.rail, -ext, -ext, W + 2 * ext, H + 2 * ext); c.restore(); } else if (rt.style === 'neon') {
+  if (imgs.rail) { c.save(); outer(); c.clip(); c.drawImage(imgs.rail, -ext, -ext, W + 2 * ext, H + 2 * ext); c.restore(); } 
+  else if (rt.style === 'neon') {
   c.fillStyle = along([[0, '#231733'], [1, rt.bg || '#160f1f']]);
   outer(); c.fill();
 
   c.save();
   outer(); c.clip(); ringClip();
-  c.shadowColor = rt.glow;
-  c.shadowBlur = 16 * s;
-  c.strokeStyle = rt.glow;
+
+  if (!isPreview) {
+      c.shadowColor = rt.glow;
+  c.shadowBlur =  16 * s;   // ← ganti jadi ini
+
+}
+  c.strokeStyle = rt.glow; 
   c.lineWidth = 3.4;
 
   const o1 = 12 * u, o2 = 9 * u;
@@ -227,7 +247,13 @@ for (let x = -ct; x < W + ct; x += weaveStep) {
 
 // --- 2) NOISE grain: bintik acak lebih padat & sedikit lebih tegas ---
 c.globalCompositeOperation = 'overlay';
-const noiseN = Math.round(22000 * wu * (H / 728));
+
+const noiseN = isPreview
+  ? Math.round(1500 * wu * (H / 728))       // preview: 15× lebih ringan
+  : Math.round(22000 * wu * (H / 728));     // full: seperti biasa
+for (let i = 0; i < noiseN; i++) {
+  // ... loop body sama
+}
 for (let i = 0; i < noiseN; i++) {
   const r = rng.next();
   c.fillStyle = r < 0.45 ? 'rgba(255,255,255,0.055)'
@@ -242,7 +268,8 @@ for (let i = 0; i < noiseN; i++) {
 // --- 3) FIBER streaks: garis tipis panjang, searah, sangat halus ---
 // Memberi kesan serat kain (bukan hanya noise titik)
 c.globalCompositeOperation = 'overlay';
-const fibersN = Math.round(700 * wu);
+const fibersN = isPreview ? 60 : Math.round(700 * wu);
+
 for (let i = 0; i < fibersN; i++) {
   const horiz = rng.next() < 0.5;
   const len = rng.range(60, 320) * wu;
@@ -273,7 +300,7 @@ c.restore();
   c.fillStyle = 'rgba(255,255,255,0.32)'; for (const x of [T.headStringX, W / 2, T.footSpotX]) { c.beginPath(); c.arc(x, H / 2, 3.2, 0, 7); c.fill(); }
  
  // shading rail: merah terang tepat di sisi cushion → makin gelap ke tepi luar (referensi 8 Ball Pool)
-if (bandsOn) {
+if (bandsOn && !isPreview) {
   c.save();
   c.lineJoin = 'miter';
 
@@ -396,8 +423,10 @@ if (bandsOn) {
     c.lineTo(P[2][0], P[2][1]); 
     c.stroke();
     if (rt.style === 'neon' && !imgs.rail) { c.save(); 
-      c.shadowColor = rt.glow; 
-      c.shadowBlur = 10 * s; 
+    if (!isPreview) {
+        c.shadowColor = rt.glow;
+        c.shadowBlur = isPreview ? 0 : 10 * s;
+      }
       c.strokeStyle = rt.glow; 
       c.lineWidth = 1.6; c.beginPath(); 
       c.moveTo(P[0][0], P[0][1]); 
@@ -433,13 +462,31 @@ c.restore();
       c.beginPath(); c.arc(x, y, r + 0.8 * kk, 0, 7); c.strokeStyle = neon ? rt.glow : 'rgba(70,48,84,0.95)'; c.lineWidth = 2 * kk; c.stroke();
       c.beginPath(); c.arc(x, y, r + 2.6 * kk, ao + Math.PI * 0.6, ao + Math.PI * 1.4); c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 1.2 * kk; c.stroke();
     } else {
-      c.beginPath(); c.arc(x, y, r + 0.4 * kk, ao + Math.PI / 2, ao + Math.PI * 1.5); c.strokeStyle = neon ? rt.glow : cu.nose; c.lineWidth = 2.2 * kk; c.stroke();     // sisi kain
+      c.beginPath(); c.arc(x, y, r + 0.4 * kk, ao + Math.PI / 2, ao + Math.PI * 1.5); 
+      c.strokeStyle = neon ? rt.glow : cu.nose; c.lineWidth = 2.2 * kk; c.stroke();     // sisi kain
       c.beginPath(); c.arc(x, y, r + 0.6 * kk, ao - Math.PI / 2, ao + Math.PI / 2); c.strokeStyle = 'rgba(25,0,0,0.9)'; c.lineWidth = 2 * kk; c.stroke();                    // sisi rail
     }
   }
   // sight logam / neon dengan jarak konsisten
   const sight = (x, y) => {
-    if (rt.style === 'neon' && !imgs.rail) { c.save(); c.shadowColor = rt.glow; c.shadowBlur = 10 * s; c.strokeStyle = theme.sight; zc.lineWidth = 2.2; c.beginPath(); c.arc(x, y, 6, 0, 7); c.stroke(); c.fillStyle = theme.sight; c.beginPath(); c.arc(x, y, 2.2, 0, 7); c.fill(); c.restore(); return; }
+    if (rt.style === 'neon' && !imgs.rail) { 
+      c.save(); 
+      if (!isPreview) { 
+        c.shadowColor = rt.glow; 
+        c.shadowBlur = 10 * s; 
+      }
+        c.strokeStyle = theme.sight; 
+        c.lineWidth = 2.2; 
+
+        c.beginPath(); 
+        c.arc(x, y, 6, 0, 7); 
+        c.stroke(); 
+        c.fillStyle = theme.sight; 
+        c.beginPath(); 
+        c.arc(x, y, 2.2, 0, 7); 
+        c.fill(); 
+        c.restore(); return; 
+      }
     c.fillStyle = 'rgba(0,0,0,0.42)'; c.beginPath(); c.arc(x + 0.8, y + 1.2, 3.6, 0, 7); c.fill();
     c.fillStyle = theme.sight; c.beginPath(); c.arc(x, y, 3.4, 0, 7); c.fill();
     const rg = c.createRadialGradient(x - 1, y - 1, 0.3, x, y, 3.6); rg.addColorStop(0, 'rgba(255,255,255,0.95)'); rg.addColorStop(0.6, 'rgba(255,255,255,0)'); rg.addColorStop(1, 'rgba(0,0,0,0.35)'); c.fillStyle = rg; c.beginPath(); c.arc(x, y, 3.4, 0, 7); c.fill();
@@ -451,7 +498,6 @@ c.restore();
 }
  
 const PREVIEW_GEO = {};
-/** Pratinjau meja (toko & halaman Developer); `kind` = 'standard' | 'american'. */
 function renderTablePreview(theme, widthPx, imgs, kind, isPreview) {
   const T = TABLE_PROFILES[kind || 'standard'].table;
   PREVIEW_GEO[T.width] = PREVIEW_GEO[T.width] || buildTableGeometry(T);
@@ -460,8 +506,7 @@ function renderTablePreview(theme, widthPx, imgs, kind, isPreview) {
     theme, T, PREVIEW_GEO[T.width],
     widthPx / (T.width + 2 * tx),
     0, imgs,
-    isPreview !== false           // default true (kecuali dipanggil eksplisit false)
-                              // ← isPreview
+    isPreview === true           // default false → full quality
   ).canvas;
 }
 /* ---------------- renderer ---------------- */

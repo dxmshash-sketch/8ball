@@ -30,22 +30,258 @@ function countUp(el, from, to, ms, fmt) {
 }
 
 /** Konfeti ringan (satu canvas overlay, berhenti otomatis). */
+// class Fx {
+//   constructor(canvas) { t
+//     his.cv = canvas; 
+//     this.ctx = canvas.getContext('2d'); 
+//     this.p = []; 
+//     this.on = false; 
+//   }
+
+//   burst(x, y, n, spread) {
+//     const cols = ['#F4C542', '#fff2b0', '#32D74B', '#57BFEA', '#FF5A5F', '#d99cff'];
+//     for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, s = (2 + Math.random() * 9) * (spread || 1); this.p.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 4, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4, w: 5 + Math.random() * 6, h: 3 + Math.random() * 5, life: 1, c: cols[i % cols.length] }); }
+//     if (!this.on) { this.on = true; this._resize(); requestAnimationFrame((t) => this._loop(t)); }
+//   }
+//   _resize() { const d = Math.min(window.devicePixelRatio || 1, 2); this.cv.width = innerWidth * d; this.cv.height = innerHeight * d; this.d = d; }
+//   _loop() {
+//     const c = this.ctx, d = this.d; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, this.cv.width, this.cv.height); c.setTransform(d, 0, 0, d, 0, 0);
+//     for (const q of this.p) { q.vy += 0.28; q.x += q.vx; q.y += q.vy; q.vx *= 0.985; q.r += q.vr; q.life -= 0.011; c.save(); c.globalAlpha = Math.max(0, q.life); c.translate(q.x, q.y); c.rotate(q.r); c.fillStyle = q.c; c.fillRect(-q.w / 2, -q.h / 2, q.w, q.h); c.restore(); }
+//     this.p = this.p.filter((q) => q.life > 0 && q.y < innerHeight + 40);
+//     if (this.p.length) requestAnimationFrame(() => this._loop()); else { this.on = false; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, this.cv.width, this.cv.height); }
+//   }
+// }
 class Fx {
-  constructor(canvas) { this.cv = canvas; this.ctx = canvas.getContext('2d'); this.p = []; this.on = false; }
-  burst(x, y, n, spread) {
-    const cols = ['#F4C542', '#fff2b0', '#32D74B', '#57BFEA', '#FF5A5F', '#d99cff'];
-    for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, s = (2 + Math.random() * 9) * (spread || 1); this.p.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 4, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4, w: 5 + Math.random() * 6, h: 3 + Math.random() * 5, life: 1, c: cols[i % cols.length] }); }
-    if (!this.on) { this.on = true; this._resize(); requestAnimationFrame((t) => this._loop(t)); }
+  constructor(canvas) {
+    this.cv = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.p = [];
+    this.on = false;
+    this._dpr = 1;
   }
-  _resize() { const d = Math.min(window.devicePixelRatio || 1, 2); this.cv.width = innerWidth * d; this.cv.height = innerHeight * d; this.d = d; }
-  _loop() {
-    const c = this.ctx, d = this.d; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, this.cv.width, this.cv.height); c.setTransform(d, 0, 0, d, 0, 0);
-    for (const q of this.p) { q.vy += 0.28; q.x += q.vx; q.y += q.vy; q.vx *= 0.985; q.r += q.vr; q.life -= 0.011; c.save(); c.globalAlpha = Math.max(0, q.life); c.translate(q.x, q.y); c.rotate(q.r); c.fillStyle = q.c; c.fillRect(-q.w / 2, -q.h / 2, q.w, q.h); c.restore(); }
-    this.p = this.p.filter((q) => q.life > 0 && q.y < innerHeight + 40);
-    if (this.p.length) requestAnimationFrame(() => this._loop()); else { this.on = false; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, this.cv.width, this.cv.height); }
+
+  _resize() {
+    const d = Math.min(window.devicePixelRatio || 1, 2);
+    this.cv.width = innerWidth * d;
+    this.cv.height = innerHeight * d;
+    this._dpr = d;
+  }
+
+  // /** Ledakan partikel dari titik (x, y). */
+  // burst(x, y, n, spread) {
+  //   if (!this.on) { this.on = true; this._resize(); requestAnimationFrame((t) => this._loop(t)); }
+  //   const palette = [
+  //     '#F2C14E', '#FFE9A8',        // gold
+  //     '#3BA8FF', '#4FC3FF',        // blue
+  //     '#9FB3C8',                   // silver
+  //     '#FF5A6A', '#32D583', '#D99CFF',  // accent
+  //     '#FFFFFF',
+  //   ];
+  //   for (let i = 0; i < n; i++) {
+  //     const a = Math.random() * Math.PI * 2;
+  //     const speed = (3 + Math.random() * 11) * (spread || 1);
+  //     const type = Math.random();
+  //     // 60% rect, 25% ribbon, 15% circle
+  //     let shape = 'rect';
+  //     if (type > 0.6 && type < 0.85) shape = 'ribbon';
+  //     else if (type >= 0.85) shape = 'circle';
+
+  //     this.p.push({
+  //       x, y,
+  //       vx: Math.cos(a) * speed,
+  //       vy: Math.sin(a) * speed - 5,
+  //       rot: Math.random() * Math.PI * 2,
+  //       vr: (Math.random() - 0.5) * 0.45,
+  //       w: 4 + Math.random() * 8,
+  //       h: shape === 'ribbon' ? 2 + Math.random() * 3 : 3 + Math.random() * 6,
+  //       life: 1,
+  //       decay: 0.008 + Math.random() * 0.008,
+  //       c: palette[(Math.random() * palette.length) | 0],
+  //       shape,
+  //       swayPhase: Math.random() * Math.PI * 2,
+  //       swayAmp: 0.3 + Math.random() * 0.8,
+  //     });
+  //   }
+  // }
+burst(x, y, n, spread) {
+  if (!this.on) { this.on = true; this._resize(); requestAnimationFrame((t) => this._loop(t)); }
+  const palette = [
+    '#F2C14E', '#FFE9A8', '#FFD34E',   // gold
+    '#3BA8FF', '#4FC3FF',               // blue
+    '#FFFFFF', '#FFEEDD',               // white
+    '#FF5A6A', '#32D583', '#D99CFF',    // accent
+  ];
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const speed = (3 + Math.random() * 13) * (spread || 1);
+    const r = Math.random();
+    const shape = r < 0.55 ? 'rect' : r < 0.85 ? 'ribbon' : 'circle';
+    this.p.push({
+      x, y,
+      vx: Math.cos(a) * speed,
+      vy: Math.sin(a) * speed - 6,
+      rot: Math.random() * Math.PI * 2,
+      vr: (Math.random() - 0.5) * 0.55,
+      w: 4 + Math.random() * 8,
+      h: shape === 'ribbon' ? 2 + Math.random() * 3 : 3 + Math.random() * 6,
+      life: 1,
+      decay: 0.007 + Math.random() * 0.008,
+      c: palette[(Math.random() * palette.length) | 0],
+      shape,
+      swayPhase: Math.random() * Math.PI * 2,
+      swayAmp: 0.3 + Math.random() * 0.9,
+    });
   }
 }
+  /** Hujan dari atas layar (koin / confetti). */
+  rain(n) {
+    if (!this.on) { this.on = true; this._resize(); requestAnimationFrame((t) => this._loop(t)); }
+    const W = innerWidth;
+    const palette = ['#F2C14E', '#FFE9A8', '#FFD34E', '#B8850C', '#FFFFFF'];
+    for (let i = 0; i < n; i++) {
+      const isCoin = Math.random() < 0.55;
+      this.p.push({
+        x: Math.random() * W,
+        y: -20 - Math.random() * 120,
+        vx: (Math.random() - 0.5) * 1.6,
+        vy: 1.5 + Math.random() * 3,
+        rot: Math.random() * Math.PI * 2,
+        vr: (Math.random() - 0.5) * 0.35,
+        w: isCoin ? 8 + Math.random() * 6 : 5 + Math.random() * 8,
+        h: isCoin ? 8 + Math.random() * 6 : 3 + Math.random() * 5,
+        life: 1,
+        decay: 0.003 + Math.random() * 0.004,
+        c: palette[(Math.random() * palette.length) | 0],
+        shape: isCoin ? 'coin' : 'ribbon',
+        swayPhase: Math.random() * Math.PI * 2,
+        swayAmp: 0.4 + Math.random() * 1.2,
+      });
+    }
+  }
 
+  // _loop() {
+  //   const c = this.ctx, d = this._dpr;
+  //   c.setTransform(1, 0, 0, 1, 0, 0);
+  //   c.clearRect(0, 0, this.cv.width, this.cv.height);
+  //   c.setTransform(d, 0, 0, d, 0, 0);
+
+  //   const t = performance.now() * 0.001;
+
+  //   for (const q of this.p) {
+  //     // Fisika
+  //     q.vy += 0.32;                        // gravity
+  //     q.vx *= 0.992;                       // air drag
+  //     q.vy *= 0.992;
+  //     // Sway (efek kertas melayang)
+  //     q.x += q.vx + Math.sin(t * 2 + q.swayPhase) * q.swayAmp;
+  //     q.y += q.vy;
+  //     q.rot += q.vr;
+  //     q.life -= q.decay;
+  //     if (q.life < 0) q.life = 0;
+
+  //     // Fade + scale kecil menuju akhir
+  //     const alpha = Math.max(0, Math.min(1, q.life * 1.4));
+  //     const scale = 0.7 + q.life * 0.3;
+
+  //     c.save();
+  //     c.globalAlpha = alpha;
+  //     c.translate(q.x, q.y);
+  //     c.rotate(q.rot);
+  //     c.scale(scale, scale);
+  //     c.fillStyle = q.c;
+
+  //     if (q.shape === 'circle') {
+  //       c.beginPath();
+  //       c.arc(0, 0, q.w / 2, 0, Math.PI * 2);
+  //       c.fill();
+  //     } else if (q.shape === 'coin') {
+  //       // Koin: circle emas dengan rim gelap
+  //       c.beginPath();
+  //       c.arc(0, 0, q.w / 2, 0, Math.PI * 2);
+  //       c.fill();
+  //       c.strokeStyle = 'rgba(0,0,0,0.35)';
+  //       c.lineWidth = 1.2;
+  //       c.stroke();
+  //       // Highlight kecil
+  //       c.fillStyle = 'rgba(255,255,255,0.55)';
+  //       c.beginPath();
+  //       c.arc(-q.w * 0.18, -q.h * 0.18, q.w * 0.14, 0, Math.PI * 2);
+  //       c.fill();
+  //     } else if (q.shape === 'ribbon') {
+  //       // Ribbon: rect tipis panjang
+  //       c.fillRect(-q.w / 2, -q.h / 2, q.w, q.h);
+  //     } else {
+  //       // Rect default
+  //       c.fillRect(-q.w / 2, -q.h / 2, q.w, q.h);
+  //     }
+
+  //     c.restore();
+  //   }
+
+  //   // Buang partikel yang mati atau di luar layar bawah
+  //   this.p = this.p.filter((q) => q.life > 0 && q.y < innerHeight + 60 && q.x > -80 && q.x < innerWidth + 80);
+
+  //   if (this.p.length) {
+  //     requestAnimationFrame(() => this._loop());
+  //   } else {
+  //     this.on = false;
+  //     c.setTransform(1, 0, 0, 1, 0, 0);
+  //     c.clearRect(0, 0, this.cv.width, this.cv.height);
+  //   }
+  // }
+
+  _loop() {
+  const c = this.ctx, d = this._dpr || 1;
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.clearRect(0, 0, this.cv.width, this.cv.height);
+  c.setTransform(d, 0, 0, d, 0, 0);
+  const t = performance.now() * 0.001;
+
+  for (const q of this.p) {
+    q.vy += 0.32;
+    q.vx *= 0.992; q.vy *= 0.992;
+    q.x += q.vx + Math.sin(t * 2 + q.swayPhase) * q.swayAmp;
+    q.y += q.vy;
+    q.rot += q.vr;
+    q.life -= q.decay;
+    if (q.life < 0) q.life = 0;
+
+    const alpha = Math.max(0, Math.min(1, q.life * 1.4));
+    const scale = 0.7 + q.life * 0.3;
+
+    c.save();
+    c.globalAlpha = alpha;
+    c.translate(q.x, q.y);
+    c.rotate(q.rot);
+    c.scale(scale, scale);
+    c.fillStyle = q.c;
+
+    if (q.shape === 'circle') {
+      c.beginPath(); c.arc(0, 0, q.w / 2, 0, Math.PI * 2); c.fill();
+    } else if (q.shape === 'coin') {
+      c.beginPath(); c.arc(0, 0, q.w / 2, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 1.2; c.stroke();
+      c.fillStyle = 'rgba(255,255,255,.55)';
+      c.beginPath(); c.arc(-q.w*.18, -q.h*.18, q.w*.14, 0, Math.PI * 2); c.fill();
+    } else {
+      c.fillRect(-q.w / 2, -q.h / 2, q.w, q.h);
+    }
+    c.restore();
+  }
+
+  this.p = this.p.filter((q) =>
+    q.life > 0 && q.y < innerHeight + 60 &&
+    q.x > -80 && q.x < innerWidth + 80
+  );
+
+  if (this.p.length) requestAnimationFrame(() => this._loop());
+  else {
+    this.on = false;
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.clearRect(0, 0, this.cv.width, this.cv.height);
+  }
+}
+}
 const PAGE_SCREENS = { menu: 'screenMenu', modes: 'screenModes', settings: 'screenSettings', profile: 'screenProfile', rewards: 'screenRewards', board: 'screenBoard', tables: 'screenTables', cues: 'screenCues', dev: 'screenDev', auth: 'screenAuth', market: 'screenMarket', friend: 'screenFriend' };
 
 class UI {
@@ -199,7 +435,55 @@ class UI {
       this.stack.push(this.current || ''); this.show('screenPause');
     } else if (this.current === 'screenPause' || this.current === 'screenSettings') { this.stack = []; this.hideAll(); }
   }
+/** Hujan koin yang terbang masuk ke kotak. Target = elemen box. */
+_coinRainToBox(targetEl, count) {
+  if (!targetEl) return;
+  const rect = targetEl.getBoundingClientRect();
+  const targetX = rect.left + rect.width / 2;
+  const targetY = rect.top + rect.height / 2;
 
+  for (let i = 0; i < (count || 14); i++) {
+    // Spawn acak di sekeliling layar (bawah + kiri + kanan)
+    const side = Math.random();
+    let spawnX, spawnY;
+    if (side < 0.55) {
+      // bawah
+      spawnX = Math.random() * innerWidth;
+      spawnY = innerHeight + 40;
+    } else if (side < 0.8) {
+      // kiri
+      spawnX = -40;
+      spawnY = innerHeight * 0.5 + Math.random() * innerHeight * 0.5;
+    } else {
+      // kanan
+      spawnX = innerWidth + 40;
+      spawnY = innerHeight * 0.5 + Math.random() * innerHeight * 0.5;
+    }
+
+    const dx = targetX - spawnX;
+    const dy = targetY - spawnY;
+
+    const coin = document.createElement('div');
+    coin.className = 'lu-coin-fly';
+    coin.style.left = spawnX + 'px';
+    coin.style.top = spawnY + 'px';
+    coin.style.setProperty('--dx', dx + 'px');
+    coin.style.setProperty('--dy', dy + 'px');
+    coin.style.animationDelay = (i * 60 + Math.random() * 80) + 'ms';
+    document.body.appendChild(coin);
+
+    // Trigger animasi + hapus setelah selesai
+    requestAnimationFrame(() => coin.classList.add('fly'));
+
+    // Saat koin tiba di box → burst mini + suara
+    const arriveAt = 1100 + i * 60;
+    setTimeout(() => {
+      this.fx.burst(targetX, targetY, 6, 0.6);
+    }, arriveAt);
+
+    setTimeout(() => coin.remove(), arriveAt + 300);
+  }
+}
   /* ------------------------------ per-frame ------------------------------ */
   tick(dt, game) {
     if ($('hud').hidden) return;

@@ -189,7 +189,7 @@ body[data-layout=portrait] #turnChip{font-size:15px;padding:5px 12px}
 .rw-item canvas{width:44px;height:auto;border-radius:4px}
 .rw-row.locked{opacity:.55}
 
-/* level-up */
+/* level-up
 .lu{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;width:min(480px,100%);max-height:100%;overflow-y:auto;padding:10px}
 .lu-ring{position:relative;width:150px;height:150px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 30%,#fff2b0,#F4C542 55%,#b8850c);box-shadow:0 0 0 8px rgba(0,0,0,.3),0 0 60px rgba(244,197,66,.55);animation:pop .7s cubic-bezier(.2,1.6,.4,1) both}
 .lu-ring::after{content:"";position:absolute;inset:-14px;border-radius:50%;border:3px solid rgba(244,197,66,.6);animation:ripple 1.6s ease-out infinite}
@@ -202,7 +202,7 @@ body[data-layout=portrait] #turnChip{font-size:15px;padding:5px 12px}
 .lu-card img{width:110px;height:20px;object-fit:contain}.lu-card canvas{width:96px;border-radius:4px}
 @keyframes rise{from{transform:translateY(16px) scale(.9);opacity:0}}
 .lu-card.claimed{animation:claimed .6s both}
-@keyframes claimed{50%{transform:scale(1.12);box-shadow:0 0 30px rgba(244,197,66,.6)}}
+@keyframes claimed{50%{transform:scale(1.12);box-shadow:0 0 30px rgba(244,197,66,.6)}} */
 
 /* hasil */
 .result h2{font-size:42px;text-align:center}
@@ -601,4 +601,661 @@ body::before{
 @keyframes fadeIn {
   from { opacity: 0; transform: scale(0.98); }
   to { opacity: 1; transform: scale(1); }
+}
+
+/* ============================================================
+   REWARD MODAL ANIMATIONS
+   ============================================================ */
+
+/* Ring: masuk dengan scale + rotate, lalu pulse glow */
+.lu-ring {
+  animation: lu-ring-in 0.7s cubic-bezier(.2,1.5,.4,1) both;
+  position: relative;
+}
+@keyframes lu-ring-in {
+  0%   { transform: scale(0.2) rotate(-180deg); opacity: 0; }
+  60%  { transform: scale(1.08) rotate(10deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* Ring glow pulse setelah masuk */
+.lu-ring::before {
+  content: '';
+  position: absolute;
+  inset: -20px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(242,193,78,0.55) 0%, transparent 65%);
+  animation: lu-ring-glow 1.8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+@keyframes lu-ring-glow {
+  0%,100% { transform: scale(1);   opacity: 0.6; }
+  50%     { transform: scale(1.15); opacity: 1; }
+}
+
+/* Nomor level: naik + shine sweep */
+.lu-num {
+  animation: lu-num-in 0.6s 0.25s cubic-bezier(.2,1.5,.4,1) both;
+}
+@keyframes lu-num-in {
+  0%   { transform: scale(0.4) translateY(20px); opacity: 0; filter: blur(8px); }
+  100% { transform: scale(1) translateY(0);     opacity: 1; filter: blur(0); }
+}
+
+/* Judul: slide dari bawah */
+.lu h2 {
+  animation: lu-title-in 0.5s 0.35s cubic-bezier(.2,.9,.3,1) both;
+   font-size: 28px;   /* dari default ~38 */
+    margin: 4px 0 0;
+}
+@keyframes lu-title-in {
+  0%   { transform: translateY(24px); opacity: 0; }
+  100% { transform: translateY(0);    opacity: 1; }
+}
+
+.lu .sub {
+  animation: lu-title-in 0.5s 0.45s cubic-bezier(.2,.9,.3,1) both;
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Cards: terbang dari tengah lalu bounce */
+.lu-card {
+  transform-origin: 50% 50%;
+  animation: lu-card-fly 0.7s cubic-bezier(.2,1.4,.35,1) both;
+  position: relative;
+  overflow: hidden;
+}
+@keyframes lu-card-fly {
+  0% {
+    transform: translate(0, 60px) scale(0.2) rotate(-25deg);
+    opacity: 0;
+    filter: blur(6px);
+  }
+  55% {
+    transform: translate(0, 0) scale(1.1) rotate(4deg);
+    opacity: 1;
+    filter: blur(0);
+  }
+  75% {
+    transform: translate(0, 0) scale(0.96) rotate(-1.5deg);
+  }
+  100% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+.lu-rewards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin: 4px 0;
+}
+/* Shine sweep pada card setelah landing */
+.lu-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(255,255,255,0.55) 50%,
+    transparent 70%
+  );
+  transform: translateX(-120%);
+  animation: lu-card-shine 1.1s ease-out 0.9s both;
+  pointer-events: none;
+}
+@keyframes lu-card-shine {
+  to { transform: translateX(120%); }
+}
+
+/* Card claim bounce */
+.lu-card.claimed {
+  animation: lu-card-claim 0.65s cubic-bezier(.2,1.6,.4,1) both;
+}
+@keyframes lu-card-claim {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.22) rotate(3deg); filter: brightness(1.6); }
+  60%  { transform: scale(0.96) rotate(-1deg); filter: brightness(1.1); }
+  100% { transform: scale(1) rotate(0deg); filter: brightness(1); }
+}
+
+/* Button: masuk dari bawah */
+#luBtn {
+  animation: lu-title-in 0.5s 1.1s cubic-bezier(.2,.9,.3,1) both;
+}
+
+/* Flash overlay di screen levelup */
+#screenLevelUp::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 35%, rgba(242,193,78,0.35), transparent 60%);
+  opacity: 0;
+  animation: lu-flash 0.85s ease-out 0.05s both;
+  pointer-events: none;
+  z-index: 0;
+}
+@keyframes lu-flash {
+  0%   { opacity: 0; }
+  25%  { opacity: 1; }
+  100% { opacity: 0.15; }
+}
+
+/* Content di atas flash */
+.lu > * { position: relative; z-index: 1; }
+#luWallet {
+  font-size: 13px;
+  min-height: 18px;
+}
+/* Wallet: angka naik dengan pulse */
+#luWallet b.gold {
+  display: inline-block;
+  animation: lu-wallet-pulse 0.6s ease-out;
+}
+@keyframes lu-wallet-pulse {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.18); text-shadow: 0 0 16px rgba(242,193,78,0.9); }
+  100% { transform: scale(1); }
+}
+
+/* ============================================================
+   PANDORA BOX REWARD — animasi buka kotak harta
+   ============================================================ */
+
+/* ── Container screen — anti scroll ── */
+/* Jadi ini: */
+#screenLevelUp {
+  overflow: hidden !important;
+}
+
+.lu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  width: min(480px, 100%);
+  max-width: 100vw;
+  max-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;    /* ← no scroll sama sekali */
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+
+/* ── Stage kotak ── */
+/* .lu-box-stage {
+  position: relative;
+  width: 200px;
+  height: 220px;
+  margin: 0 auto 8px;
+  perspective: 800px;
+  overflow: visible;
+  flex-shrink: 0;
+} */
+
+/* Konten dalam .lu juga harus lebih compact */
+.lu-box-stage {
+  width: 180px;
+  height: 180px;   /* dari 220 → 180 supaya muat */
+  margin: 0 auto 4px;
+}
+
+/* ── Kotak utama ── */
+.lu-box {
+  position: absolute;
+  inset: 0;
+  animation: lu-box-in 0.5s cubic-bezier(.2,1.6,.4,1) both;
+  transform-style: preserve-3d;
+}
+@keyframes lu-box-in {
+  0%   { transform: scale(0) rotate(-180deg); opacity: 0; }
+  60%  { transform: scale(1.15) rotate(10deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+/* ── Fase getar — intensitas meningkat ── */
+.lu-box.shaking {
+  animation: lu-box-shake 0.55s ease-in-out both;
+}
+@keyframes lu-box-shake {
+  0%   { transform: translate(0,0) rotate(0) scale(1); }
+  15%  { transform: translate(-2px,-1px) rotate(-1.5deg) scale(1.01); }
+  30%  { transform: translate(2px,-1px) rotate(1.5deg) scale(1.02); }
+  45%  { transform: translate(-4px,-2px) rotate(-3deg) scale(1.04); }
+  60%  { transform: translate(4px,-2px) rotate(3deg) scale(1.06); }
+  80%  { transform: translate(-6px,-4px) rotate(-4.5deg) scale(1.09); }
+  100% { transform: translate(0,-2px) rotate(0) scale(1.12); }
+}
+
+/* ── Badan kotak ── */
+.lu-box-body {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140px;
+  height: 90px;
+  background: linear-gradient(180deg, #a52a2a 0%, #8a1a1a 35%, #5a0808 100%);
+  border: 3px solid #d4a13a;
+  border-radius: 8px 8px 12px 12px;
+  box-shadow:
+    inset 0 -10px 20px rgba(0,0,0,.55),
+    inset 0 4px 10px rgba(255,220,120,.28),
+    0 12px 32px rgba(0,0,0,.65);
+  z-index: 2;
+}
+
+.lu-box-band {
+  position: absolute;
+  top: 50%;
+  left: 0; right: 0;
+  height: 14px;
+  transform: translateY(-50%);
+  background: linear-gradient(180deg, #ffe08a, #d4a13a 50%, #8a6210);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.7),
+    inset 0 -2px 0 rgba(0,0,0,.4),
+    0 0 12px rgba(242,193,78,.55);
+}
+
+.lu-box-lock {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 26px;
+  height: 26px;
+  background: radial-gradient(circle at 35% 30%, #fff3c4 0%, #f0c85a 40%, #b8840a 70%, #7a5a10 100%);
+  border-radius: 50%;
+  box-shadow:
+    0 0 14px rgba(242,193,78,.85),
+    inset 0 1px 2px rgba(255,255,255,.85),
+    inset 0 -2px 4px rgba(0,0,0,.5);
+  z-index: 3;
+}
+.lu-box-lock::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #7a5a10, #3a2806);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.7);
+}
+
+/* ── Tutup kotak ── */
+.lu-box-lid {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  transform-origin: center bottom;
+  width: 150px;
+  height: 55px;
+  background: linear-gradient(180deg, #b53030 0%, #8a1a1a 55%, #5a0808 100%);
+  border: 3px solid #d4a13a;
+  border-bottom: 0;
+  border-radius: 14px 14px 0 0;
+  box-shadow:
+    inset 0 6px 12px rgba(255,220,120,.4),
+    inset 0 -6px 12px rgba(0,0,0,.5),
+    0 -6px 16px rgba(0,0,0,.5);
+  z-index: 4;
+}
+.lu-box-lid::before {
+  content: '';
+  position: absolute;
+  top: 6px; left: 10px; right: 10px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(255,230,150,.7), transparent);
+  border-radius: 2px;
+}
+
+/* Ledakan: tutup terbang ke atas + rotasi */
+.lu-box.burst .lu-box-lid {
+  animation: lu-lid-fly 0.75s cubic-bezier(.2,1.4,.4,1) both;
+}
+@keyframes lu-lid-fly {
+  0%   { transform: translateX(-50%) translateY(0) rotate(0) scale(1); opacity: 1; }
+  30%  { transform: translateX(-50%) translateY(-40px) rotate(-8deg) scale(1.05); opacity: 1; }
+  100% { transform: translateX(-50%) translateY(-280px) rotate(-42deg) scale(1.15); opacity: 0; }
+}
+
+.lu-box.burst .lu-box-body {
+  animation: lu-body-burst 0.7s cubic-bezier(.2,1.4,.4,1) both;
+}
+@keyframes lu-body-burst {
+  0%   { transform: translateX(-50%) scale(1); }
+  25%  { transform: translateX(-50%) scale(1.14); }
+  100% { transform: translateX(-50%) scale(0.9); opacity: 0.75; }
+}
+
+/* ── Cahaya dari dalam kotak ── */
+.lu-box-glow {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    #ffffff 0%,
+    #fff2b0 15%,
+    #f2c14e 30%,
+    rgba(242,193,78,.5) 55%,
+    transparent 75%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.lu-box.burst .lu-box-glow {
+  animation: lu-glow-burst 1s ease-out both;
+}
+@keyframes lu-glow-burst {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(0); }
+  10%  { opacity: 1; transform: translate(-50%,-50%) scale(0.5); }
+  30%  { opacity: 1; transform: translate(-50%,-50%) scale(1.6); }
+  65%  { opacity: 0.7; transform: translate(-50%,-50%) scale(2.4); }
+  100% { opacity: 0; transform: translate(-50%,-50%) scale(3.2); }
+}
+
+/* ── Beam cahaya ke atas ── */
+/* Ganti .lu-box-beam dengan: */
+.lu-box-beam {
+  position: absolute;
+  bottom: 40%;
+  left: 50%;
+  transform: translateX(-50%) scaleY(0);
+  transform-origin: center bottom;
+  width: 120px;
+  height: 200px;   /* dari 380 → 200 supaya tidak menyentuh frame */
+
+  background: linear-gradient(to top,
+    rgba(255,248,220,.9) 0%,
+    rgba(255,230,150,.6) 30%,
+    rgba(242,193,78,.25) 60%,
+    transparent 100%);
+
+  /* Kunci: fade halus di ujung atas + kiri/kanan */
+  mask-image: linear-gradient(to top,
+    black 0%,
+    black 35%,
+    rgba(0,0,0,0.6) 70%,
+    transparent 100%);
+
+  -webkit-mask-image: linear-gradient(to top,
+    black 0%,
+    black 35%,
+    rgba(0,0,0,0.6) 70%,
+    transparent 100%);
+
+  filter: blur(6px);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+  will-change: transform, opacity;
+  contain: layout paint;
+}
+
+.lu-box.burst .lu-box-beam {
+  animation: lu-beam 1.1s cubic-bezier(.2,.9,.3,1) both;
+}
+
+@keyframes lu-beam {
+  0%   { opacity: 0; transform: translateX(-50%) scaleY(0); }
+  15%  { opacity: 1; transform: translateX(-50%) scaleY(1); }
+  60%  { opacity: 0.55; transform: translateX(-50%) scaleY(1.03); }
+  100% { opacity: 0; transform: translateX(-50%) scaleY(1.1); }
+}
+
+
+
+/* ============================================================
+   FLASH LEDAKAN — 3 lapis: white → ring → gold ambient
+   ============================================================ */
+
+.lu-flash {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0;
+  overflow: hidden;
+}
+
+/* Lapisan 1: WHITE flash sangat singkat */
+.lu-flash::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 40%,
+    #ffffff 0%,
+    rgba(255,255,255,.85) 25%,
+    rgba(255,255,255,0) 60%);
+  opacity: 0;
+}
+
+/* Lapisan 2: SHOCKWAVE ring */
+.lu-flash::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border-radius: 50%;
+  border: 3px solid rgba(255,240,180,.9);
+  box-shadow:
+    0 0 30px rgba(255,220,120,.9),
+    inset 0 0 20px rgba(255,255,255,.6);
+  opacity: 0;
+  transform: scale(0);
+}
+
+/* Ambient gold — halus, tetap ada setelah flash */
+.lu-flash-ambient {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  background: radial-gradient(
+    ellipse 80% 60% at 50% 45%,
+    rgba(242,193,78,.22) 0%,
+    rgba(242,193,78,.08) 40%,
+    transparent 75%
+  );
+  opacity: 0;
+  transition: opacity 0.6s ease-out;
+}
+.lu-flash-ambient.on { opacity: 1; }
+
+/* Animasi */
+.lu-flash.on::before {
+  animation: lu-flash-white 0.5s ease-out both;
+}
+@keyframes lu-flash-white {
+  0%   { opacity: 0; }
+  8%   { opacity: 1; }
+  25%  { opacity: 0.6; }
+  100% { opacity: 0; }
+}
+
+.lu-flash.on::after {
+  animation: lu-flash-ring 0.7s cubic-bezier(.15,.85,.4,1) both;
+}
+@keyframes lu-flash-ring {
+  0%   { opacity: 1; transform: scale(0.2); border-width: 8px; }
+  40%  { opacity: 0.9; transform: scale(12);  border-width: 4px; }
+  100% { opacity: 0; transform: scale(28);  border-width: 1px; }
+}
+
+/* ============================================================
+   JUDUL & BUTTON
+   ============================================================ */
+
+.lu-title-in {
+  animation: lu-fade-up 0.55s cubic-bezier(.2,.9,.3,1) both;
+}
+@keyframes lu-fade-up {
+  0%   { opacity: 0; transform: translateY(18px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   KARTU HADIAH — terbang keluar dari tengah kotak
+   ============================================================ */
+
+.lu-card {
+  visibility: hidden;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+  position: relative;
+  overflow: hidden;
+    min-width: 96px;
+  padding: 10px 8px;   /* dari 12 → 10 */
+  font-size: 13px;
+}
+.lu-card.explode {
+  visibility: visible;
+  animation: lu-card-explode 0.95s cubic-bezier(.2,1.5,.4,1) both;
+}
+@keyframes lu-card-explode {
+  0% {
+    transform: translate(var(--from-x, 0), var(--from-y, 0))
+               scale(0.15)
+               rotate(var(--from-r, 0deg));
+    opacity: 0;
+    filter: brightness(2) blur(4px);
+  }
+  30% {
+    opacity: 1;
+    filter: brightness(1.6) blur(0);
+  }
+  55% {
+    transform: translate(0,0) scale(1.18) rotate(0deg);
+    filter: brightness(1.15);
+  }
+  75% {
+    transform: translate(0,0) scale(0.94) rotate(0deg);
+    filter: brightness(1);
+  }
+  100% {
+    transform: translate(0,0) scale(1) rotate(0deg);
+    opacity: 1;
+    filter: brightness(1);
+  }
+}
+
+/* Shine sweep setelah kartu mendarat */
+.lu-card.explode::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg,
+    transparent 30%,
+    rgba(255,255,255,.6) 50%,
+    transparent 70%);
+  transform: translateX(-130%);
+  animation: lu-card-shine 0.9s ease-out 1.3s both;
+  pointer-events: none;
+  border-radius: inherit;
+}
+@keyframes lu-card-shine {
+  to { transform: translateX(130%); }
+}
+
+/* Kartu claim bounce */
+.lu-card.claimed {
+  animation: lu-card-claim 0.65s cubic-bezier(.2,1.6,.4,1) both;
+}
+@keyframes lu-card-claim {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.24) rotate(3deg); filter: brightness(1.8); }
+  60%  { transform: scale(0.94) rotate(-1.5deg); filter: brightness(1.15); }
+  100% { transform: scale(1) rotate(0deg); filter: brightness(1); }
+}
+
+/* ============================================================
+   WALLET & UTIL
+   ============================================================ */
+
+#luWallet b.gold {
+  display: inline-block;
+  animation: lu-wallet-pulse 0.6s ease-out;
+}
+@keyframes lu-wallet-pulse {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.18); text-shadow: 0 0 16px rgba(242,193,78,.9); }
+  100% { transform: scale(1); }
+}
+#luBtn {
+  min-height: 48px;
+  font-size: 18px;
+  padding: 0 24px;
+  max-width: 320px;
+  width: 100%;
+}
+/* Body lock saat modal buka */
+body.modal-open {
+  overflow: hidden !important;
+}
+
+/* ── Koin terbang masuk ke kotak ── */
+.lu-coin-fly {
+  position: fixed;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9998;
+  background: radial-gradient(circle at 35% 30%,
+    #fff3c4 0%,
+    #f0c85a 40%,
+    #b8840a 70%,
+    #7a5a10 100%);
+  box-shadow:
+    0 0 14px rgba(242,193,78,.85),
+    inset 0 1px 3px rgba(255,255,255,.9),
+    inset 0 -2px 4px rgba(0,0,0,.5);
+  will-change: transform, opacity;
+}
+
+/* Ring highlight di dalam koin */
+.lu-coin-fly::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(122,90,16,.6);
+}
+
+@keyframes lu-coin-fly-in {
+  0% {
+    transform: translate(0, 0) scale(0.3) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1) rotate(45deg);
+  }
+  85% {
+    opacity: 1;
+    transform: translate(var(--dx), var(--dy)) scale(1) rotate(540deg);
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy)) scale(0.1) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.lu-coin-fly.fly {
+  animation: lu-coin-fly-in 1.1s cubic-bezier(.5,0,.7,1) both;
 }

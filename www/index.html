@@ -204,7 +204,7 @@ body[data-layout=portrait] #turnChip{font-size:15px;padding:5px 12px}
 .rw-item canvas{width:44px;height:auto;border-radius:4px}
 .rw-row.locked{opacity:.55}
 
-/* level-up */
+/* level-up
 .lu{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;width:min(480px,100%);max-height:100%;overflow-y:auto;padding:10px}
 .lu-ring{position:relative;width:150px;height:150px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 30%,#fff2b0,#F4C542 55%,#b8850c);box-shadow:0 0 0 8px rgba(0,0,0,.3),0 0 60px rgba(244,197,66,.55);animation:pop .7s cubic-bezier(.2,1.6,.4,1) both}
 .lu-ring::after{content:"";position:absolute;inset:-14px;border-radius:50%;border:3px solid rgba(244,197,66,.6);animation:ripple 1.6s ease-out infinite}
@@ -217,7 +217,7 @@ body[data-layout=portrait] #turnChip{font-size:15px;padding:5px 12px}
 .lu-card img{width:110px;height:20px;object-fit:contain}.lu-card canvas{width:96px;border-radius:4px}
 @keyframes rise{from{transform:translateY(16px) scale(.9);opacity:0}}
 .lu-card.claimed{animation:claimed .6s both}
-@keyframes claimed{50%{transform:scale(1.12);box-shadow:0 0 30px rgba(244,197,66,.6)}}
+@keyframes claimed{50%{transform:scale(1.12);box-shadow:0 0 30px rgba(244,197,66,.6)}} */
 
 /* hasil */
 .result h2{font-size:42px;text-align:center}
@@ -616,6 +616,663 @@ body::before{
 @keyframes fadeIn {
   from { opacity: 0; transform: scale(0.98); }
   to { opacity: 1; transform: scale(1); }
+}
+
+/* ============================================================
+   REWARD MODAL ANIMATIONS
+   ============================================================ */
+
+/* Ring: masuk dengan scale + rotate, lalu pulse glow */
+.lu-ring {
+  animation: lu-ring-in 0.7s cubic-bezier(.2,1.5,.4,1) both;
+  position: relative;
+}
+@keyframes lu-ring-in {
+  0%   { transform: scale(0.2) rotate(-180deg); opacity: 0; }
+  60%  { transform: scale(1.08) rotate(10deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* Ring glow pulse setelah masuk */
+.lu-ring::before {
+  content: '';
+  position: absolute;
+  inset: -20px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(242,193,78,0.55) 0%, transparent 65%);
+  animation: lu-ring-glow 1.8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+@keyframes lu-ring-glow {
+  0%,100% { transform: scale(1);   opacity: 0.6; }
+  50%     { transform: scale(1.15); opacity: 1; }
+}
+
+/* Nomor level: naik + shine sweep */
+.lu-num {
+  animation: lu-num-in 0.6s 0.25s cubic-bezier(.2,1.5,.4,1) both;
+}
+@keyframes lu-num-in {
+  0%   { transform: scale(0.4) translateY(20px); opacity: 0; filter: blur(8px); }
+  100% { transform: scale(1) translateY(0);     opacity: 1; filter: blur(0); }
+}
+
+/* Judul: slide dari bawah */
+.lu h2 {
+  animation: lu-title-in 0.5s 0.35s cubic-bezier(.2,.9,.3,1) both;
+   font-size: 28px;   /* dari default ~38 */
+    margin: 4px 0 0;
+}
+@keyframes lu-title-in {
+  0%   { transform: translateY(24px); opacity: 0; }
+  100% { transform: translateY(0);    opacity: 1; }
+}
+
+.lu .sub {
+  animation: lu-title-in 0.5s 0.45s cubic-bezier(.2,.9,.3,1) both;
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Cards: terbang dari tengah lalu bounce */
+.lu-card {
+  transform-origin: 50% 50%;
+  animation: lu-card-fly 0.7s cubic-bezier(.2,1.4,.35,1) both;
+  position: relative;
+  overflow: hidden;
+}
+@keyframes lu-card-fly {
+  0% {
+    transform: translate(0, 60px) scale(0.2) rotate(-25deg);
+    opacity: 0;
+    filter: blur(6px);
+  }
+  55% {
+    transform: translate(0, 0) scale(1.1) rotate(4deg);
+    opacity: 1;
+    filter: blur(0);
+  }
+  75% {
+    transform: translate(0, 0) scale(0.96) rotate(-1.5deg);
+  }
+  100% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+.lu-rewards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin: 4px 0;
+}
+/* Shine sweep pada card setelah landing */
+.lu-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(255,255,255,0.55) 50%,
+    transparent 70%
+  );
+  transform: translateX(-120%);
+  animation: lu-card-shine 1.1s ease-out 0.9s both;
+  pointer-events: none;
+}
+@keyframes lu-card-shine {
+  to { transform: translateX(120%); }
+}
+
+/* Card claim bounce */
+.lu-card.claimed {
+  animation: lu-card-claim 0.65s cubic-bezier(.2,1.6,.4,1) both;
+}
+@keyframes lu-card-claim {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.22) rotate(3deg); filter: brightness(1.6); }
+  60%  { transform: scale(0.96) rotate(-1deg); filter: brightness(1.1); }
+  100% { transform: scale(1) rotate(0deg); filter: brightness(1); }
+}
+
+/* Button: masuk dari bawah */
+#luBtn {
+  animation: lu-title-in 0.5s 1.1s cubic-bezier(.2,.9,.3,1) both;
+}
+
+/* Flash overlay di screen levelup */
+#screenLevelUp::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 35%, rgba(242,193,78,0.35), transparent 60%);
+  opacity: 0;
+  animation: lu-flash 0.85s ease-out 0.05s both;
+  pointer-events: none;
+  z-index: 0;
+}
+@keyframes lu-flash {
+  0%   { opacity: 0; }
+  25%  { opacity: 1; }
+  100% { opacity: 0.15; }
+}
+
+/* Content di atas flash */
+.lu > * { position: relative; z-index: 1; }
+#luWallet {
+  font-size: 13px;
+  min-height: 18px;
+}
+/* Wallet: angka naik dengan pulse */
+#luWallet b.gold {
+  display: inline-block;
+  animation: lu-wallet-pulse 0.6s ease-out;
+}
+@keyframes lu-wallet-pulse {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.18); text-shadow: 0 0 16px rgba(242,193,78,0.9); }
+  100% { transform: scale(1); }
+}
+
+/* ============================================================
+   PANDORA BOX REWARD — animasi buka kotak harta
+   ============================================================ */
+
+/* ── Container screen — anti scroll ── */
+/* Jadi ini: */
+#screenLevelUp {
+  overflow: hidden !important;
+}
+
+.lu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  width: min(480px, 100%);
+  max-width: 100vw;
+  max-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;    /* ← no scroll sama sekali */
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+
+/* ── Stage kotak ── */
+/* .lu-box-stage {
+  position: relative;
+  width: 200px;
+  height: 220px;
+  margin: 0 auto 8px;
+  perspective: 800px;
+  overflow: visible;
+  flex-shrink: 0;
+} */
+
+/* Konten dalam .lu juga harus lebih compact */
+.lu-box-stage {
+  width: 180px;
+  height: 180px;   /* dari 220 → 180 supaya muat */
+  margin: 0 auto 4px;
+}
+
+/* ── Kotak utama ── */
+.lu-box {
+  position: absolute;
+  inset: 0;
+  animation: lu-box-in 0.5s cubic-bezier(.2,1.6,.4,1) both;
+  transform-style: preserve-3d;
+}
+@keyframes lu-box-in {
+  0%   { transform: scale(0) rotate(-180deg); opacity: 0; }
+  60%  { transform: scale(1.15) rotate(10deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+/* ── Fase getar — intensitas meningkat ── */
+.lu-box.shaking {
+  animation: lu-box-shake 0.55s ease-in-out both;
+}
+@keyframes lu-box-shake {
+  0%   { transform: translate(0,0) rotate(0) scale(1); }
+  15%  { transform: translate(-2px,-1px) rotate(-1.5deg) scale(1.01); }
+  30%  { transform: translate(2px,-1px) rotate(1.5deg) scale(1.02); }
+  45%  { transform: translate(-4px,-2px) rotate(-3deg) scale(1.04); }
+  60%  { transform: translate(4px,-2px) rotate(3deg) scale(1.06); }
+  80%  { transform: translate(-6px,-4px) rotate(-4.5deg) scale(1.09); }
+  100% { transform: translate(0,-2px) rotate(0) scale(1.12); }
+}
+
+/* ── Badan kotak ── */
+.lu-box-body {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140px;
+  height: 90px;
+  background: linear-gradient(180deg, #a52a2a 0%, #8a1a1a 35%, #5a0808 100%);
+  border: 3px solid #d4a13a;
+  border-radius: 8px 8px 12px 12px;
+  box-shadow:
+    inset 0 -10px 20px rgba(0,0,0,.55),
+    inset 0 4px 10px rgba(255,220,120,.28),
+    0 12px 32px rgba(0,0,0,.65);
+  z-index: 2;
+}
+
+.lu-box-band {
+  position: absolute;
+  top: 50%;
+  left: 0; right: 0;
+  height: 14px;
+  transform: translateY(-50%);
+  background: linear-gradient(180deg, #ffe08a, #d4a13a 50%, #8a6210);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.7),
+    inset 0 -2px 0 rgba(0,0,0,.4),
+    0 0 12px rgba(242,193,78,.55);
+}
+
+.lu-box-lock {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 26px;
+  height: 26px;
+  background: radial-gradient(circle at 35% 30%, #fff3c4 0%, #f0c85a 40%, #b8840a 70%, #7a5a10 100%);
+  border-radius: 50%;
+  box-shadow:
+    0 0 14px rgba(242,193,78,.85),
+    inset 0 1px 2px rgba(255,255,255,.85),
+    inset 0 -2px 4px rgba(0,0,0,.5);
+  z-index: 3;
+}
+.lu-box-lock::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #7a5a10, #3a2806);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.7);
+}
+
+/* ── Tutup kotak ── */
+.lu-box-lid {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  transform-origin: center bottom;
+  width: 150px;
+  height: 55px;
+  background: linear-gradient(180deg, #b53030 0%, #8a1a1a 55%, #5a0808 100%);
+  border: 3px solid #d4a13a;
+  border-bottom: 0;
+  border-radius: 14px 14px 0 0;
+  box-shadow:
+    inset 0 6px 12px rgba(255,220,120,.4),
+    inset 0 -6px 12px rgba(0,0,0,.5),
+    0 -6px 16px rgba(0,0,0,.5);
+  z-index: 4;
+}
+.lu-box-lid::before {
+  content: '';
+  position: absolute;
+  top: 6px; left: 10px; right: 10px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(255,230,150,.7), transparent);
+  border-radius: 2px;
+}
+
+/* Ledakan: tutup terbang ke atas + rotasi */
+.lu-box.burst .lu-box-lid {
+  animation: lu-lid-fly 0.75s cubic-bezier(.2,1.4,.4,1) both;
+}
+@keyframes lu-lid-fly {
+  0%   { transform: translateX(-50%) translateY(0) rotate(0) scale(1); opacity: 1; }
+  30%  { transform: translateX(-50%) translateY(-40px) rotate(-8deg) scale(1.05); opacity: 1; }
+  100% { transform: translateX(-50%) translateY(-280px) rotate(-42deg) scale(1.15); opacity: 0; }
+}
+
+.lu-box.burst .lu-box-body {
+  animation: lu-body-burst 0.7s cubic-bezier(.2,1.4,.4,1) both;
+}
+@keyframes lu-body-burst {
+  0%   { transform: translateX(-50%) scale(1); }
+  25%  { transform: translateX(-50%) scale(1.14); }
+  100% { transform: translateX(-50%) scale(0.9); opacity: 0.75; }
+}
+
+/* ── Cahaya dari dalam kotak ── */
+.lu-box-glow {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    #ffffff 0%,
+    #fff2b0 15%,
+    #f2c14e 30%,
+    rgba(242,193,78,.5) 55%,
+    transparent 75%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.lu-box.burst .lu-box-glow {
+  animation: lu-glow-burst 1s ease-out both;
+}
+@keyframes lu-glow-burst {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(0); }
+  10%  { opacity: 1; transform: translate(-50%,-50%) scale(0.5); }
+  30%  { opacity: 1; transform: translate(-50%,-50%) scale(1.6); }
+  65%  { opacity: 0.7; transform: translate(-50%,-50%) scale(2.4); }
+  100% { opacity: 0; transform: translate(-50%,-50%) scale(3.2); }
+}
+
+/* ── Beam cahaya ke atas ── */
+/* Ganti .lu-box-beam dengan: */
+.lu-box-beam {
+  position: absolute;
+  bottom: 40%;
+  left: 50%;
+  transform: translateX(-50%) scaleY(0);
+  transform-origin: center bottom;
+  width: 120px;
+  height: 200px;   /* dari 380 → 200 supaya tidak menyentuh frame */
+
+  background: linear-gradient(to top,
+    rgba(255,248,220,.9) 0%,
+    rgba(255,230,150,.6) 30%,
+    rgba(242,193,78,.25) 60%,
+    transparent 100%);
+
+  /* Kunci: fade halus di ujung atas + kiri/kanan */
+  mask-image: linear-gradient(to top,
+    black 0%,
+    black 35%,
+    rgba(0,0,0,0.6) 70%,
+    transparent 100%);
+
+  -webkit-mask-image: linear-gradient(to top,
+    black 0%,
+    black 35%,
+    rgba(0,0,0,0.6) 70%,
+    transparent 100%);
+
+  filter: blur(6px);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+  will-change: transform, opacity;
+  contain: layout paint;
+}
+
+.lu-box.burst .lu-box-beam {
+  animation: lu-beam 1.1s cubic-bezier(.2,.9,.3,1) both;
+}
+
+@keyframes lu-beam {
+  0%   { opacity: 0; transform: translateX(-50%) scaleY(0); }
+  15%  { opacity: 1; transform: translateX(-50%) scaleY(1); }
+  60%  { opacity: 0.55; transform: translateX(-50%) scaleY(1.03); }
+  100% { opacity: 0; transform: translateX(-50%) scaleY(1.1); }
+}
+
+
+
+/* ============================================================
+   FLASH LEDAKAN — 3 lapis: white → ring → gold ambient
+   ============================================================ */
+
+.lu-flash {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0;
+  overflow: hidden;
+}
+
+/* Lapisan 1: WHITE flash sangat singkat */
+.lu-flash::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 40%,
+    #ffffff 0%,
+    rgba(255,255,255,.85) 25%,
+    rgba(255,255,255,0) 60%);
+  opacity: 0;
+}
+
+/* Lapisan 2: SHOCKWAVE ring */
+.lu-flash::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border-radius: 50%;
+  border: 3px solid rgba(255,240,180,.9);
+  box-shadow:
+    0 0 30px rgba(255,220,120,.9),
+    inset 0 0 20px rgba(255,255,255,.6);
+  opacity: 0;
+  transform: scale(0);
+}
+
+/* Ambient gold — halus, tetap ada setelah flash */
+.lu-flash-ambient {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  background: radial-gradient(
+    ellipse 80% 60% at 50% 45%,
+    rgba(242,193,78,.22) 0%,
+    rgba(242,193,78,.08) 40%,
+    transparent 75%
+  );
+  opacity: 0;
+  transition: opacity 0.6s ease-out;
+}
+.lu-flash-ambient.on { opacity: 1; }
+
+/* Animasi */
+.lu-flash.on::before {
+  animation: lu-flash-white 0.5s ease-out both;
+}
+@keyframes lu-flash-white {
+  0%   { opacity: 0; }
+  8%   { opacity: 1; }
+  25%  { opacity: 0.6; }
+  100% { opacity: 0; }
+}
+
+.lu-flash.on::after {
+  animation: lu-flash-ring 0.7s cubic-bezier(.15,.85,.4,1) both;
+}
+@keyframes lu-flash-ring {
+  0%   { opacity: 1; transform: scale(0.2); border-width: 8px; }
+  40%  { opacity: 0.9; transform: scale(12);  border-width: 4px; }
+  100% { opacity: 0; transform: scale(28);  border-width: 1px; }
+}
+
+/* ============================================================
+   JUDUL & BUTTON
+   ============================================================ */
+
+.lu-title-in {
+  animation: lu-fade-up 0.55s cubic-bezier(.2,.9,.3,1) both;
+}
+@keyframes lu-fade-up {
+  0%   { opacity: 0; transform: translateY(18px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   KARTU HADIAH — terbang keluar dari tengah kotak
+   ============================================================ */
+
+.lu-card {
+  visibility: hidden;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+  position: relative;
+  overflow: hidden;
+    min-width: 96px;
+  padding: 10px 8px;   /* dari 12 → 10 */
+  font-size: 13px;
+}
+.lu-card.explode {
+  visibility: visible;
+  animation: lu-card-explode 0.95s cubic-bezier(.2,1.5,.4,1) both;
+}
+@keyframes lu-card-explode {
+  0% {
+    transform: translate(var(--from-x, 0), var(--from-y, 0))
+               scale(0.15)
+               rotate(var(--from-r, 0deg));
+    opacity: 0;
+    filter: brightness(2) blur(4px);
+  }
+  30% {
+    opacity: 1;
+    filter: brightness(1.6) blur(0);
+  }
+  55% {
+    transform: translate(0,0) scale(1.18) rotate(0deg);
+    filter: brightness(1.15);
+  }
+  75% {
+    transform: translate(0,0) scale(0.94) rotate(0deg);
+    filter: brightness(1);
+  }
+  100% {
+    transform: translate(0,0) scale(1) rotate(0deg);
+    opacity: 1;
+    filter: brightness(1);
+  }
+}
+
+/* Shine sweep setelah kartu mendarat */
+.lu-card.explode::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg,
+    transparent 30%,
+    rgba(255,255,255,.6) 50%,
+    transparent 70%);
+  transform: translateX(-130%);
+  animation: lu-card-shine 0.9s ease-out 1.3s both;
+  pointer-events: none;
+  border-radius: inherit;
+}
+@keyframes lu-card-shine {
+  to { transform: translateX(130%); }
+}
+
+/* Kartu claim bounce */
+.lu-card.claimed {
+  animation: lu-card-claim 0.65s cubic-bezier(.2,1.6,.4,1) both;
+}
+@keyframes lu-card-claim {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.24) rotate(3deg); filter: brightness(1.8); }
+  60%  { transform: scale(0.94) rotate(-1.5deg); filter: brightness(1.15); }
+  100% { transform: scale(1) rotate(0deg); filter: brightness(1); }
+}
+
+/* ============================================================
+   WALLET & UTIL
+   ============================================================ */
+
+#luWallet b.gold {
+  display: inline-block;
+  animation: lu-wallet-pulse 0.6s ease-out;
+}
+@keyframes lu-wallet-pulse {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.18); text-shadow: 0 0 16px rgba(242,193,78,.9); }
+  100% { transform: scale(1); }
+}
+#luBtn {
+  min-height: 48px;
+  font-size: 18px;
+  padding: 0 24px;
+  max-width: 320px;
+  width: 100%;
+}
+/* Body lock saat modal buka */
+body.modal-open {
+  overflow: hidden !important;
+}
+
+/* ── Koin terbang masuk ke kotak ── */
+.lu-coin-fly {
+  position: fixed;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9998;
+  background: radial-gradient(circle at 35% 30%,
+    #fff3c4 0%,
+    #f0c85a 40%,
+    #b8840a 70%,
+    #7a5a10 100%);
+  box-shadow:
+    0 0 14px rgba(242,193,78,.85),
+    inset 0 1px 3px rgba(255,255,255,.9),
+    inset 0 -2px 4px rgba(0,0,0,.5);
+  will-change: transform, opacity;
+}
+
+/* Ring highlight di dalam koin */
+.lu-coin-fly::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(122,90,16,.6);
+}
+
+@keyframes lu-coin-fly-in {
+  0% {
+    transform: translate(0, 0) scale(0.3) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1) rotate(45deg);
+  }
+  85% {
+    opacity: 1;
+    transform: translate(var(--dx), var(--dy)) scale(1) rotate(540deg);
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy)) scale(0.1) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.lu-coin-fly.fly {
+  animation: lu-coin-fly-in 1.1s cubic-bezier(.5,0,.7,1) both;
 }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
@@ -3417,7 +4074,7 @@ function drawCover(c, img, x, y, w, h) {
   c.drawImage(img, (img.width - iw) / 2, (img.height - ih) / 2, iw, ih, x, y, w, h);
 }
  
-function renderTableLayer(theme, T, geo, s, rot, imgs) {
+function renderTableLayer(theme, T, geo, s, rot, imgs, isPreview) {
   imgs = imgs || {};
   const W = T.width, H = T.height, ct = T.cushion, rail = T.rail, ext = ct + rail, pad = 46, tx = ext + pad, u = rail / 56, wu = W / 1600;   // u, wu: skala hiasan untuk meja berukuran lain
   const cv = document.createElement('canvas'); cv.width = Math.ceil((W + 2 * tx) * s); cv.height = Math.ceil((H + 2 * tx) * s);
@@ -3431,17 +4088,37 @@ function renderTableLayer(theme, T, geo, s, rot, imgs) {
   const along = (stops) => { const g = c.createLinearGradient(cxw - GX * half, cyw - GY * half, cxw + GX * half, cyw + GY * half); for (const [o, col] of stops) g.addColorStop(o, col); return g; };
   const outer = () => rrect(-ext, -ext, W + 2 * ext, H + 2 * ext, 30 * u);
   const ringClip = () => { c.beginPath(); c.rect(-ct, -ct, W + 2 * ct, H + 2 * ct); c.rect(-ext - 5, -ext - 5, W + 2 * ext + 10, H + 2 * ext + 10); c.clip('evenodd'); };
-  c.save(); c.shadowColor = 'rgba(0,0,0,0.6)'; c.shadowBlur = 30 * u * s; c.shadowOffsetX = GX * 12 * u * s; c.shadowOffsetY = GY * 12 * u * s; c.fillStyle = '#20080a'; outer(); c.fill(); c.restore();
+ if (!isPreview) {
+  c.save();
+  c.shadowColor = 'rgba(0,0,0,0.6)';
+  c.shadowBlur = 30 * u * s;
+  c.shadowOffsetX = GX * 12 * u * s;
+  c.shadowOffsetY = GY * 12 * u * s;
+  c.fillStyle = '#20080a';
+  outer();
+  c.fill();
+  c.restore();
+} else {
+  // Preview: solid, tanpa blur
+  c.fillStyle = 'rgba(0,0,0,0.35)';
+  outer();
+  c.fill();
+};
  
-  if (imgs.rail) { c.save(); outer(); c.clip(); c.drawImage(imgs.rail, -ext, -ext, W + 2 * ext, H + 2 * ext); c.restore(); } else if (rt.style === 'neon') {
+  if (imgs.rail) { c.save(); outer(); c.clip(); c.drawImage(imgs.rail, -ext, -ext, W + 2 * ext, H + 2 * ext); c.restore(); } 
+  else if (rt.style === 'neon') {
   c.fillStyle = along([[0, '#231733'], [1, rt.bg || '#160f1f']]);
   outer(); c.fill();
 
   c.save();
   outer(); c.clip(); ringClip();
-  c.shadowColor = rt.glow;
-  c.shadowBlur = 16 * s;
-  c.strokeStyle = rt.glow;
+
+  if (!isPreview) {
+      c.shadowColor = rt.glow;
+  c.shadowBlur =  16 * s;   // ← ganti jadi ini
+
+}
+  c.strokeStyle = rt.glow; 
   c.lineWidth = 3.4;
 
   const o1 = 12 * u, o2 = 9 * u;
@@ -3566,7 +4243,13 @@ for (let x = -ct; x < W + ct; x += weaveStep) {
 
 // --- 2) NOISE grain: bintik acak lebih padat & sedikit lebih tegas ---
 c.globalCompositeOperation = 'overlay';
-const noiseN = Math.round(22000 * wu * (H / 728));
+
+const noiseN = isPreview
+  ? Math.round(1500 * wu * (H / 728))       // preview: 15× lebih ringan
+  : Math.round(22000 * wu * (H / 728));     // full: seperti biasa
+for (let i = 0; i < noiseN; i++) {
+  // ... loop body sama
+}
 for (let i = 0; i < noiseN; i++) {
   const r = rng.next();
   c.fillStyle = r < 0.45 ? 'rgba(255,255,255,0.055)'
@@ -3581,7 +4264,8 @@ for (let i = 0; i < noiseN; i++) {
 // --- 3) FIBER streaks: garis tipis panjang, searah, sangat halus ---
 // Memberi kesan serat kain (bukan hanya noise titik)
 c.globalCompositeOperation = 'overlay';
-const fibersN = Math.round(700 * wu);
+const fibersN = isPreview ? 60 : Math.round(700 * wu);
+
 for (let i = 0; i < fibersN; i++) {
   const horiz = rng.next() < 0.5;
   const len = rng.range(60, 320) * wu;
@@ -3612,7 +4296,7 @@ c.restore();
   c.fillStyle = 'rgba(255,255,255,0.32)'; for (const x of [T.headStringX, W / 2, T.footSpotX]) { c.beginPath(); c.arc(x, H / 2, 3.2, 0, 7); c.fill(); }
  
  // shading rail: merah terang tepat di sisi cushion → makin gelap ke tepi luar (referensi 8 Ball Pool)
-if (bandsOn) {
+if (bandsOn && !isPreview) {
   c.save();
   c.lineJoin = 'miter';
 
@@ -3735,8 +4419,10 @@ if (bandsOn) {
     c.lineTo(P[2][0], P[2][1]); 
     c.stroke();
     if (rt.style === 'neon' && !imgs.rail) { c.save(); 
-      c.shadowColor = rt.glow; 
-      c.shadowBlur = 10 * s; 
+    if (!isPreview) {
+        c.shadowColor = rt.glow;
+        c.shadowBlur = isPreview ? 0 : 10 * s;
+      }
       c.strokeStyle = rt.glow; 
       c.lineWidth = 1.6; c.beginPath(); 
       c.moveTo(P[0][0], P[0][1]); 
@@ -3772,13 +4458,31 @@ c.restore();
       c.beginPath(); c.arc(x, y, r + 0.8 * kk, 0, 7); c.strokeStyle = neon ? rt.glow : 'rgba(70,48,84,0.95)'; c.lineWidth = 2 * kk; c.stroke();
       c.beginPath(); c.arc(x, y, r + 2.6 * kk, ao + Math.PI * 0.6, ao + Math.PI * 1.4); c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 1.2 * kk; c.stroke();
     } else {
-      c.beginPath(); c.arc(x, y, r + 0.4 * kk, ao + Math.PI / 2, ao + Math.PI * 1.5); c.strokeStyle = neon ? rt.glow : cu.nose; c.lineWidth = 2.2 * kk; c.stroke();     // sisi kain
+      c.beginPath(); c.arc(x, y, r + 0.4 * kk, ao + Math.PI / 2, ao + Math.PI * 1.5); 
+      c.strokeStyle = neon ? rt.glow : cu.nose; c.lineWidth = 2.2 * kk; c.stroke();     // sisi kain
       c.beginPath(); c.arc(x, y, r + 0.6 * kk, ao - Math.PI / 2, ao + Math.PI / 2); c.strokeStyle = 'rgba(25,0,0,0.9)'; c.lineWidth = 2 * kk; c.stroke();                    // sisi rail
     }
   }
   // sight logam / neon dengan jarak konsisten
   const sight = (x, y) => {
-    if (rt.style === 'neon' && !imgs.rail) { c.save(); c.shadowColor = rt.glow; c.shadowBlur = 10 * s; c.strokeStyle = theme.sight; zc.lineWidth = 2.2; c.beginPath(); c.arc(x, y, 6, 0, 7); c.stroke(); c.fillStyle = theme.sight; c.beginPath(); c.arc(x, y, 2.2, 0, 7); c.fill(); c.restore(); return; }
+    if (rt.style === 'neon' && !imgs.rail) { 
+      c.save(); 
+      if (!isPreview) { 
+        c.shadowColor = rt.glow; 
+        c.shadowBlur = 10 * s; 
+      }
+        c.strokeStyle = theme.sight; 
+        c.lineWidth = 2.2; 
+
+        c.beginPath(); 
+        c.arc(x, y, 6, 0, 7); 
+        c.stroke(); 
+        c.fillStyle = theme.sight; 
+        c.beginPath(); 
+        c.arc(x, y, 2.2, 0, 7); 
+        c.fill(); 
+        c.restore(); return; 
+      }
     c.fillStyle = 'rgba(0,0,0,0.42)'; c.beginPath(); c.arc(x + 0.8, y + 1.2, 3.6, 0, 7); c.fill();
     c.fillStyle = theme.sight; c.beginPath(); c.arc(x, y, 3.4, 0, 7); c.fill();
     const rg = c.createRadialGradient(x - 1, y - 1, 0.3, x, y, 3.6); rg.addColorStop(0, 'rgba(255,255,255,0.95)'); rg.addColorStop(0.6, 'rgba(255,255,255,0)'); rg.addColorStop(1, 'rgba(0,0,0,0.35)'); c.fillStyle = rg; c.beginPath(); c.arc(x, y, 3.4, 0, 7); c.fill();
@@ -3790,7 +4494,6 @@ c.restore();
 }
  
 const PREVIEW_GEO = {};
-/** Pratinjau meja (toko & halaman Developer); `kind` = 'standard' | 'american'. */
 function renderTablePreview(theme, widthPx, imgs, kind, isPreview) {
   const T = TABLE_PROFILES[kind || 'standard'].table;
   PREVIEW_GEO[T.width] = PREVIEW_GEO[T.width] || buildTableGeometry(T);
@@ -3799,8 +4502,7 @@ function renderTablePreview(theme, widthPx, imgs, kind, isPreview) {
     theme, T, PREVIEW_GEO[T.width],
     widthPx / (T.width + 2 * tx),
     0, imgs,
-    isPreview !== false           // default true (kecuali dipanggil eksplisit false)
-                              // ← isPreview
+    isPreview === true           // default false → full quality
   ).canvas;
 }
 /* ---------------- renderer ---------------- */
@@ -4130,22 +4832,258 @@ function countUp(el, from, to, ms, fmt) {
 }
 
 /** Konfeti ringan (satu canvas overlay, berhenti otomatis). */
+// class Fx {
+//   constructor(canvas) { t
+//     his.cv = canvas; 
+//     this.ctx = canvas.getContext('2d'); 
+//     this.p = []; 
+//     this.on = false; 
+//   }
+
+//   burst(x, y, n, spread) {
+//     const cols = ['#F4C542', '#fff2b0', '#32D74B', '#57BFEA', '#FF5A5F', '#d99cff'];
+//     for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, s = (2 + Math.random() * 9) * (spread || 1); this.p.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 4, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4, w: 5 + Math.random() * 6, h: 3 + Math.random() * 5, life: 1, c: cols[i % cols.length] }); }
+//     if (!this.on) { this.on = true; this._resize(); requestAnimationFrame((t) => this._loop(t)); }
+//   }
+//   _resize() { const d = Math.min(window.devicePixelRatio || 1, 2); this.cv.width = innerWidth * d; this.cv.height = innerHeight * d; this.d = d; }
+//   _loop() {
+//     const c = this.ctx, d = this.d; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, this.cv.width, this.cv.height); c.setTransform(d, 0, 0, d, 0, 0);
+//     for (const q of this.p) { q.vy += 0.28; q.x += q.vx; q.y += q.vy; q.vx *= 0.985; q.r += q.vr; q.life -= 0.011; c.save(); c.globalAlpha = Math.max(0, q.life); c.translate(q.x, q.y); c.rotate(q.r); c.fillStyle = q.c; c.fillRect(-q.w / 2, -q.h / 2, q.w, q.h); c.restore(); }
+//     this.p = this.p.filter((q) => q.life > 0 && q.y < innerHeight + 40);
+//     if (this.p.length) requestAnimationFrame(() => this._loop()); else { this.on = false; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, this.cv.width, this.cv.height); }
+//   }
+// }
 class Fx {
-  constructor(canvas) { this.cv = canvas; this.ctx = canvas.getContext('2d'); this.p = []; this.on = false; }
-  burst(x, y, n, spread) {
-    const cols = ['#F4C542', '#fff2b0', '#32D74B', '#57BFEA', '#FF5A5F', '#d99cff'];
-    for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, s = (2 + Math.random() * 9) * (spread || 1); this.p.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 4, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4, w: 5 + Math.random() * 6, h: 3 + Math.random() * 5, life: 1, c: cols[i % cols.length] }); }
-    if (!this.on) { this.on = true; this._resize(); requestAnimationFrame((t) => this._loop(t)); }
+  constructor(canvas) {
+    this.cv = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.p = [];
+    this.on = false;
+    this._dpr = 1;
   }
-  _resize() { const d = Math.min(window.devicePixelRatio || 1, 2); this.cv.width = innerWidth * d; this.cv.height = innerHeight * d; this.d = d; }
-  _loop() {
-    const c = this.ctx, d = this.d; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, this.cv.width, this.cv.height); c.setTransform(d, 0, 0, d, 0, 0);
-    for (const q of this.p) { q.vy += 0.28; q.x += q.vx; q.y += q.vy; q.vx *= 0.985; q.r += q.vr; q.life -= 0.011; c.save(); c.globalAlpha = Math.max(0, q.life); c.translate(q.x, q.y); c.rotate(q.r); c.fillStyle = q.c; c.fillRect(-q.w / 2, -q.h / 2, q.w, q.h); c.restore(); }
-    this.p = this.p.filter((q) => q.life > 0 && q.y < innerHeight + 40);
-    if (this.p.length) requestAnimationFrame(() => this._loop()); else { this.on = false; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, this.cv.width, this.cv.height); }
+
+  _resize() {
+    const d = Math.min(window.devicePixelRatio || 1, 2);
+    this.cv.width = innerWidth * d;
+    this.cv.height = innerHeight * d;
+    this._dpr = d;
+  }
+
+  // /** Ledakan partikel dari titik (x, y). */
+  // burst(x, y, n, spread) {
+  //   if (!this.on) { this.on = true; this._resize(); requestAnimationFrame((t) => this._loop(t)); }
+  //   const palette = [
+  //     '#F2C14E', '#FFE9A8',        // gold
+  //     '#3BA8FF', '#4FC3FF',        // blue
+  //     '#9FB3C8',                   // silver
+  //     '#FF5A6A', '#32D583', '#D99CFF',  // accent
+  //     '#FFFFFF',
+  //   ];
+  //   for (let i = 0; i < n; i++) {
+  //     const a = Math.random() * Math.PI * 2;
+  //     const speed = (3 + Math.random() * 11) * (spread || 1);
+  //     const type = Math.random();
+  //     // 60% rect, 25% ribbon, 15% circle
+  //     let shape = 'rect';
+  //     if (type > 0.6 && type < 0.85) shape = 'ribbon';
+  //     else if (type >= 0.85) shape = 'circle';
+
+  //     this.p.push({
+  //       x, y,
+  //       vx: Math.cos(a) * speed,
+  //       vy: Math.sin(a) * speed - 5,
+  //       rot: Math.random() * Math.PI * 2,
+  //       vr: (Math.random() - 0.5) * 0.45,
+  //       w: 4 + Math.random() * 8,
+  //       h: shape === 'ribbon' ? 2 + Math.random() * 3 : 3 + Math.random() * 6,
+  //       life: 1,
+  //       decay: 0.008 + Math.random() * 0.008,
+  //       c: palette[(Math.random() * palette.length) | 0],
+  //       shape,
+  //       swayPhase: Math.random() * Math.PI * 2,
+  //       swayAmp: 0.3 + Math.random() * 0.8,
+  //     });
+  //   }
+  // }
+burst(x, y, n, spread) {
+  if (!this.on) { this.on = true; this._resize(); requestAnimationFrame((t) => this._loop(t)); }
+  const palette = [
+    '#F2C14E', '#FFE9A8', '#FFD34E',   // gold
+    '#3BA8FF', '#4FC3FF',               // blue
+    '#FFFFFF', '#FFEEDD',               // white
+    '#FF5A6A', '#32D583', '#D99CFF',    // accent
+  ];
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const speed = (3 + Math.random() * 13) * (spread || 1);
+    const r = Math.random();
+    const shape = r < 0.55 ? 'rect' : r < 0.85 ? 'ribbon' : 'circle';
+    this.p.push({
+      x, y,
+      vx: Math.cos(a) * speed,
+      vy: Math.sin(a) * speed - 6,
+      rot: Math.random() * Math.PI * 2,
+      vr: (Math.random() - 0.5) * 0.55,
+      w: 4 + Math.random() * 8,
+      h: shape === 'ribbon' ? 2 + Math.random() * 3 : 3 + Math.random() * 6,
+      life: 1,
+      decay: 0.007 + Math.random() * 0.008,
+      c: palette[(Math.random() * palette.length) | 0],
+      shape,
+      swayPhase: Math.random() * Math.PI * 2,
+      swayAmp: 0.3 + Math.random() * 0.9,
+    });
   }
 }
+  /** Hujan dari atas layar (koin / confetti). */
+  rain(n) {
+    if (!this.on) { this.on = true; this._resize(); requestAnimationFrame((t) => this._loop(t)); }
+    const W = innerWidth;
+    const palette = ['#F2C14E', '#FFE9A8', '#FFD34E', '#B8850C', '#FFFFFF'];
+    for (let i = 0; i < n; i++) {
+      const isCoin = Math.random() < 0.55;
+      this.p.push({
+        x: Math.random() * W,
+        y: -20 - Math.random() * 120,
+        vx: (Math.random() - 0.5) * 1.6,
+        vy: 1.5 + Math.random() * 3,
+        rot: Math.random() * Math.PI * 2,
+        vr: (Math.random() - 0.5) * 0.35,
+        w: isCoin ? 8 + Math.random() * 6 : 5 + Math.random() * 8,
+        h: isCoin ? 8 + Math.random() * 6 : 3 + Math.random() * 5,
+        life: 1,
+        decay: 0.003 + Math.random() * 0.004,
+        c: palette[(Math.random() * palette.length) | 0],
+        shape: isCoin ? 'coin' : 'ribbon',
+        swayPhase: Math.random() * Math.PI * 2,
+        swayAmp: 0.4 + Math.random() * 1.2,
+      });
+    }
+  }
 
+  // _loop() {
+  //   const c = this.ctx, d = this._dpr;
+  //   c.setTransform(1, 0, 0, 1, 0, 0);
+  //   c.clearRect(0, 0, this.cv.width, this.cv.height);
+  //   c.setTransform(d, 0, 0, d, 0, 0);
+
+  //   const t = performance.now() * 0.001;
+
+  //   for (const q of this.p) {
+  //     // Fisika
+  //     q.vy += 0.32;                        // gravity
+  //     q.vx *= 0.992;                       // air drag
+  //     q.vy *= 0.992;
+  //     // Sway (efek kertas melayang)
+  //     q.x += q.vx + Math.sin(t * 2 + q.swayPhase) * q.swayAmp;
+  //     q.y += q.vy;
+  //     q.rot += q.vr;
+  //     q.life -= q.decay;
+  //     if (q.life < 0) q.life = 0;
+
+  //     // Fade + scale kecil menuju akhir
+  //     const alpha = Math.max(0, Math.min(1, q.life * 1.4));
+  //     const scale = 0.7 + q.life * 0.3;
+
+  //     c.save();
+  //     c.globalAlpha = alpha;
+  //     c.translate(q.x, q.y);
+  //     c.rotate(q.rot);
+  //     c.scale(scale, scale);
+  //     c.fillStyle = q.c;
+
+  //     if (q.shape === 'circle') {
+  //       c.beginPath();
+  //       c.arc(0, 0, q.w / 2, 0, Math.PI * 2);
+  //       c.fill();
+  //     } else if (q.shape === 'coin') {
+  //       // Koin: circle emas dengan rim gelap
+  //       c.beginPath();
+  //       c.arc(0, 0, q.w / 2, 0, Math.PI * 2);
+  //       c.fill();
+  //       c.strokeStyle = 'rgba(0,0,0,0.35)';
+  //       c.lineWidth = 1.2;
+  //       c.stroke();
+  //       // Highlight kecil
+  //       c.fillStyle = 'rgba(255,255,255,0.55)';
+  //       c.beginPath();
+  //       c.arc(-q.w * 0.18, -q.h * 0.18, q.w * 0.14, 0, Math.PI * 2);
+  //       c.fill();
+  //     } else if (q.shape === 'ribbon') {
+  //       // Ribbon: rect tipis panjang
+  //       c.fillRect(-q.w / 2, -q.h / 2, q.w, q.h);
+  //     } else {
+  //       // Rect default
+  //       c.fillRect(-q.w / 2, -q.h / 2, q.w, q.h);
+  //     }
+
+  //     c.restore();
+  //   }
+
+  //   // Buang partikel yang mati atau di luar layar bawah
+  //   this.p = this.p.filter((q) => q.life > 0 && q.y < innerHeight + 60 && q.x > -80 && q.x < innerWidth + 80);
+
+  //   if (this.p.length) {
+  //     requestAnimationFrame(() => this._loop());
+  //   } else {
+  //     this.on = false;
+  //     c.setTransform(1, 0, 0, 1, 0, 0);
+  //     c.clearRect(0, 0, this.cv.width, this.cv.height);
+  //   }
+  // }
+
+  _loop() {
+  const c = this.ctx, d = this._dpr || 1;
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.clearRect(0, 0, this.cv.width, this.cv.height);
+  c.setTransform(d, 0, 0, d, 0, 0);
+  const t = performance.now() * 0.001;
+
+  for (const q of this.p) {
+    q.vy += 0.32;
+    q.vx *= 0.992; q.vy *= 0.992;
+    q.x += q.vx + Math.sin(t * 2 + q.swayPhase) * q.swayAmp;
+    q.y += q.vy;
+    q.rot += q.vr;
+    q.life -= q.decay;
+    if (q.life < 0) q.life = 0;
+
+    const alpha = Math.max(0, Math.min(1, q.life * 1.4));
+    const scale = 0.7 + q.life * 0.3;
+
+    c.save();
+    c.globalAlpha = alpha;
+    c.translate(q.x, q.y);
+    c.rotate(q.rot);
+    c.scale(scale, scale);
+    c.fillStyle = q.c;
+
+    if (q.shape === 'circle') {
+      c.beginPath(); c.arc(0, 0, q.w / 2, 0, Math.PI * 2); c.fill();
+    } else if (q.shape === 'coin') {
+      c.beginPath(); c.arc(0, 0, q.w / 2, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 1.2; c.stroke();
+      c.fillStyle = 'rgba(255,255,255,.55)';
+      c.beginPath(); c.arc(-q.w*.18, -q.h*.18, q.w*.14, 0, Math.PI * 2); c.fill();
+    } else {
+      c.fillRect(-q.w / 2, -q.h / 2, q.w, q.h);
+    }
+    c.restore();
+  }
+
+  this.p = this.p.filter((q) =>
+    q.life > 0 && q.y < innerHeight + 60 &&
+    q.x > -80 && q.x < innerWidth + 80
+  );
+
+  if (this.p.length) requestAnimationFrame(() => this._loop());
+  else {
+    this.on = false;
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.clearRect(0, 0, this.cv.width, this.cv.height);
+  }
+}
+}
 const PAGE_SCREENS = { menu: 'screenMenu', modes: 'screenModes', settings: 'screenSettings', profile: 'screenProfile', rewards: 'screenRewards', board: 'screenBoard', tables: 'screenTables', cues: 'screenCues', dev: 'screenDev', auth: 'screenAuth', market: 'screenMarket', friend: 'screenFriend' };
 
 class UI {
@@ -4299,7 +5237,55 @@ class UI {
       this.stack.push(this.current || ''); this.show('screenPause');
     } else if (this.current === 'screenPause' || this.current === 'screenSettings') { this.stack = []; this.hideAll(); }
   }
+/** Hujan koin yang terbang masuk ke kotak. Target = elemen box. */
+_coinRainToBox(targetEl, count) {
+  if (!targetEl) return;
+  const rect = targetEl.getBoundingClientRect();
+  const targetX = rect.left + rect.width / 2;
+  const targetY = rect.top + rect.height / 2;
 
+  for (let i = 0; i < (count || 14); i++) {
+    // Spawn acak di sekeliling layar (bawah + kiri + kanan)
+    const side = Math.random();
+    let spawnX, spawnY;
+    if (side < 0.55) {
+      // bawah
+      spawnX = Math.random() * innerWidth;
+      spawnY = innerHeight + 40;
+    } else if (side < 0.8) {
+      // kiri
+      spawnX = -40;
+      spawnY = innerHeight * 0.5 + Math.random() * innerHeight * 0.5;
+    } else {
+      // kanan
+      spawnX = innerWidth + 40;
+      spawnY = innerHeight * 0.5 + Math.random() * innerHeight * 0.5;
+    }
+
+    const dx = targetX - spawnX;
+    const dy = targetY - spawnY;
+
+    const coin = document.createElement('div');
+    coin.className = 'lu-coin-fly';
+    coin.style.left = spawnX + 'px';
+    coin.style.top = spawnY + 'px';
+    coin.style.setProperty('--dx', dx + 'px');
+    coin.style.setProperty('--dy', dy + 'px');
+    coin.style.animationDelay = (i * 60 + Math.random() * 80) + 'ms';
+    document.body.appendChild(coin);
+
+    // Trigger animasi + hapus setelah selesai
+    requestAnimationFrame(() => coin.classList.add('fly'));
+
+    // Saat koin tiba di box → burst mini + suara
+    const arriveAt = 1100 + i * 60;
+    setTimeout(() => {
+      this.fx.burst(targetX, targetY, 6, 0.6);
+    }, arriveAt);
+
+    setTimeout(() => coin.remove(), arriveAt + 300);
+  }
+}
   /* ------------------------------ per-frame ------------------------------ */
   tick(dt, game) {
     if ($('hud').hidden) return;
@@ -4409,91 +5395,93 @@ Object.assign(UI.prototype, {
   },
   /** Isi pratinjau meja ke elemen [data-theme]. */
 /** Isi pratinjau meja ke elemen [data-theme] — dengan cache + lazy render. */
-/** Isi pratinjau meja ke elemen [data-theme] — dengan cache + lazy render + fallback. */
 fillPreviews(root, width) {
   if (!root) return;
   const slots = root.querySelectorAll('[data-theme]');
   if (!slots.length) return;
 
   if (!this._previewCache) this._previewCache = new Map();
-
-  // Disconnect observer lama (kalau ada)
   if (this._previewIO) { this._previewIO.disconnect(); this._previewIO = null; }
 
   const st = this.store;
   const themes = new Map(st.allThemes().map(t => [t.id, t]));
+  const imgs = this.renderer ? this.renderer.themeImgs : null;
 
-  // ── Render 1 slot ──
+  // ── Antrian: proses 1 slot per frame ──
+  const queue = [];
+  let rafPending = false;
+
   const renderSlot = (slot) => {
     if (slot.dataset.rendered === '1') return;
     slot.dataset.rendered = '1';
 
     const theme = themes.get(slot.dataset.theme);
-    if (!theme) {
-      // Theme tidak ditemukan — hapus skeleton biar tidak shimmer selamanya
-      slot.classList.remove('skeleton');
-      return;
-    }
-
+    if (!theme) { slot.classList.remove('skeleton'); return; }
     const kind = slot.dataset.tableKind || 'standard';
     const key = theme.id + '|' + kind + '|' + width;
 
     let cv = this._previewCache.get(key);
     if (!cv) {
       try {
-        cv = renderTablePreview(theme, width, this.renderer ? this.renderer.themeImgs : null, kind);
+        // ↓↓↓ KUNCI: isPreview = true
+        cv = renderTablePreview(theme, width, imgs, kind, true);
       } catch (err) {
-        console.warn('[fillPreviews] render gagal untuk', theme.id, err);
+        console.warn('[fillPreviews]', theme.id, err);
         slot.classList.remove('skeleton');
         return;
       }
-      if (!cv || !cv.width || !cv.height) {
-        slot.classList.remove('skeleton');
-        return;
-      }
+      if (!cv || !cv.width) { slot.classList.remove('skeleton'); return; }
       this._previewCache.set(key, cv);
     }
 
-    // Clone canvas
     const clone = document.createElement('canvas');
     clone.width = cv.width;
     clone.height = cv.height;
     clone.getContext('2d').drawImage(cv, 0, 0);
-    clone.style.width = '100%';
-    clone.style.height = 'auto';
-    clone.style.display = 'block';
-
+    clone.style.cssText = 'width:100%;height:auto;display:block';
     slot.classList.remove('skeleton');
     slot.innerHTML = '';
     slot.appendChild(clone);
   };
 
-  // Kalau IntersectionObserver tidak didukung → render semua (defer per frame)
+  const processQueue = () => {
+    rafPending = false;
+    const slot = queue.shift();
+    if (!slot) return;
+    renderSlot(slot);
+    if (queue.length) scheduleQueue();
+  };
+  const scheduleQueue = () => {
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(processQueue);
+  };
+
   if (typeof IntersectionObserver === 'undefined') {
-    Array.from(slots).forEach((s, i) =>
-      setTimeout(() => renderSlot(s), i * 16)
-    );
+    slots.forEach(s => queue.push(s));
+    scheduleQueue();
     return;
   }
 
-  // ── Observer ──
-  const observer = new IntersectionObserver((entries) => {
+  this._previewIO = new IntersectionObserver((entries) => {
     for (const e of entries) {
       if (!e.isIntersecting) continue;
-      observer.unobserve(e.target);      // ← pakai local `observer`, bukan this._previewIO
-      requestAnimationFrame(() => renderSlot(e.target));
+      this._previewIO.unobserve(e.target);
+      queue.push(e.target);
     }
-  }, { rootMargin: '150px', threshold: 0 });
+    scheduleQueue();
+  }, { rootMargin: '100px', threshold: 0 });
 
-  this._previewIO = observer;
-  for (const s of slots) observer.observe(s);
+  slots.forEach(s => this._previewIO.observe(s));
 
-  // ── FALLBACK: paksa render slot yang belum ke-render setelah 800ms ──
-  // Ini menyelamatkan slot yang "kelupaan" IO karena screen transition atau layout aneh
+  // Fallback: paksa render setelah 1.2s kalau ada yang belum
   clearTimeout(this._previewFallback);
   this._previewFallback = setTimeout(() => {
-    root.querySelectorAll('[data-theme]:not([data-rendered])').forEach(renderSlot);
-  }, 800);
+    root.querySelectorAll('[data-theme]:not([data-rendered])').forEach(s => {
+      if (!queue.includes(s)) queue.push(s);
+    });
+    scheduleQueue();
+  }, 1200);
 },
   mergeItems(items) {
     let coins = 0; const out = [];
@@ -4611,30 +5599,217 @@ _chipHTML(it) {
 },
 
   /** Modal hadiah generik: dipakai untuk naik level, hadiah level, dan hadiah harian. */
-  showRewardModal(o) {
-    const el = $('pageLevelUp'), st = this.store, merged = this.mergeItems(o.items), before = st.coins;
-    el.innerHTML = '<div class="lu-ring"><span class="lu-num" id="luNum">' + o.ring + '</span></div><h2>' + esc(o.title) + '</h2><p class="sub" id="luSub">' + esc(o.sub || '') + '</p>' +
-      '<div class="lu-rewards">' + merged.map((it, i) => '<div class="lu-card" style="animation-delay:' + (0.35 + 0.14 * i).toFixed(2) + 's">' + this.rewardCardHTML(it) + '</div>').join('') + '</div>' +
-      '<div id="luWallet" class="muted" style="min-height:22px"></div><button class="btn primary big" id="luBtn">Klaim hadiah</button>';
-    this.fillPreviews(el, 190);
-    if (o.countFrom) countUp($('luNum'), o.countFrom, +o.ring, 900, (v) => String(Math.round(v)));
-    this.overlayReturn = this.current; this.show('screenLevelUp'); this.audio.play(o.sound || 'win', 0.6);
-    this.fx.burst(innerWidth / 2, innerHeight * 0.32, 90, 1);
-    let claimed = false;
-    $('luBtn').onclick = () => {
-      this.audio.unlock();
-      if (!claimed) {
-        claimed = true; o.claim(); el.querySelectorAll('.lu-card').forEach((c) => c.classList.add('claimed'));
-        this.fx.burst(innerWidth / 2, innerHeight * 0.55, 130, 1.3); this.audio.play('pocket', 0.8);
-        $('luWallet').innerHTML = 'Saldo ' + COIN_SVG + ' <b class="gold" id="luBal">' + fmtCoins(before) + '</b>'; countUp($('luBal'), before, st.coins, 1100);
-        $('luBtn').textContent = 'Lanjut'; this.refreshMenu();
-      } else {
-        this.show(this.overlayReturn || 'screenMenu', true); if (o.onClose) o.onClose();
-        if (this.current === 'screenRewards') this.render_rewards();
-      }
-    };
-  },
+  // showRewardModal(o) {
+  //   const el = $('pageLevelUp'), st = this.store, merged = this.mergeItems(o.items), before = st.coins;
+  //   el.innerHTML = '<div class="lu-ring"><span class="lu-num" id="luNum">' + o.ring + '</span></div><h2>' + esc(o.title) + '</h2><p class="sub" id="luSub">' + esc(o.sub || '') + '</p>' +
+  //     '<div class="lu-rewards">' + merged.map((it, i) => '<div class="lu-card" style="animation-delay:' + (0.35 + 0.14 * i).toFixed(2) + 's">' + this.rewardCardHTML(it) + '</div>').join('') + '</div>' +
+  //     '<div id="luWallet" class="muted" style="min-height:22px"></div><button class="btn primary big" id="luBtn">Klaim hadiah</button>';
+  //   this.fillPreviews(el, 190);
+  //   if (o.countFrom) countUp($('luNum'), o.countFrom, +o.ring, 900, (v) => String(Math.round(v)));
+  //   this.overlayReturn = this.current; this.show('screenLevelUp'); this.audio.play(o.sound || 'win', 0.6);
+  //   this.fx.burst(innerWidth / 2, innerHeight * 0.32, 90, 1);
+  //   let claimed = false;
+  //   $('luBtn').onclick = () => {
+  //     this.audio.unlock();
+  //     if (!claimed) {
+  //       claimed = true; o.claim(); el.querySelectorAll('.lu-card').forEach((c) => c.classList.add('claimed'));
+  //       this.fx.burst(innerWidth / 2, innerHeight * 0.55, 130, 1.3); this.audio.play('pocket', 0.8);
+  //       $('luWallet').innerHTML = 'Saldo ' + COIN_SVG + ' <b class="gold" id="luBal">' + fmtCoins(before) + '</b>'; countUp($('luBal'), before, st.coins, 1100);
+  //       $('luBtn').textContent = 'Lanjut'; this.refreshMenu();
+  //     } else {
+  //       this.show(this.overlayReturn || 'screenMenu', true); if (o.onClose) o.onClose();
+  //       if (this.current === 'screenRewards') this.render_rewards();
+  //     }
+  //   };
+  // },
 
+/** Modal hadiah generik: dipakai untuk naik level, hadiah level, dan hadiah harian. */
+/** Modal hadiah — versi Pandora Box yang meledak. */
+showRewardModal(o) {
+  const el = $('pageLevelUp'), st = this.store;
+  const merged = this.mergeItems(o.items), before = st.coins;
+
+  // Bersihkan flash lama
+  document.querySelectorAll('.lu-flash').forEach(n => n.remove());
+
+  el.innerHTML =
+    '<div class="lu-box-stage">' +
+      '<div class="lu-box" id="luBox">' +
+        '<div class="lu-box-beam"></div>' +
+        '<div class="lu-box-glow"></div>' +
+        '<div class="lu-box-body">' +
+          '<div class="lu-box-band"></div>' +
+          '<div class="lu-box-lock"></div>' +
+        '</div>' +
+        '<div class="lu-box-lid"></div>' +
+      '</div>' +
+    '</div>' +
+    '<h2 id="luTitle" style="opacity:0">' + esc(o.title) + '</h2>' +
+    '<p class="sub" id="luSub" style="opacity:0">' + esc(o.sub || '') + '</p>' +
+    '<div class="lu-rewards" id="luRewards">' +
+      merged.map((it, i) =>
+        '<div class="lu-card" data-idx="' + i + '">' +
+          this.rewardCardHTML(it) +
+        '</div>'
+      ).join('') +
+    '</div>' +
+    '<div id="luWallet" class="muted" style="min-height:22px"></div>' +
+    '<button class="btn primary big" id="luBtn" style="opacity:0;pointer-events:none">Klaim hadiah</button>';
+
+  this.fillPreviews(el, 190);
+
+  this.overlayReturn = this.current;
+  this.show('screenLevelUp');
+  this.audio.play(o.sound || 'win', 0.6);
+
+  const box = $('luBox');
+  const flash = document.createElement('div');
+  flash.className = 'lu-flash';
+
+  // ── Ukur posisi kartu DULU untuk kalkulasi --from-x/y ──
+  // Card sudah ada di DOM dengan layout natural (visibility:hidden)
+  const cards = Array.from(el.querySelectorAll('.lu-card'));
+  const boxRect = box.getBoundingClientRect();
+  const boxCx = boxRect.left + boxRect.width / 2;
+  const boxCy = boxRect.top + boxRect.height / 2 + 20;   // sedikit di atas pusat
+
+  cards.forEach((card, i) => {
+    const r = card.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const dx = boxCx - cx;
+    const dy = boxCy - cy;
+    card.style.setProperty('--from-x', dx.toFixed(1) + 'px');
+    card.style.setProperty('--from-y', dy.toFixed(1) + 'px');
+    card.style.setProperty('--from-r', (Math.random() * 60 - 30).toFixed(1) + 'deg');
+  });
+
+  // ── Timeline ──
+
+  // Fase 1 (150ms): kotak mulai getar
+  setTimeout(() => {
+    box.classList.add('shaking');
+    this.audio.play('ui', 0.4);
+  }, 150);
+
+ // Fase 2 (700ms): MELEDAK
+setTimeout(() => {
+  box.classList.remove('shaking');
+  box.classList.add('burst');
+
+  // ── COIN RAIN MASUK KE BOX ──
+  // Koin-koin terbang dari bawah/samping menuju kotak dulu
+  this._coinRainToBox(box, 16);
+
+  // Flash 3 lapis
+  const flash = document.createElement('div');
+  flash.className = 'lu-flash';
+  document.body.appendChild(flash);
+  requestAnimationFrame(() => flash.classList.add('on'));
+
+  const ambient = document.createElement('div');
+  ambient.className = 'lu-flash-ambient';
+  document.body.appendChild(ambient);
+  requestAnimationFrame(() => ambient.classList.add('on'));
+
+  setTimeout(() => flash.remove(), 800);
+  setTimeout(() => {
+    ambient.classList.remove('on');
+    setTimeout(() => ambient.remove(), 800);
+  }, 1000);
+
+  // Confetti ledakan (tunda 400ms supaya koin masuk dulu)
+  setTimeout(() => {
+    this.fx.burst(boxCx, boxCy - 20, 90, 1.7);
+    setTimeout(() => this.fx.burst(boxCx - 60, boxCy - 40, 40, 1.3), 60);
+    setTimeout(() => this.fx.burst(boxCx + 60, boxCy - 40, 40, 1.3), 120);
+    setTimeout(() => this.fx.rain(30), 280);
+  }, 500);
+
+  this.audio.play('pocket', 0.9);
+}, 700);
+
+  // Fase 3 (900ms): kartu hadiah terbang keluar
+  setTimeout(() => {
+    cards.forEach((card, i) => {
+      setTimeout(() => {
+        card.classList.add('explode');
+        const r = card.getBoundingClientRect();
+        // Burst kecil di lokasi kartu saat mendarat
+        setTimeout(() => {
+          this.fx.burst(
+            r.left + r.width / 2,
+            r.top + r.height / 2,
+            14, 1.1
+          );
+        }, 480);
+      }, i * 130);
+    });
+  }, 900);
+
+  // Fase 4 (1200ms): judul + subtitle fade in
+  setTimeout(() => {
+    const t = $('luTitle'); if (t) t.classList.add('lu-title-in');
+    if (o.countFrom) {
+      const numEl = $('luNum');
+    }
+  }, 1200);
+  setTimeout(() => {
+    const s = $('luSub'); if (s) s.classList.add('lu-title-in');
+  }, 1320);
+
+  // Fase 5 (1550ms): button muncul
+  setTimeout(() => {
+    const b = $('luBtn');
+    if (b) {
+      b.style.transition = 'opacity .4s ease, transform .4s cubic-bezier(.2,1.6,.4,1)';
+      b.style.opacity = '1';
+      b.style.transform = 'scale(1)';
+      b.style.pointerEvents = 'auto';
+      b.style.transform = 'scale(0.85)';
+      requestAnimationFrame(() => { b.style.transform = 'scale(1)'; });
+    }
+  }, 1550);
+
+  // ── Klik Klaim ──
+  let claimed = false;
+  $('luBtn').onclick = () => {
+    this.audio.unlock();
+    if (!claimed) {
+      claimed = true;
+      o.claim();
+
+      // Tiap kartu burst sendiri + bounce
+      cards.forEach((c, i) => {
+        setTimeout(() => {
+          c.classList.add('claimed');
+          const r = c.getBoundingClientRect();
+          this.fx.burst(r.left + r.width / 2, r.top + r.height / 2, 24, 1.4);
+          this.audio.play('pocket', 0.55 + i * 0.08);
+        }, i * 95);
+      });
+
+      // Burst pusat setelah semua kartu
+      setTimeout(() => {
+        this.fx.burst(innerWidth / 2, innerHeight * 0.52, 90, 1.7);
+        this.fx.rain(34);
+      }, cards.length * 95 + 120);
+
+      // Wallet count-up
+      $('luWallet').innerHTML =
+        'Saldo ' + COIN_SVG + ' <b class="gold" id="luBal">' + fmtCoins(before) + '</b>';
+      const balEl = $('luBal');
+      setTimeout(() => countUp(balEl, before, st.coins, 1100), 280);
+
+      $('luBtn').textContent = 'Lanjut';
+      this.refreshMenu();
+    } else {
+      this.show(this.overlayReturn || 'screenMenu', true);
+      if (o.onClose) o.onClose();
+      if (this.current === 'screenRewards') this.render_rewards();
+    }
+  };
+},
   /* ------------------------------ peringkat ------------------------------ */
   render_board() {
     const kind = this.lbKind || 'coins', el = $('pageBoard'), rows = this.board.fetch(kind), you = rows.find((r) => r.isYou);
@@ -4651,21 +5826,22 @@ _chipHTML(it) {
   /* ------------------------------ toko meja ------------------------------ */
 render_tables() {
   const st = this.store, el = $('pageTables'), eq = st.data.tables.equipped;
-  const WIDTH = 145;
-
   el.innerHTML = this._head('Meja', this._wallet()) +
     '<div class="pg-body"><p class="note" style="margin-top:0">Tema meja berlaku untuk kedua ukuran meja. Pilih ukuran meja saat memulai pertandingan (halaman Pilih permainan).</p>' +
     '<div class="tb-grid">' +
       st.allThemes().map((t) => {
         const owned = st.themeOwned(t.id), on = eq === t.id;
+        // Cek cache: kalau sudah ada, tidak perlu skeleton
         const cache = this._previewCache || new Map();
-        const hasStd = cache.has(t.id + '|standard|' + WIDTH);
-        const hasAme = cache.has(t.id + '|american|' + WIDTH);
+        const hasStd = cache.has(t.id + '|standard|145');
+        const hasAme = cache.has(t.id + '|american|145');
+        const clsStd = hasStd ? '' : ' skeleton';
+        const clsAme = hasAme ? '' : ' skeleton';
 
         return '<div class="tb-card' + (on ? ' equipped' : '') + '">' +
           '<div class="tb-prev two">' +
-            '<span class="' + (hasStd ? '' : 'skeleton') + '" data-theme="' + t.id + '" data-table-kind="standard"></span>' +
-            '<span class="' + (hasAme ? '' : 'skeleton') + '" data-theme="' + t.id + '" data-table-kind="american"></span>' +
+            '<span class="' + clsStd.trim() + '" data-theme="' + t.id + '" data-table-kind="standard"></span>' +
+            '<span class="' + clsAme.trim() + '" data-theme="' + t.id + '" data-table-kind="american"></span>' +
           '</div>' +
           '<div class="tb-info">' +
             '<h4>' + esc(t.name) + '<span class="rar ' + t.rarity + '">' + t.rarity + '</span></h4>' +
@@ -4683,8 +5859,9 @@ render_tables() {
     buy: (d) => { if (st.buyTable(d.v)) { this.toast('Meja dibeli', 'ok'); this.fx.burst(innerWidth / 2, innerHeight / 2, 70); } else this.toast('Koin tidak cukup', 'foul'); this.render_tables(); },
   });
 
-  this.fillPreviews(el, WIDTH);
+  this.fillPreviews(el, 145);
 },
+
   /* ------------------------------ Cue Collection ------------------------------ */
   render_cues() {
     const st = this.store, el = $('pageCues'), eq = st.data.cues.equipped;
@@ -4750,7 +5927,6 @@ render_tables() {
     this.showRewardModal({ title: 'Naik Level!', sub: 'Level ' + sm.prevLevel + ' → ' + sm.newLevel, ring: String(sm.newLevel), countFrom: sm.prevLevel, sound: 'levelup', items, claim: () => { this.store.claimAllLevels(); return true; }, onClose: () => { $('resBal').textContent = fmtCoins(this.store.coins); } });
   },
 });
-
 /* =====================================================================
    15 · DEVELOPER / DIY — buat skin cue & meja dari gambar sendiri (tersimpan lokal di perangkat)
    ===================================================================== */

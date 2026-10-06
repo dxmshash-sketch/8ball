@@ -452,12 +452,18 @@ c.restore();
  
 const PREVIEW_GEO = {};
 /** Pratinjau meja (toko & halaman Developer); `kind` = 'standard' | 'american'. */
-function renderTablePreview(theme, widthPx, imgs, kind) {
-  const T = TABLE_PROFILES[kind || 'standard'].table; PREVIEW_GEO[T.width] = PREVIEW_GEO[T.width] || buildTableGeometry(T);
+function renderTablePreview(theme, widthPx, imgs, kind, isPreview) {
+  const T = TABLE_PROFILES[kind || 'standard'].table;
+  PREVIEW_GEO[T.width] = PREVIEW_GEO[T.width] || buildTableGeometry(T);
   const tx = T.rail + T.cushion + 46;
-  return renderTableLayer(theme, T, PREVIEW_GEO[T.width], widthPx / (T.width + 2 * tx), 0, imgs).canvas;
+  return renderTableLayer(
+    theme, T, PREVIEW_GEO[T.width],
+    widthPx / (T.width + 2 * tx),
+    0, imgs,
+    isPreview !== false           // default true (kecuali dipanggil eksplisit false)
+                              // ← isPreview
+  ).canvas;
 }
- 
 /* ---------------- renderer ---------------- */
 class Renderer {
   constructor(canvas, game, store) {

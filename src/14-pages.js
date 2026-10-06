@@ -13,12 +13,93 @@ Object.assign(UI.prototype, {
     };
   },
   /** Isi pratinjau meja ke elemen [data-theme]. */
-  fillPreviews(root, width) {
-    root.querySelectorAll('[data-theme]').forEach((slot) => {
-      const th = this.store.themeDef(slot.dataset.theme), kind = slot.dataset.tableKind || 'standard';
-      loadThemeImages(th, (imgs) => { slot.innerHTML = ''; slot.appendChild(renderTablePreview(th, width || 300, imgs, kind)); });
-    });
-  },
+/** Isi pratinjau meja ke elemen [data-theme] — dengan cache + lazy render. */
+/** Isi pratinjau meja ke elemen [data-theme] — dengan cache + lazy render + fallback. */
+fillPreviews(root, width) {
+  if (!root) return;
+  const slots = root.querySelectorAll('[data-theme]');
+  if (!slots.length) return;
+
+  if (!this._previewCache) this._previewCache = new Map();
+
+  // Disconnect observer lama (kalau ada)
+  if (this._previewIO) { this._previewIO.disconnect(); this._previewIO = null; }
+
+  const st = this.store;
+  const themes = new Map(st.allThemes().map(t => [t.id, t]));
+
+  // ── Render 1 slot ──
+  const renderSlot = (slot) => {
+    if (slot.dataset.rendered === '1') return;
+    slot.dataset.rendered = '1';
+
+    const theme = themes.get(slot.dataset.theme);
+    if (!theme) {
+      // Theme tidak ditemukan — hapus skeleton biar tidak shimmer selamanya
+      slot.classList.remove('skeleton');
+      return;
+    }
+
+    const kind = slot.dataset.tableKind || 'standard';
+    const key = theme.id + '|' + kind + '|' + width;
+
+    let cv = this._previewCache.get(key);
+    if (!cv) {
+      try {
+        cv = renderTablePreview(theme, width, this.renderer ? this.renderer.themeImgs : null, kind);
+      } catch (err) {
+        console.warn('[fillPreviews] render gagal untuk', theme.id, err);
+        slot.classList.remove('skeleton');
+        return;
+      }
+      if (!cv || !cv.width || !cv.height) {
+        slot.classList.remove('skeleton');
+        return;
+      }
+      this._previewCache.set(key, cv);
+    }
+
+    // Clone canvas
+    const clone = document.createElement('canvas');
+    clone.width = cv.width;
+    clone.height = cv.height;
+    clone.getContext('2d').drawImage(cv, 0, 0);
+    clone.style.width = '100%';
+    clone.style.height = 'auto';
+    clone.style.display = 'block';
+
+    slot.classList.remove('skeleton');
+    slot.innerHTML = '';
+    slot.appendChild(clone);
+  };
+
+  // Kalau IntersectionObserver tidak didukung → render semua (defer per frame)
+  if (typeof IntersectionObserver === 'undefined') {
+    Array.from(slots).forEach((s, i) =>
+      setTimeout(() => renderSlot(s), i * 16)
+    );
+    return;
+  }
+
+  // ── Observer ──
+  const observer = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      observer.unobserve(e.target);      // ← pakai local `observer`, bukan this._previewIO
+      requestAnimationFrame(() => renderSlot(e.target));
+    }
+  }, { rootMargin: '150px', threshold: 0 });
+
+  this._previewIO = observer;
+  for (const s of slots) observer.observe(s);
+
+  // ── FALLBACK: paksa render slot yang belum ke-render setelah 800ms ──
+  // Ini menyelamatkan slot yang "kelupaan" IO karena screen transition atau layout aneh
+  clearTimeout(this._previewFallback);
+  this._previewFallback = setTimeout(() => {
+    root.querySelectorAll('[data-theme]:not([data-rendered])').forEach(renderSlot);
+  }, 800);
+},
   mergeItems(items) {
     let coins = 0; const out = [];
     for (const it of items) if (it.type === 'coins') coins += it.amount; else out.push(it);
@@ -126,12 +207,13 @@ Object.assign(UI.prototype, {
     });
     this.fillPreviews(el, 160);
   },
-  _chipHTML(it) {
-    if (it.type === 'coins') return COIN_SVG + ' ' + fmtShort(it.amount);
-    if (it.type === 'cue') return '<img alt="" src="' + this.store.cueDefById(it.id).image + '">' + esc(this.store.cueDefById(it.id).name);
-    if (it.type === 'table') return '<span data-theme="' + it.id + '"></span>' + esc(this.store.themeDef(it.id).name);
-    const [k, v] = it.id.split(':'); return avatarHTML({ sym: k === 'sym' ? v : 'crown', color: 2, frame: k === 'frame' ? v : 'none' }, 26) + (k === 'sym' ? SYMBOL_NAMES[v] : FRAMES[v].name);
-  },
+_chipHTML(it) {
+  if (it.type === 'coins') return COIN_SVG + ' ' + fmtShort(it.amount);
+  if (it.type === 'cue') return '<img alt="" src="' + this.store.cueDefById(it.id).image + '">' + esc(this.store.cueDefById(it.id).name);
+  if (it.type === 'table') return '<span class="skeleton" data-theme="' + it.id + '" style="min-width:60px;min-height:28px;display:inline-block"></span>' + esc(this.store.themeDef(it.id).name);
+  const [k, v] = it.id.split(':');
+  return avatarHTML({ sym: k === 'sym' ? v : 'crown', color: 2, frame: k === 'frame' ? v : 'none' }, 26) + (k === 'sym' ? SYMBOL_NAMES[v] : FRAMES[v].name);
+},
 
   /** Modal hadiah generik: dipakai untuk naik level, hadiah level, dan hadiah harian. */
   showRewardModal(o) {
@@ -172,20 +254,42 @@ Object.assign(UI.prototype, {
   },
 
   /* ------------------------------ toko meja ------------------------------ */
-  render_tables() {
-    const st = this.store, el = $('pageTables'), eq = st.data.tables.equipped;
-    el.innerHTML = this._head('Meja', this._wallet()) + '<div class="pg-body"><p class="note" style="margin-top:0">Tema meja berlaku untuk kedua ukuran meja. Pilih ukuran meja saat memulai pertandingan (halaman Pilih permainan).</p><div class="tb-grid">' + st.allThemes().map((t) => {
-      const owned = st.themeOwned(t.id), on = eq === t.id;
-      return '<div class="tb-card' + (on ? ' equipped' : '') + '"><div class="tb-prev two"><span data-theme="' + t.id + '" data-table-kind="standard"></span><span data-theme="' + t.id + '" data-table-kind="american"></span></div><div class="tb-info"><h4>' + esc(t.name) + '<span class="rar ' + t.rarity + '">' + t.rarity + '</span></h4>' +
-        (owned ? '<button class="btn small ' + (on ? '' : 'primary') + '" data-act="equip" data-v="' + t.id + '"' + (on ? ' disabled' : '') + '>' + (on ? 'Dipakai' : 'Pakai') + '</button>' : '<button class="btn small green" data-act="buy" data-v="' + t.id + '"' + (st.coins < t.price ? ' disabled' : '') + '>Beli · ' + COIN_SVG + ' ' + fmtShort(t.price) + '</button>') + '</div></div>';
-    }).join('') + '</div><p class="note">Meja kustom (dari halaman Developer) muncul di sini dengan label Kustom.</p></div>';
-    this._bind(el, {
-      equip: (d) => { st.equipTable(d.v); this.render_tables(); },
-      buy: (d) => { if (st.buyTable(d.v)) { this.toast('Meja dibeli', 'ok'); this.fx.burst(innerWidth / 2, innerHeight / 2, 70); } else this.toast('Koin tidak cukup', 'foul'); this.render_tables(); },
-    });
-    this.fillPreviews(el, 145);
-  },
+render_tables() {
+  const st = this.store, el = $('pageTables'), eq = st.data.tables.equipped;
+  const WIDTH = 145;
 
+  el.innerHTML = this._head('Meja', this._wallet()) +
+    '<div class="pg-body"><p class="note" style="margin-top:0">Tema meja berlaku untuk kedua ukuran meja. Pilih ukuran meja saat memulai pertandingan (halaman Pilih permainan).</p>' +
+    '<div class="tb-grid">' +
+      st.allThemes().map((t) => {
+        const owned = st.themeOwned(t.id), on = eq === t.id;
+        const cache = this._previewCache || new Map();
+        const hasStd = cache.has(t.id + '|standard|' + WIDTH);
+        const hasAme = cache.has(t.id + '|american|' + WIDTH);
+
+        return '<div class="tb-card' + (on ? ' equipped' : '') + '">' +
+          '<div class="tb-prev two">' +
+            '<span class="' + (hasStd ? '' : 'skeleton') + '" data-theme="' + t.id + '" data-table-kind="standard"></span>' +
+            '<span class="' + (hasAme ? '' : 'skeleton') + '" data-theme="' + t.id + '" data-table-kind="american"></span>' +
+          '</div>' +
+          '<div class="tb-info">' +
+            '<h4>' + esc(t.name) + '<span class="rar ' + t.rarity + '">' + t.rarity + '</span></h4>' +
+            (owned
+              ? '<button class="btn small ' + (on ? '' : 'primary') + '" data-act="equip" data-v="' + t.id + '"' + (on ? ' disabled' : '') + '>' + (on ? 'Dipakai' : 'Pakai') + '</button>'
+              : '<button class="btn small green" data-act="buy" data-v="' + t.id + '"' + (st.coins < t.price ? ' disabled' : '') + '>Beli · ' + COIN_SVG + ' ' + fmtShort(t.price) + '</button>') +
+          '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>' +
+    '<p class="note">Meja kustom (dari halaman Developer) muncul di sini dengan label Kustom.</p></div>';
+
+  this._bind(el, {
+    equip: (d) => { st.equipTable(d.v); this.render_tables(); },
+    buy: (d) => { if (st.buyTable(d.v)) { this.toast('Meja dibeli', 'ok'); this.fx.burst(innerWidth / 2, innerHeight / 2, 70); } else this.toast('Koin tidak cukup', 'foul'); this.render_tables(); },
+  });
+
+  this.fillPreviews(el, WIDTH);
+},
   /* ------------------------------ Cue Collection ------------------------------ */
   render_cues() {
     const st = this.store, el = $('pageCues'), eq = st.data.cues.equipped;

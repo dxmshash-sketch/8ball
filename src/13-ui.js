@@ -77,14 +77,19 @@ if (typeof CONFIG !== 'undefined' && CONFIG.colors && CONFIG.colors.balls) {
 
   html,body{background:var(--bc-bg);color:var(--bc-text);font-family:${THEME.fontBody};-webkit-font-smoothing:antialiased;}
 
-  body::before{
-    content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
-    background:
-      radial-gradient(60% 40% at 50% 0%, rgba(79,195,255,0.08), transparent 70%),
-      radial-gradient(80% 60% at 50% 120%, rgba(59,168,255,0.06), transparent 70%),
-      ${THEME.vignette};
-  }
-
+  // body::before{
+  //   content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  //   background:
+  //     radial-gradient(60% 40% at 50% 0%, rgba(79,195,255,0.08), transparent 70%),
+  //     radial-gradient(80% 60% at 50% 120%, rgba(59,168,255,0.06), transparent 70%),
+  //     ${THEME.vignette};
+  // }
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(60% 40% at 50% 0%, rgba(79,195,255,0.08), transparent 70%),
+    radial-gradient(80% 60% at 50% 120%, rgba(59,168,255,0.06), transparent 70%);
+}
   /* ---------- headings & numbers ---------- */
   .logo,.panel h2,.pg-head h2,.mode-card b,.btn,.hud-menu,
   .cue-panel h3,.tb-info h4,.rw-lv,.res-row,.mm h2,.lu h2,
@@ -96,23 +101,23 @@ if (typeof CONFIG !== 'undefined' && CONFIG.colors && CONFIG.colors.balls) {
   }
 
   /* ---------- glass ---------- */
-  .panel,.chip,.tile,.mode-card,.bet,.stat-c,.tb-card,.dev-item,
-  .lb-row,.set-row,.cue-panel,.cue-preview,.bdg-card,.pick,.rw-row,
-  .day,.pod{
-    background:linear-gradient(180deg,${THEME.chromeHi},transparent 40%),${THEME.glass};
-    border:1px solid var(--bc-stroke-soft);
-    box-shadow:${THEME.shadowSm};
-    backdrop-filter:blur(12px) saturate(140%);
-    -webkit-backdrop-filter:blur(12px) saturate(140%);
-    transition:transform ${THEME.dur} ${THEME.ease},
-               box-shadow ${THEME.dur} ${THEME.ease},
-               border-color ${THEME.dur} ${THEME.ease};
-  }
-  .tile:hover,.tb-card:hover,.bdg-card:hover,.pick:hover{
-    transform:translateY(-4px);border-color:var(--bc-primary);
-    box-shadow:${THEME.shadowSm},${THEME.bloom};
-  }
+  /* Hanya panel utama & modal yang dapat blur */
+.panel,.chip{
+  background:linear-gradient(180deg,${THEME.chromeHi},transparent 40%),${THEME.glass};
+  border:1px solid var(--bc-stroke-soft);
+  box-shadow:${THEME.shadowSm};
+  backdrop-filter:blur(12px) saturate(140%);
+  -webkit-backdrop-filter:blur(12px) saturate(140%);
+}
 
+/* Sisanya: solid, tanpa blur */
+.tile,.mode-card,.bet,.stat-c,.tb-card,.dev-item,
+.lb-row,.set-row,.cue-panel,.cue-preview,.bdg-card,.pick,.rw-row,
+.day,.pod{
+  background:linear-gradient(180deg,${THEME.chromeHi},transparent 40%),rgba(14,22,36,0.92);
+  border:1px solid var(--bc-stroke-soft);
+  box-shadow:${THEME.shadowSm};
+}
   /* ---------- CTA ---------- */
   .btn{
     border:1px solid rgba(180,225,255,.45);
@@ -220,12 +225,15 @@ if (typeof CONFIG !== 'undefined' && CONFIG.colors && CONFIG.colors.balls) {
 
   /* ---------- avatar ring ---------- */
   .avx{box-shadow:inset 0 -4px 8px rgba(0,0,0,.35),inset 0 2px 4px rgba(255,255,255,.22);}
-  .avx[data-frame=neon],.avx[data-frame=diamond],.avx[data-frame=gold]{
-    box-shadow:
-      0 0 0 calc(var(--s)*.07) var(--frame),
-      0 0 0 calc(var(--s)*.105) rgba(0,0,0,.4),
-      0 0 calc(var(--s)*.4) var(--frame);
-  }
+  .avx[data-frame=neon]::before,
+  .avx[data-frame=diamond]::before,
+  .avx[data-frame=gold]::before{
+    content:'';
+    position:absolute;inset:0;border-radius:50%;
+    box-shadow:0 0 calc(var(--s)*.4) var(--frame);
+    pointer-events:none;
+    will-change:opacity;
+}
 
   /* ---------- primitives ---------- */
   .glass{
@@ -449,7 +457,17 @@ class Fx {
   _resize() { const d = Math.min(window.devicePixelRatio || 1, 2); this.cv.width = innerWidth * d; this.cv.height = innerHeight * d; this.d = d; }
   _loop() {
     const c = this.ctx, d = this.d; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, this.cv.width, this.cv.height); c.setTransform(d, 0, 0, d, 0, 0);
-    for (const q of this.p) { q.vy += 0.28; q.x += q.vx; q.y += q.vy; q.vx *= 0.985; q.r += q.vr; q.life -= 0.011; c.save(); c.globalAlpha = Math.max(0, q.life); c.translate(q.x, q.y); c.rotate(q.r); c.fillStyle = q.c; c.fillRect(-q.w / 2, -q.h / 2, q.w, q.h); c.restore(); }
+    for (const q of this.p) { 
+      q.vy += 0.28; q.x += q.vx; q.y += q.vy; q.vx *= 0.985; q.r += q.vr; 
+      q.life -= 0.011; c.save(); 
+      c.globalAlpha = Math.max(0, q.life); 
+      c.translate(q.x, q.y); c.rotate(q.r); 
+      c.fillStyle = q.c; 
+      c.fillRect(-q.w / 2, -q.h / 2, q.w, q.h); 
+      c.restore(); }
+
+
+
     this.p = this.p.filter((q) => q.life > 0 && q.y < innerHeight + 40);
     if (this.p.length) requestAnimationFrame(() => this._loop()); else { this.on = false; c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, this.cv.width, this.cv.height); }
   }
@@ -463,6 +481,15 @@ class UI {
     this.current = 'screenMenu'; this.stack = []; this.selectedMode = 'bot'; this.selectedDiff = 'medium'; this.selectedBet = 1000;
     this.powerShown = 0.5; this.toastTimer = 0; this.dragPower = false; this.spinDrag = false; this.fineDir = 0; this.fineHold = 0;
     this.spinCtx = $('spinCv').getContext('2d'); this.lastSpin = '';
+    this.dom = {
+    hud: $('hud'),
+    powerFill: $('powerFill'),
+    powerHandle: $('powerHandle'),
+    powerVal: $('powerVal'),
+    p: [null, null],
+    ringFg: [null, null],
+    avRing: [null, null],
+  };
   }
 
   attach(game, renderer, board) {
@@ -486,6 +513,10 @@ class UI {
     let armed = 0; $('btnReset').addEventListener('click', () => { if (Date.now() - armed > 4000) { armed = Date.now(); this.toast('Ketuk sekali lagi untuk menghapus SEMUA data', 'foul'); return; } this.store.resetAll(); location.reload(); });
     this.store.onChange((what) => { if (what === 'table') this.renderer.applyTheme(); if (what === 'cueball') this.renderer.applyCueSkin(); if (what === 'coins' || what === 'avatar') this.refreshMenu(); });
     this._bindPower(); this._bindSpin(); this._bindFine(); this.syncSettings(); this.refreshMenu();
+     for (let i = 0; i < 2; i++) {
+    this.dom.p[i] = $('p' + i);
+    this.dom.ringFg[i] = this.dom.p[i].querySelector('.ring-fg');  // ← cache sekali
+  }
   }
   click() { this.audio.unlock(); this.audio.play('ui', 0.5); }
 
@@ -675,21 +706,28 @@ class UI {
   }
 
   /* ------------------------------ per-frame ------------------------------ */
-  tick(dt, game) {
-    if ($('hud').hidden) return;
-    const active = game.isTurnState() || game.state === GameState.BALL_IN_HAND;
-    for (let i = 0; i < 2; i++) {
-      const el = $('p' + i), on = active && game.rules.currentSeat === i; el.classList.toggle('active', on);
-      const frac = on ? Util.clamp(game.turnLeft / game.turnTotal, 0, 1) : 0;
-      el.classList.toggle('urgent', on && game.turnLeft < 6); el.querySelector('.ring-fg').style.strokeDashoffset = String(138.2 * (1 - frac));
-    }
-    $('hud').classList.toggle('locked', !game.canControl() && !game.canPlace());
-    this.powerShown += (game.aim.power - this.powerShown) * Math.min(1, dt * (this.dragPower ? 40 : 12));
-    const p = Util.clamp(this.powerShown, 0, 1);
-    $('powerFill').style.clipPath = 'inset(0 0 ' + ((1 - p) * 100).toFixed(1) + '% 0)'; $('powerHandle').style.top = (p * 100).toFixed(1) + '%'; $('powerVal').textContent = Math.round(p * 100);
-    if (this.fineDir && game.canControl()) { this.fineHold += dt; game.nudgeAim(this.fineDir * CONFIG.aim.fineRate * dt * 0.35 * (this.fineHold > 0.7 ? 2.2 : 1)); } else this.fineHold = 0;
-    this.drawSpin(game);
+ tick(dt, game) {
+  const D = this.dom;
+  if (D.hud.hidden) return;
+  const active = game.isTurnState() || game.state === GameState.BALL_IN_HAND;
+  for (let i = 0; i < 2; i++) {
+    const el = D.p[i], on = active && game.rules.currentSeat === i;
+    el.classList.toggle('active', on);
+    const frac = on ? Util.clamp(game.turnLeft / game.turnTotal, 0, 1) : 0;
+    el.classList.toggle('urgent', on && game.turnLeft < 6);
+    D.ringFg[i].style.strokeDashoffset = String(138.2 * (1 - frac));  // ← cache!
   }
+  const canCtl = game.canControl();
+  D.hud.classList.toggle('locked', !canCtl && !game.canPlace());
+  this.powerShown += (game.aim.power - this.powerShown) * Math.min(1, dt * (this.dragPower ? 40 : 12));
+  const p = Util.clamp(this.powerShown, 0, 1);
+  D.powerFill.style.clipPath = 'inset(0 0 ' + ((1 - p) * 100).toFixed(1) + '% 0)';
+  D.powerHandle.style.top = (p * 100).toFixed(1) + '%';
+  D.powerVal.textContent = Math.round(p * 100);
+  if (this.fineDir && canCtl) { this.fineHold += dt; game.nudgeAim(this.fineDir * CONFIG.aim.fineRate * dt * 0.35 * (this.fineHold > 0.7 ? 2.2 : 1)); }
+  else this.fineHold = 0;
+  this.drawSpin(game, canCtl);
+}
   _bindPower() {
     const tr = $('powerTrack'), g = () => this.game;
     const upd = (e) => { const r = tr.getBoundingClientRect(); g().setPower(Util.clamp((e.clientY - r.top) / r.height, 0, 1)); };
@@ -705,8 +743,9 @@ class UI {
     el.addEventListener('pointermove', (e) => { if (this.spinDrag) upd(e); }); el.addEventListener('pointerup', () => { this.spinDrag = false; });
     el.addEventListener('dblclick', () => g().setSpin(0, 0));
   }
-  drawSpin(game) {
-    const key = game.aim.spinX.toFixed(2) + game.aim.spinY.toFixed(2) + game.canControl(); if (key === this.lastSpin) return; this.lastSpin = key;
+  drawSpin(game, canCtl) {
+    const key = game.aim.spinX.toFixed(2) + game.aim.spinY.toFixed(2) + canCtl; 
+    if (key === this.lastSpin) return; this.lastSpin = key;
     const c = this.spinCtx, w = 168, r = w / 2 - 8; c.clearRect(0, 0, w, w);
     const gr = c.createRadialGradient(w * 0.4, w * 0.36, 8, w / 2, w / 2, r + 10); gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, '#c4ced8'); c.fillStyle = gr; c.beginPath(); c.arc(w / 2, w / 2, r + 8, 0, 7); c.fill();
     c.strokeStyle = 'rgba(30,40,55,.28)'; c.lineWidth = 2; c.beginPath(); c.moveTo(w / 2, 14); c.lineTo(w / 2, w - 14); c.moveTo(14, w / 2); c.lineTo(w - 14, w / 2); c.stroke(); c.beginPath(); c.arc(w / 2, w / 2, r * 0.5, 0, 7); c.stroke();

@@ -147,7 +147,8 @@ Object.assign(UI.prototype, {
       $('dvFlip').addEventListener('change', (e) => { D.flip = e.target.checked; build(); });
       this._devCuePreview();
     } else if (D.tab === 'table') {
-      const upd = () => this._devTablePreview(), fields = ['dvSight', 'dvCl1', 'dvCl2', 'dvCu', 'dvR1', 'dvR2', 'dvR3'], keys = ['sight', 'cl1', 'cl2', 'cu', 'r1', 'r2', 'r3'];
+      const upd = () => this._devTablePreview(), 
+      fields = ['dvSight', 'dvCl1', 'dvCl2', 'dvCu', 'dvR1', 'dvR2', 'dvR3'], keys = ['sight', 'cl1', 'cl2', 'cu', 'r1', 'r2', 'r3'];
       fields.forEach((id, i) => $(id).addEventListener('input', (e) => { D[keys[i]] = e.target.value; clearTimeout(this._dt); this._dt = setTimeout(upd, 90); }));
       $('dvStyle').addEventListener('change', (e) => { D.style = e.target.value; const L = RAIL_LABELS[D.style]; ['lbR1', 'lbR2', 'lbR3'].forEach((id, i) => { $(id).firstChild.nodeValue = L[i]; }); upd(); });
       onFile('dvClothFile', (img) => { D.clothImg = img; D.clothData = fitDataURL(img, 1024, 482, 0.82); upd(); });
@@ -164,20 +165,66 @@ Object.assign(UI.prototype, {
       const f = $('dvImpFile'); f.addEventListener('change', () => { if (f.files[0]) f.files[0].text().then((t) => { $('dvImport').value = t; }); });
     }
   },
-  _devCuePreview() {
-    const D = this.dev, cv = $('dvCuePrev'); if (!cv) return; const c = cv.getContext('2d'); c.clearRect(0, 0, 1200, 120);
-    if (D.cueCanvas) c.drawImage(D.cueCanvas, 0, 0);
-    else { c.fillStyle = '#6b7484'; c.font = '28px sans-serif'; c.textAlign = 'center'; c.fillText('Pilih gambar cue…', 600, 70); }
-    const th = this.store.themeDef(this.store.data.tables.equipped), tcv = $('dvCueTable');
-    loadThemeImages(th, (imgs) => {
-      const base = renderTablePreview(th, 900, imgs); tcv.width = base.width; tcv.height = base.height; const t = tcv.getContext('2d'); t.drawImage(base, 0, 0);
-      if (!D.cueCanvas) return;
-      const T = CONFIG.table, tx = T.rail + T.cushion + 46, s = base.width / (T.width + 2 * tx), R = T.ballRadius, L = T.width * CONFIG.aim.cueLengthRatio, h = L * 0.1 * 0.62, off = R + CONFIG.aim.cueGap + 40;
-      const bx = (tx + T.headStringX) * s, by = (tx + T.height / 2) * s;
-      t.drawImage(D.cueCanvas, bx - (off + L) * s, by - h * s / 2, L * s, h * s);
-      t.fillStyle = '#f6f6f0'; t.beginPath(); t.arc(bx, by, R * s, 0, 7); t.fill(); t.strokeStyle = 'rgba(0,0,0,.35)'; t.lineWidth = 1; t.stroke();
-    });
-  },
+  // _devCuePreview() {
+  //   const D = this.dev, cv = $('dvCuePrev'); if (!cv) return; const c = cv.getContext('2d'); c.clearRect(0, 0, 1200, 120);
+  //   if (D.cueCanvas) c.drawImage(D.cueCanvas, 0, 0);
+  //   else { c.fillStyle = '#6b7484'; c.font = '28px sans-serif'; c.textAlign = 'center'; c.fillText('Pilih gambar cue…', 600, 70); }
+  //   const th = this.store.themeDef(this.store.data.tables.equipped), tcv = $('dvCueTable');
+  //   loadThemeImages(th, (imgs) => {
+  //     const base = renderTablePreview(th, 900, imgs); tcv.width = base.width; tcv.height = base.height; const t = tcv.getContext('2d'); t.drawImage(base, 0, 0);
+  //     if (!D.cueCanvas) return;
+  //     const T = CONFIG.table, tx = T.rail + T.cushion + 46, s = base.width / (T.width + 2 * tx), R = T.ballRadius, L = T.width * CONFIG.aim.cueLengthRatio, h = L * 0.1 * 0.62, off = R + CONFIG.aim.cueGap + 40;
+  //     const bx = (tx + T.headStringX) * s, by = (tx + T.height / 2) * s;
+  //     t.drawImage(D.cueCanvas, bx - (off + L) * s, by - h * s / 2, L * s, h * s);
+  //     t.fillStyle = '#f6f6f0'; t.beginPath(); t.arc(bx, by, R * s, 0, 7); t.fill(); t.strokeStyle = 'rgba(0,0,0,.35)'; t.lineWidth = 1; t.stroke();
+  //   });
+  // },
+_devCuePreview() {
+  const D = this.dev, cv = $('dvCuePrev'); if (!cv) return;
+  const c = cv.getContext('2d');
+  c.clearRect(0, 0, 1200, 120);
+  if (D.cueCanvas) c.drawImage(D.cueCanvas, 0, 0);
+  else {
+    c.fillStyle = '#6b7484';
+    c.font = '28px sans-serif';
+    c.textAlign = 'center';
+    c.fillText('Pilih gambar cue…', 600, 70);
+  }
+
+  const th = this.store.themeDef(this.store.data.tables.equipped);
+  const tcv = $('dvCueTable');
+  loadThemeImages(th, (imgs) => {
+    // ← pakai isPreview=true + width lebih kecil
+    const base = renderTablePreview(th, 620, imgs, 'standard', true);
+
+    if (tcv.width !== base.width || tcv.height !== base.height) {
+      tcv.width = base.width;
+      tcv.height = base.height;
+    } else {
+      tcv.getContext('2d').clearRect(0, 0, tcv.width, tcv.height);
+    }
+
+    const t = tcv.getContext('2d');
+    t.drawImage(base, 0, 0);
+
+    if (!D.cueCanvas) return;
+    const T = CONFIG.table;
+    const tx = T.rail + T.cushion + 46;
+    const s = base.width / (T.width + 2 * tx);
+    const R = T.ballRadius;
+    const L = T.width * CONFIG.aim.cueLengthRatio;
+    const h = L * 0.1 * 0.62;
+    const off = R + CONFIG.aim.cueGap + 40;
+    const bx = (tx + T.headStringX) * s;
+    const by = (tx + T.height / 2) * s;
+
+    t.drawImage(D.cueCanvas, bx - (off + L) * s, by - h * s / 2, L * s, h * s);
+    t.fillStyle = '#f6f6f0';
+    t.beginPath(); t.arc(bx, by, R * s, 0, 7); t.fill();
+    t.strokeStyle = 'rgba(0,0,0,.35)'; t.lineWidth = 1; t.stroke();
+  });
+},
+
   _devTheme() {
     const D = this.dev, sy = D.style || 'wood', g = (k, d) => D[k] || d;
     const cl1 = g('cl1', '#86d9f6'), cl2 = g('cl2', '#2d8dbd'), cu = g('cu', '#63c6f0'), r1 = g('r1', '#a83232'), r2 = g('r2', '#8a2426'), r3 = g('r3', '#671719');
@@ -188,10 +235,31 @@ Object.assign(UI.prototype, {
     else rail = { style: 'wood', a: r1, accent: shadeHex(r1, 0.15), b: r2, c: r3, d: shadeHex(r3, -0.4) };
     return { name: 'Pratinjau', rarity: 'Kustom', price: 0, cloth: { a: cl1, b: mixHex(cl1, cl2, 0.5), c: cl2 }, cushion: { base: shadeHex(cu, -0.4), mid: shadeHex(cu, -0.2), nose: cu }, rail, sight: g('sight', '#ffffff'), rim: shadeHex(r3, -0.6) };
   },
+  // _devTablePreview() {
+  //   const D = this.dev, cv = $('dvTablePrev'); if (!cv) return;
+  //   const base = renderTablePreview(this._devTheme(), 900, { cloth: D.clothImg, rail: D.railImg }, D.tableKind || 'standard'); cv.width = base.width; cv.height = base.height; cv.getContext('2d').drawImage(base, 0, 0);
+  // },
   _devTablePreview() {
-    const D = this.dev, cv = $('dvTablePrev'); if (!cv) return;
-    const base = renderTablePreview(this._devTheme(), 900, { cloth: D.clothImg, rail: D.railImg }, D.tableKind || 'standard'); cv.width = base.width; cv.height = base.height; cv.getContext('2d').drawImage(base, 0, 0);
-  },
+  const D = this.dev, cv = $('dvTablePrev'); if (!cv) return;
+
+  // Reuse canvas — resize hanya kalau ukuran beda
+  const base = renderTablePreview(
+    this._devTheme(),
+    620,                                    // ← turunkan dari 900 → 620
+    { cloth: D.clothImg, rail: D.railImg },
+    D.tableKind || 'standard',
+    true                                    // ← isPreview = true
+  );
+
+  if (cv.width !== base.width || cv.height !== base.height) {
+    cv.width = base.width;
+    cv.height = base.height;
+  } else {
+    // Ukuran sama — cukup clear + draw, tidak realloc buffer
+    cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
+  }
+  cv.getContext('2d').drawImage(base, 0, 0);
+},
   /** Template panduan (PNG) menampilkan zona yang tertutup/terlihat, dengan geometri meja yang sama. */
   _downloadTemplate(kind) {
     const T = CONFIG.table, ct = T.cushion, ext = T.cushion + T.rail, geo = buildTableGeometry(T), off = kind === 'cloth' ? ct : ext;

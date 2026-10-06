@@ -329,30 +329,7 @@ body::before{
   font-family:var(--f-num);font-weight:700;
 }
 
-/* --- Glass panel primitive --- */
-.panel{
-  background:
-    linear-gradient(180deg, rgba(120,180,255,.08), transparent 40%),
-    var(--glass);
-  border:1px solid var(--stroke-soft);
-  border-radius:22px;
-  box-shadow:var(--shadow);
-  backdrop-filter:blur(14px) saturate(140%);
-  -webkit-backdrop-filter:blur(14px) saturate(140%);
-}
-.chip,.tile,.mode-card,.bet,.stat-c,.tb-card,.dev-item,.lb-row,
-.set-row,.cue-panel,.cue-preview,.bdg-card,.pick,.rw-row,.day,.pod{
-  background:
-    linear-gradient(180deg, rgba(120,180,255,.06), transparent 40%),
-    var(--glass);
-  border:1px solid var(--stroke-soft);
-  box-shadow:var(--shadow-sm);
-  backdrop-filter:blur(12px) saturate(140%);
-  -webkit-backdrop-filter:blur(12px) saturate(140%);
-  transition:transform .2s cubic-bezier(.2,.9,.25,1),
-             box-shadow .2s cubic-bezier(.2,.9,.25,1),
-             border-color .2s cubic-bezier(.2,.9,.25,1);
-}
+
 .tile:hover,.tb-card:hover,.bdg-card:hover,.pick:hover{
   transform:translateY(-4px);
   border-color:var(--primary);
@@ -541,4 +518,87 @@ body::before{
 .lb-row.you{
   background:rgba(242,193,78,.08);
   border:1px solid rgba(242,193,78,.55);
+}
+
+/* Placeholder sebelum preview terisi */
+.tb-prev > span[data-theme]{
+  display:block;
+  width:100%;
+  aspect-ratio: 16 / 10;
+  background: radial-gradient(ellipse at 50% 40%, #1a2738, #060B14);
+  border-radius:8px;
+  overflow:hidden;
+}
+.tb-prev > span[data-theme] canvas{
+  width:100%;
+  height:auto;
+  display:block;
+}
+/* ---------- Skeleton Loading ---------- */
+@keyframes skel-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(30, 46, 72, 0.55) 0%,
+    rgba(60, 100, 150, 0.75) 50%,
+    rgba(30, 46, 72, 0.55) 100%
+  );
+  background-size: 200% 100%;
+  animation: skel-shimmer 1.4s linear infinite;
+  border-radius: 8px;
+}
+
+/* Pastikan ini ADA di root{.txt atau injected style */
+.tb-prev > span[data-theme]{
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  background: radial-gradient(ellipse at 50% 40%, #1a2738, #060B14);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+.tb-prev > span[data-theme].skeleton::after{
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(30, 46, 72, 0.3) 0%,
+    rgba(79, 195, 255, 0.18) 50%,
+    rgba(30, 46, 72, 0.3) 100%
+  );
+  background-size: 200% 100%;
+  animation: skel-shimmer 1.6s linear infinite;
+}
+@keyframes skel-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+.tb-prev > span[data-theme] canvas{
+  width: 100%;
+  height: auto;
+  display: block;
+}
+/* Skeleton untuk reward chip (hadiah level) */
+.rw-item.skeleton,
+.lu-card .skeleton-slot {
+  min-width: 60px;
+  min-height: 28px;
+}
+
+/* Skeleton untuk avatar di leaderboard (opsional) */
+.lb-row.loading {
+  pointer-events: none;
+}
+.tb-prev > span[data-theme] canvas{
+  animation: fadeIn 0.3s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
 }

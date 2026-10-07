@@ -1,92 +1,48 @@
 name: Build APK Android
-
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
-
 permissions:
   contents: write
-
 jobs:
   apk:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-
+          node-version: 20
       - uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'          # ← WAJIB 17, bukan 20/21/25
-
+          distribution: temurin
+          java-version: 17
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-
-      - name: Install Python deps
-        run: pip install pillow
-
-      # ── Build web assets (embed logo, cues, audio, icons) ──
-      - name: Build web assets
-        run: python3 tools/build.py
-
-      # ── Test (opsional) ──
-      - name: Test
-        run: node tools/test.js
-
-      # ── Install npm dependencies ──
-      - name: Install npm deps
-        run: npm install
-
-      # ── Add Android platform ──
-      - name: Add Android platform
-        run: npx cap add android
-
-      # ── Patch Android (icon, splash, orientasi, fullscreen) ──
-      - name: Patch Android config
-        run: python3 tools/android_patch.py
-
-      # ── Sync Capacitor plugins (termasuk Firebase Auth) ──
-      - name: Sync Capacitor
-        run: npx cap sync android
-
-      # ── Decode google-services.json dari secret ──
-      - name: Setup google-services.json
+      - run: pip install pillow
+      - run: python3 tools/build.py
+      - run: npm test
+      - run: npm install
+      - run: npx cap add android
+      - run: python3 tools/android_patch.py
+      - run: npx cap sync android
+      - name: Tambah google-services.json (dari secret)
         env:
-          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
-        run: |
-          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
-            echo "::error::Secret GOOGLE_SERVICES_JSON kosong. Firebase Auth tidak akan berfungsi."
-            echo "Tambahkan di repo Settings → Secrets → Actions."
-            exit 1
-          fi
-          echo "$GOOGLE_SERVICES_JSON" | base64 -d > android/app/google-services.json
-          echo "✓ google-services.json terpasang ($(wc -c < android/app/google-services.json) bytes)"
-
-      # ── Build APK ──
-      - name: Build APK (debug)
+          GS: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: echo "$GS" | base64 -d > android/app/google-services.json
+      - name: Build APK (debug, sudah bertanda tangan debug sehingga bisa di-install)
         working-directory: android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
-
-      # ── Rename & upload ──
-      - name: Copy APK
+      - name: Ganti nama APK
         run: cp android/app/build/outputs/apk/debug/app-debug.apk pantul.apk
-
       - uses: actions/upload-artifact@v4
         with:
           name: pantul-apk
           path: pantul.apk
-          retention-days: 30
-
-      - name: Attach to Release
+      - name: Lampirkan ke Release (hanya saat push tag)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:

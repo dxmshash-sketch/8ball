@@ -8,6 +8,8 @@ permissions:
 jobs:
   apk:
     runs-on: ubuntu-latest
+        environment: NDROID           # ← tambah ini
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

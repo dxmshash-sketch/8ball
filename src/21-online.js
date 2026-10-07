@@ -80,18 +80,32 @@ Object.assign(UI.prototype, {
     this._bind(el, { buy: (d) => this._buyMarketItem(d.v) });
     el.querySelectorAll('[data-theme-market]').forEach((slot) => { const it = items.find((x) => x.id === slot.dataset.themeMarket); if (it) loadThemeImages(it.theme, (imgs) => { slot.innerHTML = ''; slot.appendChild(renderTablePreview(it.theme, 260, imgs)); }); });
   },
-  _buyMarketItem(id) {
-    if (!this.backend.currentUser()) { this.toast('Masuk dulu untuk membeli', 'foul'); return; }
-    const item = this.backend.listMarket().find((x) => x.id === id); if (!item) return;
-    if (this.store.coins < item.price) { this.toast('Koin tidak cukup', 'foul'); return; }
-    if (!this.store.spend(item.price)) { this.toast('Koin tidak cukup', 'foul'); return; }
-    const r = this.backend.buy(id, () => {});
-    if (!r.ok) { this.store.addCoins(item.price); this.toast(r.error, 'foul'); return; }
-    if (item.kind === 'cue') this.store.addCustomCue(item.payload);
-    else if (item.kind === 'table') this.store.addCustomTable(item.payload);
-    else if (item.kind === 'cueball') this.store.addCustomCueball(item.payload);
-    this.toast('Berhasil membeli ' + item.name, 'ok'); this.fx.burst(innerWidth / 2, innerHeight / 2, 70); this.render_market(); this.refreshMenu();
-  },
+  async _buyMarketItem(id) {
+  if (!this.backend.currentUser()) { this.toast('Masuk dulu untuk membeli', 'foul'); return; }
+  const item = this.backend.listMarket().find((x) => x.id === id);
+  if (!item) return;
+  if (this.store.coins < item.price) { this.toast('Koin tidak cukup', 'foul'); return; }
+
+  // Firebase yang pegang kendali spend — biar tidak dobel
+  const r = await this.backend.buy(id, () => {});
+  if (!r.ok) { this.toast(r.error, 'foul'); return; }
+
+  // Sync koin dari Firebase → lokal
+  const u = this.backend.currentUser();
+  if (u) {
+    this.store.data.profile.coins = u.coins;
+    this.store.save();
+  }
+
+  if (item.kind === 'cue') this.store.addCustomCue(item.payload);
+  else if (item.kind === 'table') this.store.addCustomTable(item.payload);
+  else if (item.kind === 'cueball') this.store.addCustomCueball(item.payload);
+
+  this.toast('Berhasil membeli ' + item.name, 'ok');
+  this.fx.burst(innerWidth / 2, innerHeight / 2, 70);
+  this.render_market();
+  this.refreshMenu();
+},
 
   /* ------------------------------ Matchmaking (cari lawan) ------------------------------ */
   startQuickMatch(opts) {

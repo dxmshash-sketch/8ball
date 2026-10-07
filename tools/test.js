@@ -304,7 +304,7 @@ ok(
   ok(
     'Standar: profil sesuai config',
     TS.width === 1600 &&
-    TS.height === 728 &&
+    TS.height === 800 &&
     TS.ballRadius === 15 &&
     TS.rail === 40 &&
     TS.cushion === 20 &&

@@ -22,10 +22,30 @@ class FirebaseBackend {
         // role SELALU 'user' di sini — lihat FIREBASE_SETUP.md. Harus dipromosikan manual lewat Firestore Console;
         // aturan keamanan HARUS menolak client menulis role lain selain 'user' saat create, dan menolak perubahan
         // role sama sekali saat update, kalau tidak sembarang client bisa klaim admin untuk dirinya sendiri.
-        const doc = { uid: fbUser.uid, email: fbUser.email, name: (fbUser.displayName || fbUser.email.split('@')[0]).slice(0, 20), avatarImage: fbUser.photoURL || null, role: 'user', coins: START_COINS, owned: [], createdAt: Date.now() };
+        const doc = { 
+          uid: fbUser.uid, 
+          email: fbUser.email, 
+          name: (fbUser.displayName || fbUser.email.split('@')[0]).slice(0, 20), 
+          avatarImage: fbUser.photoURL || null, 
+          role: 'user', 
+          coins: START_COINS, owned: [], 
+          createdAt: Date.now() 
+        };
         await ref.set(doc); snap = await ref.get();
       }
-      this.user = snap.data(); this._emitAuth();
+      this.user = snap.data(); 
+      // ▼▼▼ TAMBAHKAN: sinkron koin Firebase → store lokal ▼▼▼
+  if (typeof window !== 'undefined' && window.ui && window.ui.store) {
+    const store = window.ui.store;
+    store.data.profile.coins = this.user.coins;
+    if (this.user.name) store.data.profile.name = this.user.name;
+    store.save();
+    if (window.ui.refreshMenu) window.ui.refreshMenu();
+  }
+  // ▲▲▲ END ▲▲▲
+
+      
+      this._emitAuth();
     });
   }
   _emitAuth() { for (const fn of this.listeners) fn(this.user); }
@@ -38,7 +58,40 @@ class FirebaseBackend {
     catch (e) { return { ok: false, error: e.message }; }
   }
   async signInPassword(email, password) { try { await this.auth.signInWithEmailAndPassword(email, password); return { ok: true }; } catch (e) { return { ok: false, error: e.message }; } }
-  async signInGoogle() { try { await this.auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); return { ok: true }; } catch (e) { return { ok: false, error: e.message }; } }
+  async signInGoogle() {
+  try {
+    const isNative = typeof window !== 'undefined'
+      && window.Capacitor
+      && window.Capacitor.isNativePlatform
+      && window.Capacitor.isNativePlatform();
+
+    if (isNative) {
+      const FirebaseAuth = window.Capacitor.Plugins
+        && window.Capacitor.Plugins.FirebaseAuthentication;
+
+      if (!FirebaseAuth) {
+        throw new Error('Plugin FirebaseAuthentication belum ter-sync. Jalankan npx cap sync android');
+      }
+
+      const result = await FirebaseAuth.signInWithGoogle();
+      if (!result || !result.credential || !result.credential.idToken) {
+        throw new Error('Google tidak mengembalikan idToken');
+      }
+
+      const credential = firebase.auth.GoogleAuthProvider.credential(result.credential.idToken);
+      await this.auth.signInWithCredential(credential);
+      return { ok: true };
+    }
+
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    await this.auth.signInWithPopup(provider);
+    return { ok: true };
+  } catch (e) {
+    console.error('[Google Sign-In]', e);
+    return { ok: false, error: e.message || 'Gagal masuk dengan Google' };
+  }
+}
   signOut() { this.auth.signOut(); }
 
   async updateProfile(patch) {

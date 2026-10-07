@@ -11,7 +11,17 @@ adaptive = res / 'mipmap-anydpi-v26'
 if adaptive.exists():
     for f in adaptive.iterdir(): f.unlink()
     adaptive.rmdir()
-sq, rd = Image.open(root / 'assets/icons/icon-1024.png').convert('RGBA'), Image.open(root / 'assets/icons/icon-round-1024.png').convert('RGBA')
+# Jadi:
+sq_path = root / 'assets/icons/icon-1024.png'
+if not sq_path.exists():
+    sq_path = root / 'assets/icons/icon-512.png'  # fallback
+sq = Image.open(sq_path).convert('RGBA')
+
+rd_path = root / 'assets/icons/icon-round-1024.png'
+if not rd_path.exists():
+    rd_path = sq_path  # fallback ke square
+rd = Image.open(rd_path).convert('RGBA')
+
 for dens, px in {'mdpi': 48, 'hdpi': 72, 'xhdpi': 96, 'xxhdpi': 144, 'xxxhdpi': 192}.items():
     d = res / f'mipmap-{dens}'; d.mkdir(parents=True, exist_ok=True)
     sq.resize((px, px), Image.LANCZOS).save(d / 'ic_launcher.png')

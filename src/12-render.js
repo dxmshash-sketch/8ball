@@ -73,9 +73,42 @@ function loadThemeImages(theme, onLoad) {
   if (!pending && onLoad) onLoad(imgs);
   return imgs;
 }
+
 function drawCover(c, img, x, y, w, h) {
   const r = Math.max(w / img.width, h / img.height), iw = w / r, ih = h / r;
   c.drawImage(img, (img.width - iw) / 2, (img.height - ih) / 2, iw, ih, x, y, w, h);
+}
+
+/* ---------------- Logo watermark (di-load SEKALI di top-level) ---------------- */
+let CLOTH_LOGO_IMG = null;
+let CLOTH_LOGO_LOADING = false;
+let CLOTH_LOGO_CALLBACKS = [];
+
+function ensureClothLogo(onReady) {
+  if (CLOTH_LOGO_IMG) {
+    if (onReady) onReady(CLOTH_LOGO_IMG);
+    return CLOTH_LOGO_IMG;
+  }
+  if (onReady) CLOTH_LOGO_CALLBACKS.push(onReady);
+  if (CLOTH_LOGO_LOADING) return null;
+  if (!CONFIG.clothLogo || !CONFIG.clothLogo.enabled) return null;
+
+  CLOTH_LOGO_LOADING = true;
+  const im = new Image();
+  im.onload = () => {
+    CLOTH_LOGO_IMG = im;
+    CLOTH_LOGO_LOADING = false;
+    const cbs = CLOTH_LOGO_CALLBACKS.slice();
+    CLOTH_LOGO_CALLBACKS.length = 0;
+    cbs.forEach((cb) => { try { cb(im); } catch (e) { console.warn(e); } });
+  };
+  im.onerror = () => {
+    console.warn('[ClothLogo] gagal load:', CONFIG.clothLogo.src);
+    CLOTH_LOGO_LOADING = false;
+    CLOTH_LOGO_CALLBACKS.length = 0;
+  };
+  im.src = CONFIG.clothLogo.src;
+  return null;
 }
  
 function renderTableLayer(theme, T, geo, s, rot, imgs, isPreview) {
@@ -92,7 +125,8 @@ function renderTableLayer(theme, T, geo, s, rot, imgs, isPreview) {
   const along = (stops) => { const g = c.createLinearGradient(cxw - GX * half, cyw - GY * half, cxw + GX * half, cyw + GY * half); for (const [o, col] of stops) g.addColorStop(o, col); return g; };
   const outer = () => rrect(-ext, -ext, W + 2 * ext, H + 2 * ext, 30 * u);
   const ringClip = () => { c.beginPath(); c.rect(-ct, -ct, W + 2 * ct, H + 2 * ct); c.rect(-ext - 5, -ext - 5, W + 2 * ext + 10, H + 2 * ext + 10); c.clip('evenodd'); };
- if (!isPreview) {
+ 
+  if (!isPreview) {
   c.save();
   c.shadowColor = 'rgba(0,0,0,0.6)';
   c.shadowBlur = 30 * u * s;
@@ -108,7 +142,7 @@ function renderTableLayer(theme, T, geo, s, rot, imgs, isPreview) {
   outer();
   c.fill();
 };
- 
+
   if (imgs.rail) { c.save(); outer(); c.clip(); c.drawImage(imgs.rail, -ext, -ext, W + 2 * ext, H + 2 * ext); c.restore(); } 
   else if (rt.style === 'neon') {
   c.fillStyle = along([[0, '#231733'], [1, rt.bg || '#160f1f']]);
@@ -221,6 +255,10 @@ if (imgs.cloth) {
   c.save();
   c.beginPath(); c.rect(-ct, -ct, W + 2 * ct, H + 2 * ct); c.clip();
   drawCover(c, imgs.cloth, -ct, -ct, W + 2 * ct, H + 2 * ct);
+  /* ---------------- Logo watermark (di-load sekali) ---------------- */
+  /* logo code ditaruh di sini */
+  let CLOTH_LOGO_IMG = null;   // ← ini hanya jalan kalau theme pakai cloth IMAGE
+
   c.restore();
 } else {
   g = c.createRadialGradient(W / 2, H / 2, 40, W / 2, H / 2, W * 0.62);
@@ -249,11 +287,9 @@ for (let x = -ct; x < W + ct; x += weaveStep) {
 c.globalCompositeOperation = 'overlay';
 
 const noiseN = isPreview
-  ? Math.round(1500 * wu * (H / 728))       // preview: 15× lebih ringan
-  : Math.round(22000 * wu * (H / 728));     // full: seperti biasa
-for (let i = 0; i < noiseN; i++) {
-  // ... loop body sama
-}
+  ? Math.round(1500 * wu * (H / 800))       // preview: 15× lebih ringan
+  : Math.round(22000 * wu * (H / 800));     // full: seperti biasa
+
 for (let i = 0; i < noiseN; i++) {
   const r = rng.next();
   c.fillStyle = r < 0.45 ? 'rgba(255,255,255,0.055)'
@@ -287,7 +323,49 @@ for (let i = 0; i < fibersN; i++) {
 
 c.globalCompositeOperation = 'source-over';
 c.restore();
+
 /* ====== AKHIR TEKSTUR KAIN ====== */
+
+// ── LOGO WATERMARK DI KAIN (selalu render, baik image maupun gradient) ──
+if (CONFIG.clothLogo && CONFIG.clothLogo.enabled) {
+  const logoCfg = CONFIG.clothLogo;
+
+  const drawLogo = (img) => {
+    const logoTargetW = W * (logoCfg.widthRatio || 0.4);
+    const logoTargetH = logoTargetW * (img.naturalHeight / img.naturalWidth);
+
+    c.save();
+    c.beginPath();
+    c.rect(-ct, -ct, W + 2 * ct, H + 2 * ct);
+    c.clip();
+
+    c.globalAlpha = logoCfg.opacity || 0.1;
+    c.globalCompositeOperation = logoCfg.blend || 'source-over';
+
+    const cx = W / 2;
+    const cy = H / 2 + H * (logoCfg.offsetY || 0);
+
+    if (logoCfg.rotation) {
+      c.translate(cx, cy);
+      c.rotate(logoCfg.rotation);
+      c.drawImage(img, -logoTargetW / 2, -logoTargetH / 2, logoTargetW, logoTargetH);
+    } else {
+      c.drawImage(img, cx - logoTargetW / 2, cy - logoTargetH / 2, logoTargetW, logoTargetH);
+    }
+
+    c.restore();
+  };
+
+  if (CLOTH_LOGO_IMG) {
+    drawLogo(CLOTH_LOGO_IMG);
+  } else {
+    ensureClothLogo(() => {
+      const r = window.game && window.game.renderer;
+      if (r && r.vw) r._buildTable();
+    });
+  }
+}
+/* ====== LOGO WATERMARK END ====== */
 
 // (blok glow(...) DIHAPUS — user tidak mau pencahayaan tambahan)
 
@@ -512,15 +590,37 @@ function renderTablePreview(theme, widthPx, imgs, kind, isPreview) {
 /* ---------------- renderer ---------------- */
 class Renderer {
   constructor(canvas, game, store) {
-    this.canvas = canvas; this.ctx = canvas.getContext('2d'); this.game = game; this.store = store;
-    this.geo = game.world.geo; this.sprites = new BallSprites(); this.dpr = 1; this.vw = 0; this.vh = 0;
-    this.scale = 1; this.rot = 0; this.maxZoom = 1.7; this.cam = { zoom: 1, cx: CONFIG.table.width / 2, cy: CONFIG.table.height / 2 };
-    this.pred = { kind: 0, t: 0, hitId: -1, x: 0, y: 0, objX: 0, objY: 0, cueX: 0, cueY: 0, cueLen: 0 };
-    this.pred2 = { kind: 0, t: 0, hitId: -1, x: 0, y: 0, objX: 0, objY: 0, cueX: 0, cueY: 0, cueLen: 0 };
-    this.tmp = { x: 0, y: 0 }; this.time = 0; this.themeImgs = {}; this.theme = null;
-    this.cueFX = new CueballFX();
-    this.applyTheme(true); this.applyCueSkin(); this.resize();
-  }
+  this.canvas = canvas;
+  this.ctx = canvas.getContext('2d');
+  this.game = game;
+  this.store = store;
+  this.geo = game.world.geo;
+  this.sprites = new BallSprites();
+  this.dpr = 1;
+  this.vw = 0;
+  this.vh = 0;
+  this.scale = 1;
+  this.rot = 0;
+  this.maxZoom = 1.7;
+  this.cam = { zoom: 1, cx: CONFIG.table.width / 2, cy: CONFIG.table.height / 2 };
+  this.pred = { kind: 0, t: 0, hitId: -1, x: 0, y: 0, objX: 0, objY: 0, cueX: 0, cueY: 0, cueLen: 0 };
+  this.pred2 = { kind: 0, t: 0, hitId: -1, x: 0, y: 0, objX: 0, objY: 0, cueX: 0, cueY: 0, cueLen: 0 };
+  this.tmp = { x: 0, y: 0 };
+  this.time = 0;
+  this.themeImgs = {};
+  this.theme = null;
+  this.cueFX = new CueballFX();
+
+  this.applyTheme(true);
+  this.applyCueSkin();
+  this.resize();
+
+  // Preload logo (callback rebuild saat siap)
+  ensureClothLogo(() => {
+    if (this.vw) this._buildTable();
+  });
+}
+
 
   /** Margin (px) yang dicadangkan HUD per layout; disamakan dengan CSS. */
   static layoutFor(vw, vh) {

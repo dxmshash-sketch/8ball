@@ -27,13 +27,29 @@ class Store {
   _emit(what) { for (const fn of this.listeners) fn(what); }
   save() { try { window.localStorage.setItem(this.key, JSON.stringify(this.data)); } catch (e) { /* abaikan */ } }
   saveCustom() { try { window.localStorage.setItem(this.customKey, JSON.stringify(this.custom)); return true; } catch (e) { return false; } }
-
+  // Di store, tambahkan method:
+_syncCoinsToBackend() {
+  const b = window.ui && window.ui.backend;
+  if (!b || !b.currentUser() || !b.updateProfile) return;
+  b.updateProfile({ coins: this.data.profile.coins });
+}
   /* ------------ ekonomi & level ------------ */
   get coins() { return this.data.profile.coins; }
   level() { return levelInfo(this.data.profile.xp).level; }
   progress() { return levelInfo(this.data.profile.xp); }
-  addCoins(n) { this.data.profile.coins += n; this.save(); this._emit('coins'); }
-  spend(n) { if (n < 0 || this.data.profile.coins < n) return false; this.data.profile.coins -= n; this.save(); this._emit('coins'); return true; }
+  addCoins(n) {
+  this.data.profile.coins += n;
+  this.save();
+  this._syncCoinsToBackend();   // ← tambahkan
+  return true;
+}
+  spend(n) {
+    if (this.data.profile.coins < n) return false;
+    this.data.profile.coins -= n;
+    this.save();
+    this._syncCoinsToBackend();   // ← tambahkan
+    return true;
+  }
 
   /** Dipanggil setelah pertandingan (mode bertaruh). Taruhan sudah dipotong saat mulai. */
   recordMatch(r) {

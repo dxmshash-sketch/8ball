@@ -10,7 +10,8 @@
    Profil meja — sumber kebenaran geometri.
    CONFIG.table akan diisi otomatis dari TABLE_PROFILES.standard.table.
    --------------------------------------------------------------------- */
- const TABLE_PROFILES = {
+ 
+   const TABLE_PROFILES = {
   standard: {
     id: 'standard',
     name: '8 Ball Pool',
@@ -20,7 +21,7 @@
       // WORLD / PLAYFIELD
       // ============================================================
       width: 1600,
-      height: 728,
+      height: 800,
 
       // ============================================================
       // TABLE STRUCTURE
@@ -36,11 +37,11 @@
       // ============================================================
       // POCKET GEOMETRY
       // ============================================================
-      cornerMouth: 52,
-      cornerThroat: 60,
+      cornerMouth: 78,
+      cornerThroat: 52,
 
-      sideMouth: 50,
-      sideThroat: 56,
+      sideMouth: 62,
+      sideThroat: 42,
 
       // ============================================================
       // BREAK / RACK
@@ -54,7 +55,10 @@
       headSpotX: 400,
       footSpotY: 364,
 
-      // ============================================================
+     
+    },
+    metadata: {
+       // ============================================================
       // POCKET CENTERS
       // ============================================================
       pockets: {
@@ -78,19 +82,19 @@
 
         bottomLeft: {
           x: 0,
-          y: 728,
+          y: 800,
           type: 'corner',
         },
 
         bottomSide: {
           x: 800,
-          y: 728,
+          y: 800,
           type: 'side',
         },
 
         bottomRight: {
           x: 1600,
-          y: 728,
+          y: 800,
           type: 'corner',
         },
       },
@@ -137,132 +141,144 @@ const CONFIG = {
   /* table diisi dari TABLE_PROFILES.standard (single source of truth). */
   table: Object.assign({}, TABLE_PROFILES.standard.table),
   tableId: 'standard',
+ clothLogo: {
+    // CLOTH_LOGOS di-inject oleh build system (tools/build.py)
+    // Key = nama file tanpa .png, jadi 'logo-standar' untuk logo-standar.png
+    get src() {
+      return (typeof CLOTH_LOGOS !== 'undefined' && CLOTH_LOGOS['logo-standar']) || '';
+    },
+    enabled: true,
+    opacity: 0.10,
+    widthRatio: 0.42,
+    offsetY: 0,
+    rotation: 0,
+  },
 
-  // physics: {
-  //   // ============================================================
-  //   // CORE SIMULATION
-  //   // ============================================================
-  //   fixedStep: 1 / 300,
-  //   maxStepsPerFrame: 14,
-  //   maxTravelFraction: 0.4,
-  //   maxSubsteps: 8,
-
-  //   // ============================================================
-  //   // CLOTH / SLIDING
-  //   // Bola baru ditembak akan sedikit slip lalu masuk rolling.
-  //   // ============================================================
-  //   slidingAccel: 850,
-
-  //   // ============================================================
-  //   // ROLLING
-  //   // 28   = kehilangan kecepatan konstan
-  //   // 0.14 = drag berdasarkan kecepatan
-  //   // Kombinasi ini membuat bola terasa panjang tapi tetap berhenti natural.
-  //   // ============================================================
-  //   rollingDecel: 28,
-  //   rollingDrag: 0.14,
-  //   stopSpeed: 2.5,
-  //   slideEpsilon: 2.4,
-
-  //   // ============================================================
-  //   // SIDE SPIN
-  //   // ============================================================
-  //   sideSpinDecayConst: 20,
-  //   sideSpinDecayRate: 0.5,
-  //   sideSpinStopped: 6,
-  //   sideSpinStop: 0.4,
-
-  //   // ============================================================
-  //   // BALL COLLISION
-  //   // ============================================================
-  //   ballRestitution: 0.96,
-  //   ballFriction: 0.06,
-
-  //   // ============================================================
-  //   // CUSHION / RAIL
-  //   // ============================================================
-  //   cushionRestitution: 0.84,
-  //   cushionSpeedLoss: 0.000015,
-  //   cushionMinRestitution: 0.68,
-  //   cushionFriction: 0.17,
-  //   cushionSpinKeep: 0.58,
-
-  //   // ============================================================
-  //   // SHOT
-  //   // ============================================================
-  //   maxShotSpeed: 5800,
-  //   maxSpinOffset: 0.75,       // 0.5 = normal, 1.0 = ekstrem
-  //   shotTimeoutSeconds: 30,
-  // },
   physics: {
-  // Physics 240 Hz sudah sangat halus untuk billiard
-  fixedStep: 1 / 240,
+    // ============================================================
+    // CORE SIMULATION
+    // ============================================================
+    fixedStep: 1 / 300,
+    maxStepsPerFrame: 14,
+    maxTravelFraction: 0.4,
+    maxSubsteps: 8,
 
-  // Jangan terlalu banyak mengejar physics ketika frame drop
-  maxStepsPerFrame: 8,
+    // ============================================================
+    // CLOTH / SLIDING
+    // Bola baru ditembak akan sedikit slip lalu masuk rolling.
+    // ============================================================
+    slidingAccel: 850,
 
-  // Collision tunneling protection
-  maxTravelFraction: 0.35,
-  maxSubsteps: 6,
+    // ============================================================
+    // ROLLING
+    // 28   = kehilangan kecepatan konstan
+    // 0.14 = drag berdasarkan kecepatan
+    // Kombinasi ini membuat bola terasa panjang tapi tetap berhenti natural.
+    // ============================================================
+    rollingDecel: 28,
+    rollingDrag: 0.14,
+    stopSpeed: 2.5,
+    slideEpsilon: 2.4,
 
-  // --------------------------------
-  // BALL MOVEMENT
-  // --------------------------------
+    // ============================================================
+    // SIDE SPIN
+    // ============================================================
+    sideSpinDecayConst: 20,
+    sideSpinDecayRate: 0.5,
+    sideSpinStopped: 6,
+    sideSpinStop: 0.4,
 
-  slidingAccel: 900,
+    // ============================================================
+    // BALL COLLISION
+    // ============================================================
+    ballRestitution: 0.96,
+    ballFriction: 0.06,
 
-  rollingDecel: 24,
+    // ============================================================
+    // CUSHION / RAIL
+    // ============================================================
+    cushionRestitution: 0.84,
+    cushionSpeedLoss: 0.000015,
+    cushionMinRestitution: 0.68,
+    cushionFriction: 0.17,
+    cushionSpinKeep: 0.58,
 
-  rollingDrag: 0.10,
+    // ============================================================
+    // SHOT
+    // ============================================================
+    maxShotSpeed: 5800,
+    maxSpinOffset: 0.75,       // 0.5 = normal, 1.0 = ekstrem
+    shotTimeoutSeconds: 30,
+  },
+//   physics: {
+//   // Physics 240 Hz sudah sangat halus untuk billiard
+//   fixedStep: 1 / 240,
 
-  stopSpeed: 1.5,
+//   // Jangan terlalu banyak mengejar physics ketika frame drop
+//   maxStepsPerFrame: 8,
 
-  slideEpsilon: 1.8,
+//   // Collision tunneling protection
+//   maxTravelFraction: 0.35,
+//   maxSubsteps: 6,
 
-  // --------------------------------
-  // SPIN
-  // --------------------------------
+//   // --------------------------------
+//   // BALL MOVEMENT
+//   // --------------------------------
 
-  sideSpinDecayConst: 18,
+//   slidingAccel: 900,
 
-  sideSpinDecayRate: 0.45,
+//   rollingDecel: 24,
 
-  sideSpinStopped: 4,
+//   rollingDrag: 0.10,
 
-  sideSpinStop: 0.25,
+//   stopSpeed: 1.5,
 
-  // --------------------------------
-  // BALL COLLISION
-  // --------------------------------
+//   slideEpsilon: 1.8,
 
-  ballRestitution: 0.97,
+//   // --------------------------------
+//   // SPIN
+//   // --------------------------------
 
-  ballFriction: 0.045,
+//   sideSpinDecayConst: 18,
 
-  // --------------------------------
-  // CUSHION
-  // --------------------------------
+//   sideSpinDecayRate: 0.45,
 
-  cushionRestitution: 0.88,
+//   sideSpinStopped: 4,
 
-  cushionSpeedLoss: 0.00001,
+//   sideSpinStop: 0.25,
 
-  cushionMinRestitution: 0.72,
+//   // --------------------------------
+//   // BALL COLLISION
+//   // --------------------------------
 
-  cushionFriction: 0.12,
+//   ballRestitution: 0.97,
 
-  cushionSpinKeep: 0.62,
+//   ballFriction: 0.045,
 
-  // --------------------------------
-  // SHOT
-  // --------------------------------
+//   // --------------------------------
+//   // CUSHION
+//   // --------------------------------
 
-  maxShotSpeed: 5800,
+//   cushionRestitution: 0.88,
 
-  maxSpinOffset: 0.75,
+//   cushionSpeedLoss: 0.00001,
 
-  shotTimeoutSeconds: 30,
-},
+//   cushionMinRestitution: 0.72,
+
+//   cushionFriction: 0.12,
+
+//   cushionSpinKeep: 0.62,
+
+//   // --------------------------------
+//   // SHOT
+//   // --------------------------------
+
+//   maxShotSpeed: 5800,
+
+//   maxSpinOffset: 0.75,
+
+//   shotTimeoutSeconds: 30,
+// },
   rules: {
     turnSeconds: 35, breakSeconds: 45, foulBannerSeconds: 1.7,
     breakMinCushionBalls: 4,

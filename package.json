@@ -5,18 +5,11 @@
   "description": "Pantul — game billiard 8-ball (Canvas 2D, tanpa dependensi runtime)",
   "scripts": {
     "build": "python3 tools/build.py",
-    "test": "node tools/test.js",
-    "sync": "npx cap sync android",
-    "android": "npx cap open android",
-    "apk": "cd android && ./gradlew assembleDebug"
-  },
-  "dependencies": {
-    "@capacitor-firebase/authentication": "^6.3.1",
-    "firebase": "^10.14.1"
+    "test": "node tools/test.js"
   },
   "devDependencies": {
-    "@capacitor/android": "^6.2.2",
-    "@capacitor/cli": "^6.2.2",
-    "@capacitor/core": "^6.2.2"
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/cli": "^6.2.0",
+    "@capacitor/core": "^6.2.0"
   }
 }

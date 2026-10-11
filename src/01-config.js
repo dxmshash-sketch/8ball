@@ -32,16 +32,16 @@
       // ============================================================
       // BALL
       // ============================================================
-      ballRadius: 15.8,
+      ballRadius: 17.4,
 
       // ============================================================
       // POCKET GEOMETRY
       // ============================================================
-      cornerMouth: 78,
-      cornerThroat: 52,
+      cornerMouth: 72,
+      cornerThroat: 62,
 
       sideMouth: 62,
-      sideThroat: 42,
+      sideThroat: 52,
 
       // ============================================================
       // BREAK / RACK
@@ -52,7 +52,7 @@
       // ============================================================
       // REFERENCE MARKERS
       // ============================================================
-      headSpotX: 400,
+      headSpotX: 500,
       footSpotY: 364,
 
      
@@ -129,7 +129,7 @@
       width: 880, height: 440,
       rail: 41,
       cushion: 13,
-      ballRadius: 11.5,
+      ballRadius: 13.5,
       cornerMouth: 48, cornerThroat: 38,
       sideMouth: 44,  sideThroat: 32,
       headStringX: 220, footSpotX: 660,
@@ -285,29 +285,17 @@ const CONFIG = {
     matchmakingSeconds: { bot: 0.9, local: 0.4, online: 2.4 },
   },
 
-  aim: {
-    pullMax: 90,
-    cueLengthRatio: 0.75,
-    cueGap: 5,
-    cueAnimSeconds: 0.08,
-    fineRate: 0.32,
-    keyStep: 0.02,
-    keyStepFine: 0.004,
-  },
-
+ aim: { guide: 1, pullMax: 90, cueLengthRatio: 0.75, cueGap: 5, cueAnimSeconds: 0.08, fineRate: 0.32, keyStep: 0.02, keyStepFine: 0.004 },
   bots: {
-    easy:   { name: 'Dewi', level: 2, aimSigma: 0.030, powerSigma: 0.14, think: [1.1, 2.0], pickTop: 3, breakPower: 0.82, reward: 60 },
-    medium: { name: 'Rio',  level: 5, aimSigma: 0.012, powerSigma: 0.07, think: [1.3, 2.4], pickTop: 2, breakPower: 0.95, reward: 100 },
-    hard:   { name: 'Bima', level: 9, aimSigma: 0.004, powerSigma: 0.03, think: [1.5, 2.6], pickTop: 1, breakPower: 1.0,  reward: 160 },
+    easy:   { name: 'Dewi',  level: 2, aimSigma: 0.030, powerSigma: 0.14, think: [1.1, 2.0], pickTop: 3, breakPower: 0.82, reward: 60 },
+    medium: { name: 'Rio',   level: 5, aimSigma: 0.012, powerSigma: 0.07, think: [1.3, 2.4], pickTop: 2, breakPower: 0.95, reward: 100 },
+    hard:   { name: 'Bima',  level: 9, aimSigma: 0.004, powerSigma: 0.03, think: [1.5, 2.6], pickTop: 1, breakPower: 1.0,  reward: 160 },
   },
-
   onlineOpponents: ['Ayu_88', 'Kevin.R', 'Nadya', 'Fajar_pool', 'Tasya'],
-
   colors: {
     balls: [null, '#f2c21c', '#1f56c4', '#d92d2d', '#6a2fa0', '#ee7a1c', '#1f8f4e', '#7a1f2a', '#15131a'],
   },
 };
-
 /* ---------------------------------------------------------------------
    applyTableProfile(id)
    Mengganti CONFIG.table/physics/aim di tempat. Fisika linier (kecepatan,
@@ -381,6 +369,10 @@ class Rng {
   }
 }
 
+/* ---------------------------------------------------------------------
+   CATATAN: THEME dideklarasikan di `13-ui.js` (BLACK CHROME — design tokens).
+   Jangan deklarasikan `const THEME` di sini — akan bentrok (redeclare const).
+   --------------------------------------------------------------------- */
 /* ---------------------------------------------------------------------
    CATATAN: THEME dideklarasikan di `13-ui.js` (BLACK CHROME — design tokens).
    Jangan deklarasikan `const THEME` di sini — akan bentrok (redeclare const).

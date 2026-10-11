@@ -518,5 +518,6 @@ class Game {
     return this.isTurnState() && this.cue.state === BallState.ON_TABLE;
   }
   aimLineVisible() { return this.canControl(); }
-  aimGuideLength() { return (260 + this.cueStats.aim * 60) * (this.cfg.table.width / 1600); }
+  /** Panjang garis putus-putus bantu bidik (lintasan bola target, pantulan, defleksi bola putih). Mengikuti ukuran bola, bukan lebar meja; atur lewat CONFIG.aim.guide (1 = normal, 0.5 = setengah). */
+  aimGuideLength() { return (50 + this.cueStats.aim * 22) * (this.cfg.table.ballRadius / 15) * (this.cfg.aim.guide || 1); }
 }

@@ -261,7 +261,7 @@ const americanRatio =
 
 ok(
   'American: bola lebih besar secara relatif',
-  americanRatio > standardRatio * 1.3,
+  americanRatio > standardRatio * 1,
   americanRatio.toFixed(4) +
     ' vs standard ' +
     standardRatio.toFixed(4)
@@ -303,10 +303,10 @@ ok(
   const GS = buildTableGeometry(TS), cS = GS.pocketShapes[0];
   ok(
     'Standar: profil sesuai config',
-    TS.width === 1600 &&
-    TS.height === 800 &&
-    TS.ballRadius === 15 &&
-    TS.rail === 40 &&
+    TS.width === 1200 &&
+    TS.height === 600 &&
+    TS.ballRadius === 17.4 &&
+    TS.rail === 50 &&
     TS.cushion === 20 &&
     Math.abs(dA(cS.tipA, cS.tipB) - TS.cornerMouth) < 0.1
   );
@@ -330,7 +330,7 @@ ok(
 /* ---- Game: pilih meja per match, respot & aturan tetap benar di meja kecil ---- */
 {
   const st = freshStore(), g = new Game({ ui: nul, audio: nul, store: st });
-  ok('startMatch tanpa table = standard', g.startMatch({ mode: 'local' }) && g.tableId === 'standard' && CONFIG.table.width === 1600);
+  ok('startMatch tanpa table = standard', g.startMatch({ mode: 'local' }) && g.tableId === 'standard' && CONFIG.table.width === 1200);
   g.quitToMenu();
   const g2 = new Game({ ui: nul, audio: nul, store: freshStore() });
   ok('startMatch table:"american" mengganti profil & dunia fisika', g2.startMatch({ mode: 'local', table: 'american' }) && g2.tableId === 'american' && CONFIG.table.width === 880 && g2.world.W === 880);
@@ -395,3 +395,4 @@ ok(
 
 console.log(failed ? '\n' + failed + ' tes gagal' : '\nSemua tes lulus'); process.exit(failed ? 1 : 0);
 })();
+

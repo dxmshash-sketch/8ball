@@ -47,6 +47,22 @@
   }
 
   Object.assign(UI.prototype, {
+
+     attachBackend(backend) {
+    this.backend = backend;
+    backend.onAuthChanged((user) => { this.account = user; this.refreshMenu(); if (this.current === 'screenAuth' && user) this.back(); });
+    if (backend.onDirectoryChanged) backend.onDirectoryChanged(() => { if (this.current === 'screenFriend') this.render_friend(); });
+  },
+  /** Buat (sekali) & kembalikan div konten untuk screen yang dibangun murni lewat JS (bukan lewat body.html statis). */
+  _mount(pageId, screenId) {
+    let el = $(pageId);
+    if (!el) { el = document.createElement('div'); el.id = pageId; el.className = 'pg'; $(screenId).appendChild(el); }
+    return el;
+  },
+  accountAvatarHTML(u, size) {
+    if (u && u.avatarImage) return '<div class="avx" style="--s:' + (size || 44) + 'px;overflow:hidden"><img src="' + u.avatarImage + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div>';
+    return avatarHTML(this.store.data.profile.avatar, size, this.store.data.profile.badge);
+  },
     /* ============================== MARKET ============================== */
     async render_market() {
       const el = ensurePage('screenMarket', 'pageMarket'), be = this.backend, st = this.store, mk = this.mk = this.mk || { tab: 'all' };
@@ -94,6 +110,50 @@
       });
     },
 
+     /* ------------------------------ Auth ------------------------------ */
+  render_auth() {
+    const el = this._mount('pageAuth', 'screenAuth');
+    const tab = this.authTab || 'signin';
+    const isMock = this.backend.name === 'mock';
+    el.innerHTML = this._head('Masuk / Daftar') + '<div class="pg-body"><div class="narrow" style="max-width:420px;margin:0 auto">' +
+      (isMock ? '<p class="note" style="background:rgba(244,197,66,.1);border:1px solid rgba(244,197,66,.35);padding:10px 12px;border-radius:10px">Mode <b>simulasi lokal</b>: akun hanya tersimpan di browser ini. Untuk akun sungguhan lintas perangkat (termasuk Sign in with Google asli), sambungkan Firebase — lihat <code>FIREBASE_SETUP.md</code>.</p>' : '') +
+      '<div class="seg" style="margin:10px 0"><button data-act="atab" data-v="signin" aria-pressed="' + (tab === 'signin') + '">Masuk</button><button data-act="atab" data-v="signup" aria-pressed="' + (tab === 'signup') + '">Daftar</button></div>' +
+      '<button class="btn" style="width:100%;margin-bottom:10px" data-act="google">' + (isMock ? 'Simulasikan Sign in with Google' : 'Lanjutkan dengan Google') + '</button>' +
+      (isMock ? '<input class="text-input" id="authGoogleName" placeholder="Nama tampilan (untuk simulasi)" style="width:100%;height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:var(--panel-2);padding:0 12px;margin-bottom:14px">' : '') +
+      '<div class="row" style="align-items:center;margin:6px 0 14px"><hr style="flex:1;border-color:rgba(255,255,255,.1)"><span class="muted">atau email</span><hr style="flex:1;border-color:rgba(255,255,255,.1)"></div>' +
+      (tab === 'signup' ? '<label class="note">Nama<input class="text-input" id="authName" maxlength="20" style="width:100%;height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:var(--panel-2);padding:0 12px;margin:4px 0 10px"></label>' : '') +
+      '<label class="note">Email<input class="text-input" id="authEmail" type="email" style="width:100%;height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:var(--panel-2);padding:0 12px;margin:4px 0 10px"></label>' +
+      '<label class="note">Password<input class="text-input" id="authPass" type="password" style="width:100%;height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:var(--panel-2);padding:0 12px;margin:4px 0 14px"></label>' +
+      '<button class="btn primary big" data-act="submit">' + (tab === 'signup' ? 'Buat akun' : 'Masuk') + '</button>' +
+      '<p class="note" id="authErr" style="color:var(--bad)"></p></div></div>';
+    const err = (m) => { $('authErr').textContent = m || ''; };
+    this._bind(el, {
+      atab: (d) => { this.authTab = d.v; this.render_auth(); },
+      google: async () => {
+        this.click();
+        if (isMock) { const r = await this.backend.signInGoogleMock($('authGoogleName').value); if (!r.ok) err(r.error); else { if (r.isFirstAdmin) this.toast('Akun ini otomatis jadi ADMIN (akun pertama di browser ini)', 'ok'); } }
+        else { const r = await this.backend.signInGoogle(); if (!r.ok) err(r.error); }
+      },
+      submit: async () => {
+        this.click(); err('');
+        const email = $('authEmail').value, pass = $('authPass').value;
+        const r = tab === 'signup' ? await this.backend.signUpPassword(email, pass, $('authName').value) : await this.backend.signInPassword(email, pass);
+        if (!r.ok) err(r.error); else if (r.isFirstAdmin) this.toast('Akun ini otomatis jadi ADMIN (akun pertama di browser ini)', 'ok');
+      },
+    });
+  },
+  requireAuth(thenGo) {
+    if (this.backend.currentUser()) { this.go(thenGo); return; }
+    this.authReturn = thenGo; this.go('auth');
+  },
+  back() {
+    if (this.current === 'screenAuth' && this.authReturn) { const t = this.authReturn; this.authReturn = null; if (this._gateBlocked(t)) return; this._renderPage(t); this.show(PAGE_SCREENS[t], true); return; }
+    const id = this.stack.pop() || 'screenMenu';
+    const name = Object.keys(PAGE_SCREENS).find((k) => PAGE_SCREENS[k] === id);
+    if (name && this._gateBlocked(name)) return;
+    if (name) this._renderPage(name);
+    this.show(id, true);
+  },
     /* ============================== MAIN DENGAN TEMAN ============================== */
     render_friend() {
       const el = ensurePage('screenFriend', 'pageFriend'), be = this.backend, fr = this.fr = this.fr || { step: 'home', game: '8ball', table: 'american', bet: 0, code: '', role: '', peer: null };

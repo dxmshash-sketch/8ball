@@ -881,7 +881,7 @@ _drawSinking(c, b, i, sp, half) {
       }
     }
   }
-  _drawAim(c) {
+_drawAim(c) {
     const g = this.game, world = g.world, cue = world.balls[0], R = CONFIG.table.ballRadius, px = 1 / this.k;
     const dx = Math.cos(g.aim.angle), dy = Math.sin(g.aim.angle), pr = this.pred; AimPredictor.cast(world, cue.x, cue.y, dx, dy, 0, pr);
     const len = g.aimGuideLength(), assist = this.store.data.settings.aimAssist, bounce = this.store.data.settings.showBounce;
@@ -893,14 +893,15 @@ _drawSinking(c, b, i, sp, half) {
       if (assist) {
         const t = world.balls[pr.hitId]; c.strokeStyle = 'rgba(255,255,255,0.7)'; c.lineWidth = 1.3 * px; c.setLineDash([6 * px, 5 * px]);
         c.beginPath(); c.moveTo(t.x, t.y); c.lineTo(t.x + pr.objX * len, t.y + pr.objY * len); c.stroke();
-        if (pr.cueLen > 0.05) { c.strokeStyle = 'rgba(255,255,255,0.45)'; c.beginPath(); c.moveTo(pr.x, pr.y); c.lineTo(pr.x + pr.cueX * len * 0.45 * pr.cueLen, pr.y + pr.cueY * len * 0.45 * pr.cueLen); c.stroke(); }
+        if (pr.cueLen > 0.05) { c.strokeStyle = 'rgba(255,255,255,0.45)'; c.beginPath(); c.moveTo(pr.x, pr.y); c.lineTo(pr.x + pr.cueX * len * 0.4 * pr.cueLen, pr.y + pr.cueY * len * 0.4 * pr.cueLen); c.stroke(); }
         c.setLineDash([]);
       }
     } else if (assist && bounce) {
-      const p2 = this.pred2; AimPredictor.cast(world, pr.x, pr.y, pr.objX, pr.objY, 0, p2); const l2 = Math.min(len * 1.1, p2.t);
+      const p2 = this.pred2; AimPredictor.cast(world, pr.x, pr.y, pr.objX, pr.objY, 0, p2); const l2 = Math.min(len, p2.t);
       c.strokeStyle = 'rgba(255,255,255,0.5)'; c.lineWidth = 1.3 * px; c.setLineDash([6 * px, 5 * px]); c.beginPath(); c.moveTo(pr.x, pr.y); c.lineTo(pr.x + pr.objX * l2, pr.y + pr.objY * l2); c.stroke(); c.setLineDash([]);
       c.strokeStyle = 'rgba(255,255,255,0.7)'; c.beginPath(); c.arc(pr.x, pr.y, 3.2, 0, 7); c.stroke();
     }
   }
 }
+
  

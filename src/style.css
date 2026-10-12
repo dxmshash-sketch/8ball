@@ -92,53 +92,66 @@ input,select,textarea{font:inherit;color:#fff;-webkit-user-select:text;user-sele
 .vs .side{display:flex;flex-direction:column;align-items:center;gap:8px}
 
 
+
 /* =========================================
-   FIX MARKET SCROLL — CUEBALL
+   CUEBALL — MARKET SCROLL FIX
+   Berlaku hanya untuk halaman Market
    ========================================= */
 
-/* Pastikan screen aktif punya tinggi viewport */
 #screenMarket {
+  min-height: 0;
+  min-width: 0;
+}
+
+#screenMarket #pageMarket {
+  display: flex;
+  flex-direction: column;
+
+  width: 100%;
   height: 100%;
   min-height: 0;
   min-width: 0;
+
+  overflow: hidden;
 }
 
-/* Container halaman */
-#pageMarket {
-  width: 100%;
-  min-width: 0;
-  min-height: 0;
+#screenMarket #pageMarket > .pg-head {
+  flex: 0 0 auto;
 }
 
-/* .pg-body menjadi satu-satunya scroll container */
-#pageMarket .pg-body {
-  flex: 1 1 0%;
+#screenMarket #pageMarket > .pg-body {
+  flex: 1 1 0;
+  height: auto;
   min-height: 0;
-  height: 0;
+  max-height: none;
+
   overflow-x: hidden;
   overflow-y: auto;
-  overscroll-behavior-y: contain;
+
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
   touch-action: pan-y;
+
   padding-bottom: calc(32px + env(safe-area-inset-bottom));
 }
 
-/* Grid market harus mengikuti tinggi konten */
-#pageMarket .mk-grid {
-  min-height: max-content;
+#screenMarket .mk-grid {
   align-content: start;
+  min-width: 0;
 }
 
-/* Jangan biarkan animasi kartu mengunci interaksi */
-#pageMarket .mk-card {
-  min-height: 0;
+#screenMarket .mk-card {
+  min-width: 0;
 }
 
-/* Android / mobile */
 @media (max-width: 768px) {
-  #pageMarket .pg-body {
+  #screenMarket #pageMarket > .pg-body {
     padding-left: 12px;
     padding-right: 12px;
+  }
+
+  #screenMarket .mk-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

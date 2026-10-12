@@ -441,7 +441,7 @@ class UI {
     this.spinCtx = $('spinCv').getContext('2d'); this.lastSpin = '';
   }
 
-  attach(game, renderer, board) {
+    attach(game, renderer, board) {
     this.game = game; this.renderer = renderer; this.board = board;
     document.querySelectorAll('[data-ico]').forEach((el) => { el.innerHTML = ICONS[el.dataset.ico] || ''; });
     document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => { this.click(); this.go(b.dataset.go); }));
@@ -462,7 +462,8 @@ class UI {
     let armed = 0; $('btnReset').addEventListener('click', () => { if (Date.now() - armed > 4000) { armed = Date.now(); this.toast('Ketuk sekali lagi untuk menghapus SEMUA data', 'foul'); return; } this.store.resetAll(); location.reload(); });
     this.store.onChange((what) => { if (what === 'table') this.renderer.applyTheme(); if (what === 'cueball') this.renderer.applyCueSkin(); if (what === 'coins' || what === 'avatar') this.refreshMenu(); });
     this._bindPower(); this._bindSpin(); this._bindFine(); this.syncSettings(); this.refreshMenu();
-     
+  }
+
     attachBackend(backend) {
   this.backend = backend;
   if (typeof backend.onAuthChanged === 'function') {
@@ -520,7 +521,9 @@ class UI {
       if (inMatch && !this.syslog._timer) this.syslog.start(6200);
       if (!inMatch && this.syslog._timer) this.syslog.stop();
     }, 2500);
-  }
+    
+}
+
   click() { this.audio.unlock(); this.audio.play('ui', 0.5); }
 
   /* ------------------------------ navigasi ------------------------------ */

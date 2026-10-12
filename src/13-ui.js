@@ -1,6 +1,155 @@
 /* =====================================================================
    13 · UI CORE — navigasi, HUD, efek, input. Halaman ada di 14-pages.js & 15-dev.js
    ===================================================================== */
+
+
+/* =====================================================================
+   SYSTEM UI — terminal loader, notification stack, glitch text, log
+   ===================================================================== */
+
+/** Terminal boot loader — cinematic, no generic spinners. */
+class TerminalLoader {
+  constructor(root) {
+    this.el = document.createElement('div');
+    this.el.id = 'sysBoot';
+    this.el.innerHTML = `
+      <div class="boot">
+        <div class="boot-head"><b>BLACK CHROME · v3</b><span id="sysClock">--:--:--</span></div>
+        <div id="sysSteps"></div>
+        <div class="boot-foot"><span>READY <b id="sysReady">0%</b></span><span class="cursor"></span></div>
+      </div>`;
+    (root || document.body).appendChild(this.el);
+    this.stepsEl = this.el.querySelector('#sysSteps');
+    this.readyEl = this.el.querySelector('#sysReady');
+    this.clockEl = this.el.querySelector('#sysClock');
+    this._clockTimer = setInterval(() => {
+      const d = new Date();
+      this.clockEl.textContent = String(d.getHours()).padStart(2,'0') + ':' +
+        String(d.getMinutes()).padStart(2,'0') + ':' + String(d.getSeconds()).padStart(2,'0');
+    }, 1000);
+  }
+  _bar(pct, width = 10) {
+    const filled = Math.round(pct * width);
+    return '[' + '█'.repeat(filled) + '░'.repeat(width - filled) + ']';
+  }
+  async run(steps) {
+    const reduced = matchMedia('(prefers-reduced-motion:reduce)').matches;
+    for (let i = 0; i < steps.length; i++) {
+      const s = steps[i];
+      const line = document.createElement('div');
+      line.className = 'boot-line';
+      line.innerHTML = `<span class="label">${s.label}</span><span class="val"><span class="bar">${this._bar(0)}</span> <span class="pct">0%</span></span>`;
+      this.stepsEl.appendChild(line);
+      // force reflow supaya transisi opacity jalan
+      void line.offsetWidth;
+      line.classList.add('on');
+      const bar = line.querySelector('.bar');
+      const pctEl = line.querySelector('.pct');
+      const total = reduced ? 60 : (s.ms || 420);
+      const t0 = performance.now();
+      await new Promise((res) => {
+        const tick = (now) => {
+          const k = Math.min(1, (now - t0) / total);
+          const eased = 1 - Math.pow(1 - k, 3);
+          bar.textContent = this._bar(eased);
+          pctEl.textContent = Math.round(eased * 100) + '%';
+          this.readyEl.textContent = Math.round(((i + eased) / steps.length) * 100) + '%';
+          if (k < 1) requestAnimationFrame(tick); else res();
+        };
+        requestAnimationFrame(tick);
+      });
+      // Baris terakhir kadang ganti jadi "ACCESS GRANTED" jika s.granted
+      if (s.granted) {
+        bar.innerHTML = '<span class="f">██████████</span>';
+        pctEl.textContent = s.grantedText || 'OK';
+      }
+    }
+  }
+  close() {
+    clearInterval(this._clockTimer);
+    this.el.classList.add('done');
+    setTimeout(() => this.el.remove(), 600);
+  }
+}
+
+/** Stacked notifications (top-right). max 4, auto-dismiss. */
+class NotificationCenter {
+  constructor(root) {
+    this.el = document.createElement('div');
+    this.el.id = 'sysNotes';
+    (root || document.body).appendChild(this.el);
+    this.queue = [];
+  }
+  push({ title = 'SYSTEM', body = '', kind = '', ttl = 4200 } = {}) {
+    if (!body) return;
+    const note = document.createElement('div');
+    note.className = 'sys-note ' + kind;
+    const stamp = new Date().toTimeString().slice(0,8);
+    note.innerHTML = `<div class="n-head"><b>${title}</b><span>${stamp}</span></div><div class="n-body">${body}</div>`;
+    this.el.appendChild(note);
+    this.queue.push(note);
+    while (this.queue.length > 4) this._remove(this.queue[0]);
+    const t = setTimeout(() => this._remove(note), ttl);
+    note.addEventListener('click', () => { clearTimeout(t); this._remove(note); });
+  }
+  _remove(note) {
+    const i = this.queue.indexOf(note);
+    if (i >= 0) this.queue.splice(i, 1);
+    if (!note.parentNode) return;
+    note.classList.add('out');
+    setTimeout(() => note.remove(), 320);
+  }
+}
+
+/** Sparse glitch — call sparingly. */
+function glitchText(text, intensity = 1, opts = {}) {
+  const cls = 'glitch' + (intensity >= 2 ? ' glitch-hot' : '');
+  const tag = opts.tag || 'span';
+  return `<${tag} class="${cls}" data-text="${esc(text)}">${esc(text)}</${tag}>`;
+}
+
+/** Random system log — displays ambient log lines during matches. */
+class SystemLog {
+  constructor(root) {
+    this.el = document.createElement('div');
+    this.el.id = 'sysLog';
+    (root || document.body).appendChild(this.el);
+    this.lines = [];
+    this._timer = 0;
+    this._phrases = [
+      ['NET','ping [server:eu-west-1] <b>14ms</b>','ok'],
+      ['AI','neural target lock <b>acquired</b>',''],
+      ['PKT','stream integrity <b>100%</b>','ok'],
+      ['SIG','spectrum clean',''],
+      ['SHOT','ballistic model <b>v3.4</b>',''],
+      ['DATA','sync window <b>+12ms</b>',''],
+      ['SYS','thermal nominal <b>42°C</b>',''],
+      ['KRN','render pipeline <b>ready</b>',''],
+      ['NET','jitter <b>3ms</b>','ok'],
+      ['ERR','packet 0x2A dropped','err'],
+    ];
+  }
+  start(interval = 5200) {
+    if (this._timer) return;
+    const fire = () => {
+      const [tag, msg, kind] = this._phrases[Math.floor(Math.random()*this._phrases.length)];
+      const line = document.createElement('div');
+      line.className = 'line ' + kind;
+      const t = new Date().toTimeString().slice(0,8);
+      line.innerHTML = `<b>[${t}] ${tag}</b> · ${msg}`;
+      this.el.appendChild(line);
+      this.lines.push(line);
+      if (this.lines.length > 4) this.lines.shift().remove();
+    };
+    fire();
+    this._timer = setInterval(fire, interval);
+  }
+  stop() {
+    clearInterval(this._timer); this._timer = 0;
+    this.lines.forEach(l => l.remove()); this.lines = [];
+  }
+}
+
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const COIN_SVG = '<svg class="coin" viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="#F4C542"/><circle cx="11" cy="11" r="6.5" fill="none" stroke="#b8850c" stroke-width="1.6"/></svg>';
@@ -313,6 +462,64 @@ class UI {
     let armed = 0; $('btnReset').addEventListener('click', () => { if (Date.now() - armed > 4000) { armed = Date.now(); this.toast('Ketuk sekali lagi untuk menghapus SEMUA data', 'foul'); return; } this.store.resetAll(); location.reload(); });
     this.store.onChange((what) => { if (what === 'table') this.renderer.applyTheme(); if (what === 'cueball') this.renderer.applyCueSkin(); if (what === 'coins' || what === 'avatar') this.refreshMenu(); });
     this._bindPower(); this._bindSpin(); this._bindFine(); this.syncSettings(); this.refreshMenu();
+     
+    attachBackend(backend) {
+  this.backend = backend;
+  if (typeof backend.onAuthChanged === 'function') {
+    backend.onAuthChanged(() => this.refreshMenu());
+  }
+  if (typeof backend.onDirectoryChanged === 'function') {
+    backend.onDirectoryChanged(() => { /* refresh halaman yang menampilkan direktori, mis. render_friend */ });
+  }
+      // ── System UI bootstrap ──
+    this.notes = new NotificationCenter();
+    this.syslog = new SystemLog();
+    // Glitch pada logo menu (jarang)
+    const logo = document.querySelector('#screenMenu .logo');
+    if (logo && !matchMedia('(prefers-reduced-motion:reduce)').matches) {
+      const apply = () => {
+        if (logo.dataset.glitching) return;
+        logo.dataset.glitching = '1';
+        const raw = logo.textContent;
+        logo.innerHTML = glitchText(raw, 2, { tag: 'span' });
+        setTimeout(() => { logo.dataset.glitching = ''; logo.textContent = raw; }, 700);
+      };
+      // Pertama kali setelah 3 detik, lalu tiap 18–34 detik
+      setTimeout(apply, 3000);
+      const reFire = () => setTimeout(() => { apply(); reFire(); }, 18000 + Math.random()*16000);
+      reFire();
+    }
+    // Boot loader sekali per sesi (sessionStorage)
+    if (!sessionStorage.getItem('sysBooted')) {
+      const loader = new TerminalLoader();
+      const steps = [
+        { label: 'INITIALIZING CORE', ms: 380 },
+        { label: 'CHECKING SERVER', ms: 520 },
+        { label: 'DECRYPTING MODULES', ms: 480 },
+        { label: 'VERIFYING SIGNATURE', ms: 420 },
+        { label: 'ACCESS GRANTED', ms: 220, granted: true, grantedText: 'OK' },
+      ];
+      loader.run(steps).then(() => {
+        loader.close();
+        sessionStorage.setItem('sysBooted', '1');
+        this.notes.push({ title: 'READY', body: 'Black Chrome initialized.', kind: 'ok', ttl: 3400 });
+      });
+    }
+    // Hook toast() → notification stack
+    const _origToast = this.toast.bind(this);
+    this.toast = (msg, kind) => {
+      _origToast(msg, kind);              // tetap update #toast lama
+      const nk = kind === 'foul' ? 'err' : kind === 'ok' ? 'ok' : '';
+      const nt = kind === 'foul' ? 'ALERT' : kind === 'ok' ? 'CONFIRMED' : 'SYSTEM';
+      this.notes.push({ title: nt, body: esc(msg), kind: nk });
+    };
+    // System log aktif saat match
+    this._lastState = this.current;
+    setInterval(() => {
+      const inMatch = this.game && this.game.isActiveMatch && this.game.isActiveMatch();
+      if (inMatch && !this.syslog._timer) this.syslog.start(6200);
+      if (!inMatch && this.syslog._timer) this.syslog.stop();
+    }, 2500);
   }
   click() { this.audio.unlock(); this.audio.play('ui', 0.5); }
 
@@ -363,7 +570,17 @@ class UI {
 
   /* ------------------------------ callback dari Game ------------------------------ */
   stateChanged(game, next) {
+        if (next === GameState.GAME_OVER && this.notes) {
+      const w = game.result && game.result.youWon;
+      this.notes.push({
+        title: w ? 'VICTORY' : 'DEFEAT',
+        body: game.result ? esc(game.result.reason) : 'Match ended.',
+        kind: w ? 'ok' : 'err',
+        ttl: 5200,
+      });
+    }
     const S = GameState;
+    const inMatch = next !== S.MENU && next !== S.MATCHMAKING;
     $('hud').hidden = next === S.MENU || next === S.MATCHMAKING;
     if (next === S.MENU) { this.stack = []; this.refreshMenu(); this.show('screenMenu', true); return; }
     if (next === S.MATCHMAKING) { this.show('screenMM'); return; }
@@ -384,13 +601,13 @@ class UI {
   }
   _seatAvatar(game, i, size) {
     const p = this.store.data.profile;
-    if (i === 0 && game.mode !== 'local') return avatarHTML(p.avatar, size, p.badge);
+    if (game.mode !== 'local' && game.seats[i].control === 'local') return avatarHTML(p.avatar, size, p.badge);
     return avatarHTML(botAvatar(game.seats[i].name), size, null);
   }
   refreshPlayers(game) {
     const seats = game.seats, r = game.rules;
     for (let i = 0; i < 2; i++) {
-      $('pn' + i).textContent = seats[i].name; $('lv' + i).textContent = i === 0 && game.mode !== 'local' ? this.store.level() : seats[i].level;
+      $('pn' + i).textContent = seats[i].name; $('lv' + i).textContent = game.mode !== 'local' && seats[i].control === 'local' ? this.store.level() : seats[i].level;
       $('av' + i).innerHTML = this._seatAvatar(game, i, 0);
       const g = game.gameType === '8ball' ? r.groups[i] : null; let html = '', n = 0;
       $('tr' + i).style.display = game.gameType === '8ball' ? '' : 'none';
@@ -429,12 +646,85 @@ class UI {
     this.toastTimer = setTimeout(() => { t.className = ''; }, 2600);
   }
   pausedChanged(game, p) {
-    if (p) {
-      $('btnDisc').hidden = game.mode !== 'online';
-      $('pauseNote').textContent = game.bet ? 'Keluar atau mulai ulang sekarang dihitung kalah — taruhan ' + fmtCoins(game.bet) + ' hangus.' : '';
-      this.stack.push(this.current || ''); this.show('screenPause');
-    } else if (this.current === 'screenPause' || this.current === 'screenSettings') { this.stack = []; this.hideAll(); }
+  if (p) {
+    const consent = typeof game.needsConsent === 'function' ? game.needsConsent() : false;
+    const isOnline = game.mode === 'online';
+    $('btnDisc').hidden = !isOnline || game.isRoomMatch === true;
+    $('btnRestart').hidden = consent;
+    $('pauseNote').textContent =
+      (game.bet ? 'Keluar sekarang dihitung kalah — taruhan ' + fmtCoins(game.bet) + ' hangus. ' : '') +
+      (consent ? 'Jeda disetujui kedua pemain · otomatis lanjut dalam 60 detik · sisa jatah jeda kamu: ' + (game.pauseLeft != null ? game.pauseLeft : '–') + '.' : '');
+    this.stack.push(this.current || '');
+    this.show('screenPause');
+  } else if (this.current === 'screenPause' || this.current === 'screenSettings') {
+    this.stack = [];
+    this.hideAll();
   }
+}
+  /** Menunggu lawan menyetujui permintaan jeda. */
+  pausePending(game, on) {
+    this._ensureHudExtras(); const el = $('pauseWait'); el.hidden = !on;
+    if (on) el.innerHTML = '<span class="pw-dot"></span>Menunggu persetujuan lawan untuk jeda…';
+  }
+  /** Lawan meminta jeda: tampilkan dialog setuju/tolak (otomatis ditolak setelah 10 dtk). */
+  pausePrompt(game, on) {
+    this._ensureHudExtras(); const el = $('pausePrompt'); el.hidden = !on; if (!on) return;
+    const who = game.seats.find((x) => x.control !== 'local');
+    el.innerHTML = '<div class="pp-box"><b>' + esc(who ? who.name : 'Lawan') + ' meminta jeda</b><span>Pertandingan berhenti untuk kedua pemain. Jatah jeda tiap pemain 2×.</span><div class="pp-bar"><i></i></div><div class="pp-btns"><button class="btn small" data-a="no">Tolak</button><button class="btn small green" data-a="yes">Setuju</button></div></div>';
+    el.querySelector('[data-a=no]').onclick = () => { this.click(); game.answerPause(false); };
+    el.querySelector('[data-a=yes]').onclick = () => { this.click(); game.answerPause(true); };
+  }
+  /** Elemen & gaya tambahan HUD (dibuat sekali): skor per pemain, skor sesi, dialog jeda. Hapus <style id="hudStyle"> bila ingin kembali ke gaya lama. */
+  _ensureHudExtras() {
+    if (this._hudExtras) return; this._hudExtras = true;
+    const st = document.createElement('style'); st.id = 'hudStyle';
+    st.textContent = `
+#p0,#p1{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);background:linear-gradient(180deg,rgba(30,40,66,.86),rgba(13,19,35,.86))!important;border:1px solid rgba(255,255,255,.13)!important;border-radius:18px!important;box-shadow:0 8px 22px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.08)!important;transition:box-shadow .25s,border-color .25s,transform .25s}
+#p0.active,#p1.active{border-color:rgba(255,205,80,.9)!important;box-shadow:0 0 0 1px rgba(255,205,80,.55),0 0 26px rgba(255,190,50,.38),0 8px 22px rgba(0,0,0,.4)!important;transform:translateY(-1px)}
+#p0 .ring-fg,#p1 .ring-fg{stroke-linecap:round;filter:drop-shadow(0 0 4px rgba(255,205,80,.7))}
+#pn0,#pn1{font-weight:800;letter-spacing:.2px;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+#turnChip{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:999px;box-shadow:0 6px 18px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.12);letter-spacing:.3px}
+#turnChip.mine{box-shadow:0 0 0 1px rgba(80,220,140,.6),0 0 20px rgba(60,210,130,.35)}
+#turnChip.foul{box-shadow:0 0 0 1px rgba(255,90,95,.7),0 0 20px rgba(255,80,90,.4)}
+.hud-sc{position:absolute;left:50%;bottom:-11px;transform:translateX(-50%);display:flex;gap:6px;align-items:center;white-space:nowrap;padding:3px 9px;border-radius:999px;background:rgba(8,12,24,.92);border:1px solid rgba(255,255,255,.16);font:800 11px/1 system-ui,sans-serif;color:#dbe6ff;box-shadow:0 3px 8px rgba(0,0,0,.4);pointer-events:none}
+.hud-sc b{color:#ffd45a}.hud-sc i{font-style:normal;opacity:.55}
+#hudSeries{position:absolute;left:50%;top:calc(100% + 16px);transform:translateX(-50%);display:flex;align-items:center;gap:10px;padding:5px 14px;border-radius:999px;background:linear-gradient(180deg,rgba(30,40,66,.92),rgba(13,19,35,.92));border:1px solid rgba(255,255,255,.15);font:800 15px/1 system-ui,sans-serif;color:#fff;box-shadow:0 6px 16px rgba(0,0,0,.4);z-index:5;pointer-events:none}
+#hudSeries small{font-size:10px;font-weight:700;opacity:.65;letter-spacing:1px;text-transform:uppercase}
+#hudSeries b{color:#ffd45a;font-size:18px;min-width:12px;text-align:center}
+#pauseWait{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 72px);transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;background:rgba(12,18,34,.94);border:1px solid rgba(255,205,80,.5);color:#ffe9a8;font:700 13px system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+#pauseWait[hidden],#pausePrompt[hidden]{display:none}
+.pw-dot{width:9px;height:9px;border-radius:50%;background:#ffd45a;animation:pwp 1s infinite}@keyframes pwp{50%{opacity:.25;transform:scale(.7)}}
+#pausePrompt{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;background:rgba(3,6,14,.55);backdrop-filter:blur(3px)}
+.pp-box{width:min(88vw,340px);padding:18px;border-radius:20px;background:linear-gradient(180deg,#223056,#111a33);border:1px solid rgba(255,255,255,.16);box-shadow:0 20px 50px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:10px;color:#fff;font:600 14px system-ui,sans-serif}
+.pp-box b{font-size:17px}.pp-box span{opacity:.75;font-size:13px}
+.pp-bar{height:5px;border-radius:5px;background:rgba(255,255,255,.12);overflow:hidden}.pp-bar i{display:block;height:100%;width:100%;background:#ffd45a;animation:ppb 10s linear forwards}@keyframes ppb{to{width:0}}
+.pp-btns{display:flex;gap:10px;justify-content:flex-end}`;
+    document.head.appendChild(st);
+    for (const id of ['p0', 'p1']) { const el = $(id); if (el && getComputedStyle(el).position === 'static') el.style.position = 'relative'; const sc = document.createElement('div'); sc.className = 'hud-sc'; sc.id = 'sc' + id[1]; el.appendChild(sc); }
+    const hud = $('hud'), se = document.createElement('div'); se.id = 'hudSeries'; se.hidden = true;
+    const anchor = $('turnChip') && $('turnChip').parentNode; (anchor || hud).appendChild(se);
+    for (const id of ['pauseWait', 'pausePrompt']) { const el = document.createElement('div'); el.id = id; el.hidden = true; document.body.appendChild(el); }
+  }
+_updateScore(game) {
+  if (!game || !game.pottedBySeat || !game.sessionScore) return;
+  const potted = game.pottedBySeat, score = game.sessionScore;
+  const key = potted[0] + '|' + potted[1] + '|' + score[0] + '|' + score[1] + '|' + game.mode + '|' + game.gameType + '|' + game.rules.currentSeat;
+  if (key === this._scoreKey) return; this._scoreKey = key;
+  for (let i = 0; i < 2; i++) {
+    const el = $('sc' + i);
+    if (!el) continue;
+    const left = game.gameType === '8ball' && typeof game.rules.remaining === 'function'
+      ? ' <i>·</i> sisa <b>' + (game.rules.groups && game.rules.groups[i] ? game.rules.remaining(i) : 7) + '</b>'
+      : '';
+    el.innerHTML = 'Masuk <b>' + (potted[i] | 0) + '</b>' + left;
+  }
+  const se = $('hudSeries');
+  if (!se) return;
+  const consent = typeof game.needsConsent === 'function' ? !!game.needsConsent() : false;
+  const multi = consent || (score[0] + score[1]) > 0;
+  se.hidden = !multi;
+  if (multi) se.innerHTML = '<small>Skor</small><b>' + (score[0] | 0) + '</b><span style="opacity:.5">–</span><b>' + (score[1] | 0) + '</b>';
+}
 /** Hujan koin yang terbang masuk ke kotak. Target = elemen box. */
 _coinRainToBox(targetEl, count) {
   if (!targetEl) return;
@@ -487,27 +777,59 @@ _coinRainToBox(targetEl, count) {
   /* ------------------------------ per-frame ------------------------------ */
   tick(dt, game) {
     if ($('hud').hidden) return;
+    if (!game || !game.pottedBySeat || !game.rules || !game.sessionScore) return;
+    this._ensureHudExtras(); 
+    this._updateScore(game);
     const active = game.isTurnState() || game.state === GameState.BALL_IN_HAND;
     for (let i = 0; i < 2; i++) {
-      const el = $('p' + i), on = active && game.rules.currentSeat === i; el.classList.toggle('active', on);
-      const frac = on ? Util.clamp(game.turnLeft / game.turnTotal, 0, 1) : 0;
-      el.classList.toggle('urgent', on && game.turnLeft < 6); el.querySelector('.ring-fg').style.strokeDashoffset = String(138.2 * (1 - frac));
-    }
+  const el = $('p' + i); if (!el) continue;
+  const on = active && game.rules.currentSeat === i;
+  el.classList.toggle('active', on);
+  const ring = el.querySelector('.ring-fg');
+  if (ring) {
+    const frac = on ? Util.clamp(game.turnLeft / game.turnTotal, 0, 1) : 0;
+    ring.style.strokeDashoffset = String(138.2 * (1 - frac));
+  }
+  el.classList.toggle('urgent', on && game.turnLeft < 6);
+}
     $('hud').classList.toggle('locked', !game.canControl() && !game.canPlace());
     this.powerShown += (game.aim.power - this.powerShown) * Math.min(1, dt * (this.dragPower ? 40 : 12));
     const p = Util.clamp(this.powerShown, 0, 1);
+    const fill = $('powerFill'), handle = $('powerHandle'), val = $('powerVal');
+    if (fill)   fill.style.clipPath = 'inset(0 0 ' + ((1 - p) * 100).toFixed(1) + '% 0)';
+    if (handle) handle.style.top = (p * 100).toFixed(1) + '%';
+    if (val)    val.textContent = Math.round(p * 100);
     $('powerFill').style.clipPath = 'inset(0 0 ' + ((1 - p) * 100).toFixed(1) + '% 0)'; $('powerHandle').style.top = (p * 100).toFixed(1) + '%'; $('powerVal').textContent = Math.round(p * 100);
     if (this.fineDir && game.canControl()) { this.fineHold += dt; game.nudgeAim(this.fineDir * CONFIG.aim.fineRate * dt * 0.35 * (this.fineHold > 0.7 ? 2.2 : 1)); } else this.fineHold = 0;
     this.drawSpin(game);
   }
-  _bindPower() {
-    const tr = $('powerTrack'), g = () => this.game;
-    const upd = (e) => { const r = tr.getBoundingClientRect(); g().setPower(Util.clamp((e.clientY - r.top) / r.height, 0, 1)); };
-    tr.addEventListener('pointerdown', (e) => { if (!g().canControl()) return; this.audio.unlock(); this.dragPower = true; tr.setPointerCapture(e.pointerId); upd(e); });
-    tr.addEventListener('pointermove', (e) => { if (this.dragPower) upd(e); });
-    tr.addEventListener('pointerup', () => { if (!this.dragPower) return; this.dragPower = false; if (g().aim.power > 0.04) g().requestShot(); else this.toast('Tembakan dibatalkan', ''); });
-    tr.addEventListener('pointercancel', () => { this.dragPower = false; });
-  }
+   _bindPower() {
+  const tr = $('powerTrack');
+  if (!tr) { console.warn('[UI] #powerTrack tidak ditemukan — drag power tidak akan bekerja'); return; }
+  const g = () => this.game;
+  const upd = (e) => {
+    const r = tr.getBoundingClientRect();
+    const v = (e.clientY - r.top) / r.height;
+    console.log('[UI] drag power →', v, 'rect=', r.top, r.height);
+    g().setPower(Util.clamp(v, 0, 1));
+  };
+  tr.addEventListener('pointerdown', (e) => {
+    console.log('[UI] pointerdown powerTrack, canControl=', g().canControl());
+    if (!g().canControl()) return;
+    this.audio.unlock();
+    this.dragPower = true;
+    tr.setPointerCapture(e.pointerId);
+    upd(e);
+  });
+  tr.addEventListener('pointermove', (e) => { if (this.dragPower) upd(e); });
+  tr.addEventListener('pointerup', () => {
+    if (!this.dragPower) return;
+    this.dragPower = false;
+    if (g().aim.power > 0.04) g().requestShot();
+    else this.toast('Tembakan dibatalkan', '');
+  });
+  tr.addEventListener('pointercancel', () => { this.dragPower = false; });
+}
   _bindSpin() {
     const el = $('spin'), g = () => this.game;
     const upd = (e) => { const r = el.getBoundingClientRect(); g().setSpin(((e.clientX - r.left) / r.width * 2 - 1) * 1.12, -((e.clientY - r.top) / r.height * 2 - 1) * 1.12); };

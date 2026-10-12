@@ -54,7 +54,7 @@ class FirebaseBackend {
 
   /* ------------ marketplace ------------ */
   async listMarket() { const q = await this.db.collection('market').orderBy('publishedAt', 'desc').get(); return q.docs.map((d) => Object.assign({ id: d.id }, d.data())); }
-  async publish(item) { if (!this.isAdmin()) return false; await this.db.collection('market').add(Object.assign({ publishedAt: Date.now(), by: this.user.name }, item)); return true; }
+  async publish(item) { if (!this.isAdmin()) return false; try { await this.db.collection('market').add(Object.assign({ publishedAt: Date.now(), by: this.user.name }, item)); this.lastError = null; return true; } catch (e) { this.lastError = e.message; return false; } }
   async unpublish(id) { if (!this.isAdmin()) return false; await this.db.collection('market').doc(id).delete(); return true; }
   async buy(id, applyFn) {
     const doc = await this.db.collection('market').doc(id).get(); if (!doc.exists) return { ok: false, error: 'Item tidak ditemukan' };
@@ -67,21 +67,23 @@ class FirebaseBackend {
 
   /* ------------ room (Firestore realtime — lintas perangkat sungguhan) ------------ */
   /* ------------ matchmaking (antrian cari lawan, lintas perangkat) ------------ */
-  async joinQueue(cb) {
+ /* ------------ matchmaking (antrian cari lawan, lintas perangkat) ------------ */
+  async joinQueue(cb, filter) {
+    filter = filter || {}; const same = (d) => (d.bet || 0) === (filter.bet || 0) && (d.game || '') === (filter.game || '') && (d.table || '') === (filter.table || '');
     const me = { uid: this.user.uid, name: this.user.name, avatarImage: this.user.avatarImage }, qref = this.db.collection('queue');
     const found = await this.db.runTransaction(async (tx) => {
-      const snap = await qref.orderBy('ts').limit(5).get(); const other = snap.docs.find((d) => d.id !== me.uid && Date.now() - d.data().ts < 45000);
+      const snap = await qref.orderBy('ts').limit(5).get(); const other = snap.docs.find((d) => d.id !== me.uid && Date.now() - d.data().ts < 45000 && same(d.data()));
       if (other) { tx.delete(other.ref); return other.data(); }
-      tx.set(qref.doc(me.uid), { user: me, ts: Date.now() }); return null;
+      tx.set(qref.doc(me.uid), { user: me, ts: Date.now(), bet: filter.bet || 0, game: filter.game || '', table: filter.table || '' }); return null;
     });
     if (found) {
       const code = Math.random().toString(36).slice(2, 7).toUpperCase();
       await this.db.collection('rooms').doc(code).set({ code, host: me, guest: found.user, msgs: [] });
-      await this.db.collection('matches').doc(found.user.uid).set({ code, peer: me, ts: Date.now() });
-      cb({ code, isHost: true, peer: found.user });
+      await this.db.collection('matches').doc(found.user.uid).set({ code, peer: me, ts: Date.now(), opts: { bet: found.bet || 0, game: found.game, table: found.table } });
+      cb({ code, isHost: true, peer: found.user, opts: { bet: found.bet || 0, game: found.game, table: found.table } });
     } else {
       this._matchUnsub = this.db.collection('matches').doc(me.uid).onSnapshot(async (d) => {
-        if (!d.exists) return; const m = d.data(); this._matchUnsub && this._matchUnsub(); this._matchUnsub = null; await d.ref.delete(); cb({ code: m.code, isHost: false, peer: m.peer });
+        if (!d.exists) return; const m = d.data(); this._matchUnsub && this._matchUnsub(); this._matchUnsub = null; await d.ref.delete(); cb({ code: m.code, isHost: false, peer: m.peer, opts: m.opts });
       });
     }
   }
@@ -107,6 +109,7 @@ class FirebaseBackend {
   }
   offRoom(code) { const u = this.roomUnsubs.get(code); if (u) u(); this.roomUnsubs.delete(code); }
   sendRoomShot(code, shot) { this.db.collection('rooms').doc(code).update({ msgs: firebase.firestore.FieldValue.arrayUnion({ kind: 'shot', shot }) }); }
-  sendRoomChat(code, text) { this.db.collection('rooms').doc(code).update({ msgs: firebase.firestore.FieldValue.arrayUnion({ kind: 'chat', text, from: this.user.name }) }); }
+  sendRoomCtl(code, ctl, from) { this.db.collection('rooms').doc(code).update({ msgs: firebase.firestore.FieldValue.arrayUnion({ kind: 'ctl', ctl, from }) }); }
+   sendRoomChat(code, text) { this.db.collection('rooms').doc(code).update({ msgs: firebase.firestore.FieldValue.arrayUnion({ kind: 'chat', text, from: this.user.name }) }); }
   sendRoomStart(code, info) { this.db.collection('rooms').doc(code).update({ msgs: firebase.firestore.FieldValue.arrayUnion({ kind: 'start', info }) }); }
 }

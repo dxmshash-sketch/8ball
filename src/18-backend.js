@@ -24,7 +24,10 @@ class RoomTransport {
   constructor(backend, code) {
     this.backend = backend; this.code = code; this.bus = new EventBus(); this.authority = null;
     this.connected = true; this.roomId = code; this.playerId = (backend.currentUser() || {}).uid || 'guest';
-    backend.onRoom(code, (msg) => { if (msg.kind === 'shot' && msg.shot.__from !== this.playerId) this.bus.emit('shot', msg.shot); });   // abaikan gema dari tembakan sendiri (Firestore mengirim balik snapshot tulisan sendiri)
+    backend.onRoom(code, (msg) => {
+      if (msg.kind === 'shot' && msg.shot.__from !== this.playerId) this.bus.emit('shot', msg.shot);
+      else if (msg.kind === 'ctl' && msg.from !== this.playerId) this.bus.emit('ctl', msg.ctl);                  // jeda / lanjut / main lagi / keluar
+    });   // abaikan gema dari tembakan sendiri (Firestore mengirim balik snapshot tulisan sendiri)
   }
   on(evt, fn) { return this.bus.on(evt, fn); }
   sendShot(shot) {
@@ -33,6 +36,7 @@ class RoomTransport {
     if (err) { this.bus.emit('rejected', { shot, reason: err }); return; }
     this.bus.emit('shot', shot); this.backend.sendRoomShot(this.code, Object.assign({}, shot, { __from: this.playerId }));
   }
+  sendCtl(ctl) { if (this.connected) this.backend.sendRoomCtl(this.code, ctl, this.playerId); }
   publishSnapshot() { /* penyambungan ulang otomatis belum didukung untuk room teman */ }
   disconnect() { this.connected = false; this.bus.emit('disconnected'); }
   reconnect() { this.connected = true; this.bus.emit('reconnected', { snapshot: null }); }
@@ -105,10 +109,11 @@ class MockBackend {
   listMarket() { return readJSON(MARKET_KEY, []); }
   publish(item) {
     if (!this.isAdmin()) return false;
-    const list = this.listMarket(); list.push(Object.assign({ id: uid('m'), publishedAt: Date.now(), by: this.user.name }, item));
-    writeJSON(MARKET_KEY, list); this._netSend({ type: 'market-changed' }); return true;
+    const list = this.listMarket(); list.push(Object.assign({ id: uid('m'), publishedAt: Date.now(), by: this.user.name, byUid: this.user.uid }, item));
+    if (!writeJSON(MARKET_KEY, list)) { this.lastError = 'Penyimpanan browser penuh — kecilkan ukuran gambar atau hapus item lama'; return false; }   // dulu gagal diam-diam
+    this.lastError = null; this._netSend({ type: 'market-changed' }); if (this._marketCb) this._marketCb(); return true;
   }
-  unpublish(id) { if (!this.isAdmin()) return false; writeJSON(MARKET_KEY, this.listMarket().filter((x) => x.id !== id)); this._netSend({ type: 'market-changed' }); return true; }
+  unpublish(id) { if (!this.isAdmin()) return false; writeJSON(MARKET_KEY, this.listMarket().filter((x) => x.id !== id)); this._netSend({ type: 'market-changed' }); if (this._marketCb) this._marketCb(); return true; }
   buy(id, applyFn) {
     const item = this.listMarket().find((x) => x.id === id); if (!item || !this.user) return { ok: false, error: 'Item tidak ditemukan' };
     if (this.user.owned && this.user.owned.includes(id)) return { ok: false, error: 'Sudah dimiliki' };
@@ -122,7 +127,7 @@ class MockBackend {
   _netSend(msg) { if (this.bc) this.bc.postMessage(msg); }
   _onNet(msg) {
     if (msg.type === 'market-changed' && this._marketCb) this._marketCb();
-    if (msg.type === 'match-found' && this._queueCb && this.user && msg.to === this.user.uid) { const cb = this._queueCb; this._queueCb = null; cb({ code: msg.code, isHost: false, peer: msg.peer }); }
+    if (msg.type === 'match-found' && this._queueCb && this.user && msg.to === this.user.uid) { const cb = this._queueCb; this._queueCb = null; cb({ code: msg.code, isHost: false, peer: msg.peer, opts: msg.opts }); }
     if (msg.type === 'user-joined' || msg.type === 'user-updated') { if (this._directoryCb) this._directoryCb(); }
     const rc = this.roomChannels.get(msg.room); if (rc && msg.type === 'room-msg') rc(msg.payload);
   }
@@ -138,18 +143,19 @@ class MockBackend {
   }
   /* ------------ matchmaking (antrian cari lawan) ------------ */
   /** cb({code,isHost,peer}) dipanggil sekali saat lawan ditemukan. Mock: hanya menemukan pemain di browser yang sama. */
-  joinQueue(cb) {
-    const me = this._publicUser(this.user), now = Date.now();
+  joinQueue(cb, filter) {
+    filter = filter || {};
+    const me = this._publicUser(this.user), now = Date.now(), same = (e) => (e.bet || 0) === (filter.bet || 0) && (e.game || '') === (filter.game || '') && (e.table || '') === (filter.table || '');
     let q = readJSON('pantul.queue.v1', []).filter((e) => now - e.ts < 45000 && e.uid !== me.uid);
-    const waiting = q.shift();
+    const wi = q.findIndex(same), waiting = wi >= 0 ? q.splice(wi, 1)[0] : null;                 // hanya cocokkan lawan dengan taruhan, game, dan meja yang sama
     if (waiting) {
       writeJSON('pantul.queue.v1', q);
       const code = Math.random().toString(36).slice(2, 7).toUpperCase();
       writeJSON(ROOM_PREFIX + code, { code, host: me, guest: waiting.user, log: [] });
-      this._netSend({ type: 'match-found', to: waiting.uid, code, peer: me });
-      cb({ code, isHost: true, peer: waiting.user });
+      this._netSend({ type: 'match-found', to: waiting.uid, code, peer: me, opts: { bet: waiting.bet || 0, game: waiting.game, table: waiting.table } });
+      cb({ code, isHost: true, peer: waiting.user, opts: { bet: waiting.bet || 0, game: waiting.game, table: waiting.table } });
     } else {
-      q.push({ uid: me.uid, user: me, ts: now }); writeJSON('pantul.queue.v1', q);
+      q.push({ uid: me.uid, user: me, ts: now, bet: filter.bet || 0, game: filter.game || '', table: filter.table || '' }); writeJSON('pantul.queue.v1', q);
       this._queueCb = cb; this._queueUid = me.uid;
     }
   }
@@ -159,5 +165,6 @@ class MockBackend {
   _roomSend(code, payload) { this._netSend({ type: 'room-msg', room: code, payload }); }
   sendRoomShot(code, shot) { this._roomSend(code, { kind: 'shot', shot }); }
   sendRoomChat(code, text) { this._roomSend(code, { kind: 'chat', text, from: this.user.name }); }
+  sendRoomCtl(code, ctl, from) { this._roomSend(code, { kind: 'ctl', ctl, from }); }
   sendRoomStart(code, info) { this._roomSend(code, { kind: 'start', info }); }
 }

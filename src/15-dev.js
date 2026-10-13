@@ -67,17 +67,46 @@ Object.assign(UI.prototype, {
         '<div class="row"><button class="btn small" data-act="clearImgs">Hapus gambar</button><button class="btn small" data-act="tplCloth">Template kain</button><button class="btn small" data-act="tplFrame">Template frame</button></div>' +
         '<button class="btn green" data-act="saveTable">Simpan tema meja</button>' + this._devList('tables') + '</div>' +
         '<div class="prev-box"><div class="seg" style="align-self:flex-start">' + Object.values(TABLE_PROFILES).map((p) => '<button data-act="prevTbl" data-v="' + p.id + '" aria-pressed="' + ((D.tableKind || 'standard') === p.id) + '">' + p.name + '</button>').join('') + '</div><canvas id="dvTablePrev"></canvas><span class="note" style="margin:0">Pratinjau langsung. Gambar kain/frame menggantikan warna bila diisi.</span></div></div>';
-    } else if (D.tab === 'ball') {
-      body = '<div class="dev-grid" style="margin-top:12px"><div class="form">' +
-        '<label>Nama skin<input type="text" id="dvBallName" maxlength="24" placeholder="mis. Bola Api"></label>' +
-        '<div class="two"><label>Warna dasar<input type="color" id="dvBallTint" value="' + D.ballTint + '"></label>' +
-        '<label>Efek animasi<select id="dvBallFx">' + Object.keys(CUEBALL_FX).map((k) => '<option value="' + k + '"' + (k === D.ballFx ? ' selected' : '') + '>' + CUEBALL_FX[k].name + '</option>').join('') + '</select></label></div>' +
-        '<p class="note" id="dvFxDesc" style="margin:-4px 0 0">' + CUEBALL_FX[D.ballFx].desc + '</p>' +
-        '<label>Gambar dekal (opsional) <span class="filebtn btn small">Pilih…<input type="file" id="dvBallFile" accept="image/*"></span></label>' +
-        '<div class="row"><button class="btn small" data-act="clearBallImg">Hapus gambar</button></div>' +
-        '<button class="btn green" data-act="saveBall">Simpan skin bola putih</button>' + this._devList('cueballs') + '</div>' +
-        '<div class="prev-box"><canvas id="dvBallPrev" width="240" height="240" style="width:240px;height:240px;margin:0 auto"></canvas><span class="note" style="margin:0">Pratinjau langsung dengan animasi berjalan.</span></div></div>';
-    } else {
+    // } else if (D.tab === 'ball') {
+    //   body = '<div class="dev-grid" style="margin-top:12px"><div class="form">' +
+    //     '<label>Nama skin<input type="text" id="dvBallName" maxlength="24" placeholder="mis. Bola Api"></label>' +
+    //     '<div class="two"><label>Warna dasar<input type="color" id="dvBallTint" value="' + D.ballTint + '"></label>' +
+    //     '<label>Efek animasi<select id="dvBallFx">' + Object.keys(CUEBALL_FX).map((k) => '<option value="' + k + '"' + (k === D.ballFx ? ' selected' : '') + '>' + CUEBALL_FX[k].name + '</option>').join('') + '</select></label></div>' +
+    //     '<p class="note" id="dvFxDesc" style="margin:-4px 0 0">' + CUEBALL_FX[D.ballFx].desc + '</p>' +
+    //     '<label>Gambar dekal (opsional) <span class="filebtn btn small">Pilih…<input type="file" id="dvBallFile" accept="image/*"></span></label>' +
+    //     '<div class="row"><button class="btn small" data-act="clearBallImg">Hapus gambar</button></div>' +
+    //     '<button class="btn green" data-act="saveBall">Simpan skin bola putih</button>' + this._devList('cueballs') + '</div>' +
+    //     '<div class="prev-box"><canvas id="dvBallPrev" width="240" height="240" style="width:240px;height:240px;margin:0 auto"></canvas><span class="note" style="margin:0">Pratinjau langsung dengan animasi berjalan.</span></div></div>';
+    // }
+       } else if (D.tab === 'ball') {
+  const fxId = D.ballFx || 'none';
+  const fx = CUEBALL_FX[fxId];
+  const marketList = (this._marketCache && this._marketCache.list) || [];
+  const alreadySold = marketList.some((it) => it.kind === 'fx' && it.payload && it.payload.id === fxId);
+  body = '<div class="dev-grid" style="margin-top:12px"><div class="form">' +
+    '<label>Nama skin<input type="text" id="dvBallName" maxlength="24" placeholder="mis. Bola Api"></label>' +
+    '<div class="two"><label>Warna dasar<input type="color" id="dvBallTint" value="' + D.ballTint + '"></label>' +
+    '<label>Efek animasi<select id="dvBallFx">' + Object.keys(CUEBALL_FX).map((k) => '<option value="' + k + '"' + (k === D.ballFx ? ' selected' : '') + '>' + CUEBALL_FX[k].name + '</option>').join('') + '</select></label></div>' +
+    '<p class="note" id="dvFxDesc" style="margin:-4px 0 0">' + CUEBALL_FX[D.ballFx].desc + '</p>' +
+    '<label>Gambar dekal (opsional) <span class="filebtn btn small">Pilih…<input type="file" id="dvBallFile" accept="image/*"></span></label>' +
+    '<div class="row"><button class="btn small" data-act="clearBallImg">Hapus gambar</button></div>' +
+    '<button class="btn green" data-act="saveBall">Simpan skin bola putih</button>' +
+
+    // ── Panel jual FX ──
+    '<div class="spec" style="margin:14px 0 0;border-color:rgba(244,197,66,.45)">' +
+      '<b>Jual FX ke Market</b><br>' +
+      'FX terpilih: <span class="gold">' + (fx ? fx.name : '—') + '</span>' +
+      (fxId === 'none' ? ' <span class="bad">(Polos tidak bisa dijual)</span>' : '') +
+      (alreadySold ? ' <span class="ok">· sudah ada di Market</span>' : '') +
+    '</div>' +
+    '<div class="row" style="margin-top:8px">' +
+      '<button class="btn small primary" data-act="sellFx"' + (fxId === 'none' ? ' disabled' : '') + '>Jual FX "' + (fx ? fx.name : '—') + '"</button>' +
+    '</div>' +
+
+    this._devList('cueballs') + '</div>' +
+    '<div class="prev-box"><canvas id="dvBallPrev" width="240" height="240" style="width:240px;height:240px;margin:0 auto"></canvas><span class="note" style="margin:0">Pratinjau langsung dengan animasi berjalan.</span></div></div>';
+}
+    else {
       body = '<div class="form" style="margin-top:12px;max-width:640px"><h3 class="sec" style="margin:0">Ekspor</h3><textarea id="dvExport" readonly></textarea><div class="row"><button class="btn small" data-act="copy">Salin</button><button class="btn small" data-act="download">Unduh .json</button></div>' +
         '<h3 class="sec" style="margin:8px 0 0">Impor</h3><textarea id="dvImport" placeholder="Tempel JSON skin di sini"></textarea><div class="row"><span class="filebtn btn small">Pilih berkas .json<input type="file" id="dvImpFile" accept=".json,application/json"></span><button class="btn small green" data-act="import">Impor</button></div>' +
         '<button class="btn small danger" data-act="wipe">Hapus semua skin kustom</button></div>';
@@ -111,6 +140,37 @@ Object.assign(UI.prototype, {
     if (D.preview && D.tab !== 'ball') { D.preview.stop(); D.preview = null; }
     this._bind(el, {
       tab: (d) => { D.tab = d.v; redo(); },
+       sellFx: async () => {
+  const fxId = D.ballFx;
+  if (!fxId || fxId === 'none') { this.toast('Pilih FX dulu (bukan Polos)', 'foul'); return; }
+  const fx = CUEBALL_FX[fxId];
+  if (!fx) { this.toast('FX tidak ditemukan', 'foul'); return; }
+
+  const existing = (this._marketCache && this._marketCache.list || []).find((it) => it.kind === 'fx' && it.payload && it.payload.id === fxId);
+  if (existing) { this.toast('FX ini sudah ada di Market', 'foul'); return; }
+
+  const priceStr = window.prompt('Harga jual "' + fx.name + '" (BCPOOL)?', '25000');
+  if (priceStr === null) return;
+  const price = Math.max(0, parseInt(priceStr, 10) || 0);
+  if (price <= 0) { this.toast('Harga harus > 0', 'foul'); return; }
+
+  const ok = await this.backend.publish({
+    kind: 'fx',
+    name: fx.name,
+    price,
+    payload: { id: fxId },
+  });
+  if (ok) {
+    this.toast('"' + fx.name + '" dijual ke Market · ' + fmtCoins(price), 'ok');
+    try {
+      const list = await this.backend.listMarket();
+      this._marketCache = { list: list || [], ts: Date.now() };
+    } catch (e) {}
+    redo();
+  } else {
+    this.toast('Gagal: ' + (this.backend.lastError || 'hanya admin'), 'foul');
+  }
+},
       saveCue: () => {
         if (!D.cueCanvas) { this.toast('Pilih gambar cue dulu', 'foul'); return; }
         const name = ($('dvCueName').value.trim() || 'Cue Kustom').slice(0, 24), image = D.cueCanvas.toDataURL('image/png');

@@ -3,7 +3,7 @@
    badge, kurva level, hadiah. Tambah konten baru cukup dengan menambah data.
    ===================================================================== */
 const COIN_NAME = 'BCPOOL', START_COINS = 30000, HOUSE_FEE = 0.05, MAX_CUE_LEVEL = 4, MAX_LEVEL = 80;
-const BETS = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000, 5000000];
+const BETS = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000, 5000000, 10000000];
 const DAILY_REWARDS = [5000, 7500, 10000, 15000, 20000, 30000, 50000];
 
 const fmtCoins = (n) => Math.round(n).toLocaleString('id-ID');
@@ -127,3 +127,13 @@ function botAvatar(name) {
   const syms = Object.keys(SYMBOLS).filter((k) => k !== 'trophy'), frames = ['none', 'none', 'bronze', 'silver', 'gold'];
   return { sym: syms[h % syms.length], color: (h >>> 3) % AVATAR_COLORS.length, frame: frames[(h >>> 6) % frames.length] };
 }
+
+/* ================= FX BOLA PUTIH (katalog yang bisa dibeli) ================= */
+const FX_CATALOG = [
+  { id: 'none',     name: 'Polos',       rarity: 'Standard',  price: 0,      desc: 'Bola putih polos, tanpa animasi.' },
+  { id: 'fire',     name: 'Api',         rarity: 'Rare',      price: 15000,  desc: 'Kobaran api & bara yang menari di sekeliling bola.' },
+  { id: 'ice',      name: 'Es',          rarity: 'Rare',      price: 15000,  desc: 'Kristal es dingin melayang pelan, aura biru pucat.' },
+  { id: 'aurora',   name: 'Aurora',      rarity: 'Epic',      price: 60000,  desc: 'Pita cahaya warna-warni berputar lembut, seperti aurora.' },
+  { id: 'electric', name: 'Listrik',     rarity: 'Epic',      price: 80000,  desc: 'Percikan petir kecil berkedip di sekitar bola.' },
+  { id: 'gold',     name: 'Kilau Emas',  rarity: 'Legendary', price: 250000, desc: 'Kelip-kelip partikel emas mewah.' },
+];

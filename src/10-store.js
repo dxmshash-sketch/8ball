@@ -5,7 +5,11 @@ const todayKey = (d) => { d = d || new Date(); return d.getFullYear() + '-' + St
 
 class Store {
   constructor() {
-    this.key = 'pantul.v3'; this.customKey = 'pantul.custom.v1'; this.imgCache = new Map(); this.listeners = [];
+    this.key = 'pantul.v3'; this.customKey = 'pantul.custom.v1'; 
+    this.imgCache = new Map(); 
+    this.listeners = [];
+      this._isCloudSyncEnabled = true;   // ← TAMBAH INI
+
     this.data = {
       profile: { name: 'Pemain', coins: START_COINS, xp: 0, avatar: { sym: 'ball8', color: 0, frame: 'none' }, badge: null, created: Date.now() },
       stats: { matches: 0, wins: 0, losses: 0, streak: 0, bestStreak: 0, potted: 0, maxBetWon: 0, totalWon: 0, totalLost: 0, wins9: 0, golden: 0 },
@@ -14,6 +18,7 @@ class Store {
       cues: { equipped: 'maple', owned: { maple: 1 } },
       tables: { equipped: 'klasik', owned: ['klasik'] },
       cueball: { equipped: 'none' },
+      fx: { equipped: 'none', owned: ['none'] },   // ← TAMBAH INI
       settings: { sfx: true, music: false, aimAssist: true, showBounce: true, aimZoom: 1 },
     };
     this.custom = { cues: [], tables: [], cueballs: [] };
@@ -25,31 +30,104 @@ class Store {
   }
   onChange(fn) { this.listeners.push(fn); }
   _emit(what) { for (const fn of this.listeners) fn(what); }
-  save() { try { window.localStorage.setItem(this.key, JSON.stringify(this.data)); } catch (e) { /* abaikan */ } }
-  saveCustom() { try { window.localStorage.setItem(this.customKey, JSON.stringify(this.custom)); return true; } catch (e) { return false; } }
-  // Di store, tambahkan method:
-_syncCoinsToBackend() {
+  save() {
+  try {
+    window.localStorage.setItem(this.key, JSON.stringify(this.data));
+  } catch (e) { /* abaikan */ }
+
+  // Throttle sync ke Firebase — max 1× per 2 detik
+  const now = Date.now();
+  if (!this._lastCloudSync) this._lastCloudSync = 0;
+  if (now - this._lastCloudSync > 2000) {
+    this._lastCloudSync = now;
+    this._syncToCloud();
+  }
+}
+
+_syncToCloud() {
   const b = window.ui && window.ui.backend;
   if (!b || !b.currentUser() || !b.updateProfile) return;
-  b.updateProfile({ coins: this.data.profile.coins });
+  // ⚠️ JANGAN kirim coins/xp/wins via absolute write!
+  // Semua itu sudah pakai increment delta (atomic).
+  // Yang dikirim hanya field statis non-numerik:
+  b.updateProfile({
+    name: this.data.profile.name,
+    avatar: this.data.profile.avatar,
+    badge: this.data.profile.badge,
+    fx: this.data.fx,   // ← tambah
+
+  }).catch((e) => console.warn('[Store] sync profile gagal:', e.message));
 }
+
+
+  saveCustom() { try { window.localStorage.setItem(this.customKey, JSON.stringify(this.custom)); return true; } catch (e) { return false; } }
+  /* ===================================================================
+   Sync ke Firebase — semua dalam DELTA (atomic, race-safe)
+   =================================================================== */
+
+/** Panggil saat login selesai sync dari cloud (biar tidak loop). */
+_setSyncingFromCloud(v) { this._isCloudSyncEnabled = !v; }
+
+_syncCoinsToBackend() {
+  if (!this._isCloudSyncEnabled) return;
+  // no-op: spend/addCoins sudah handle delta via incrementCoins
+}
+
+_syncStatsToBackend() {
+  // no-op: stats di-sync saat recordMatch via incrementStats
+}
+
+/** Paksa kirim semua state lokal ke cloud (untuk logout / pindah device). */
+async forceSync() {
+  const b = window.ui && window.ui.backend;
+  if (!b || !b.currentUser() || !b.updateProfile) return;
+  try {
+    await b.updateProfile({
+      coins: this.data.profile.coins,
+      xp: this.data.profile.xp,
+      wins: this.data.stats.wins,
+      bestStreak: this.data.stats.bestStreak,
+      potted: this.data.stats.potted,
+      avatar: this.data.profile.avatar,
+      name: this.data.profile.name,
+    });
+  } catch (e) { console.warn('[Store] forceSync gagal:', e.message); }
+}
+//   // Di store, tambahkan method:
+// _syncCoinsToBackend() {
+//   const b = window.ui && window.ui.backend;
+//   if (!b || !b.currentUser() || !b.updateProfile) return;
+//   b.updateProfile({ coins: this.data.profile.coins });
+// }
   /* ------------ ekonomi & level ------------ */
   get coins() { return this.data.profile.coins; }
   level() { return levelInfo(this.data.profile.xp).level; }
   progress() { return levelInfo(this.data.profile.xp); }
   addCoins(n) {
+  if (!n) return true;
   this.data.profile.coins += n;
   this.save();
-  this._syncCoinsToBackend();   // ← tambahkan
+
+  // Kirim DELTA ke cloud (atomic)
+  const b = window.ui && window.ui.backend;
+  if (b && b.currentUser() && typeof b.incrementCoins === 'function') {
+    b.incrementCoins(n).catch((e) => console.warn('[Store] addCoins sync gagal:', e.message));
+  }
   return true;
 }
-  spend(n) {
-    if (this.data.profile.coins < n) return false;
-    this.data.profile.coins -= n;
-    this.save();
-    this._syncCoinsToBackend();   // ← tambahkan
-    return true;
+
+spend(n) {
+  if (this.data.profile.coins < n) return false;
+  this.data.profile.coins -= n;
+  this.save();
+
+  // Kirim DELTA ke cloud (atomic)
+  const b = window.ui && window.ui.backend;
+  if (b && b.currentUser() && typeof b.incrementCoins === 'function') {
+    b.incrementCoins(-n).catch((e) => console.warn('[Store] spend sync gagal:', e.message));
   }
+  return true;
+}
 
   /** Dipanggil setelah pertandingan (mode bertaruh). Taruhan sudah dipotong saat mulai. */
   recordMatch(r) {
@@ -65,6 +143,18 @@ _syncCoinsToBackend() {
     p.xp += xpGain;
     const newBadges = this._checkBadges();
     this.save(); this._emit('coins');
+    // setelah this.save(); this._emit('coins');
+const b = window.ui && window.ui.backend;
+if (b && b.currentUser() && typeof b.incrementStats === 'function') {
+  b.incrementStats({
+    xp: xpGain,
+    coins: payout,
+    wins: r.youWon ? 1 : 0,
+    losses: r.youWon ? 0 : 1,
+    matches: 1,                    // ← tambah
+    potted: r.potted || 0,
+  }).catch((e) => console.warn('[Store] recordMatch sync gagal:', e.message));
+}
     return { bet, payout, net: r.youWon ? payout - bet : -bet, xpGain, prevXp, newXp: p.xp, prevLevel, newLevel: levelInfo(p.xp).level, newBadges };
   }
   _checkBadges() {
@@ -178,6 +268,30 @@ _syncCoinsToBackend() {
   allCueballs() { return [{ id: 'none', name: 'Bawaan', tint: null, image: null, fx: 'none', builtin: true }].concat(this.custom.cueballs); }
   cueballDef(id) { return this.allCueballs().find((c) => c.id === id) || this.allCueballs()[0]; }
   equipCueball(id) { if (this.allCueballs().some((c) => c.id === id)) { this.data.cueball.equipped = id; this.save(); this._emit('cueball'); return true; } return false; }
+  /* ------------ FX bola putih ------------ */
+allFx() { return FX_CATALOG; }
+fxDef(id) { return FX_CATALOG.find((f) => f.id === id) || FX_CATALOG[0]; }
+fxOwned(id) { return this.data.fx.owned.indexOf(id) !== -1; }
+
+/* Beli FX dari Market (bukan harga lokal). Return {ok, error}. */
+buyFxFromMarket(id, price) {
+  if (this.fxOwned(id)) return { ok: false, error: 'Sudah dimiliki' };
+  if (this.data.profile.coins < price) return { ok: false, error: 'Koin tidak cukup' };
+  if (!this.spend(price)) return { ok: false, error: 'Koin tidak cukup' };
+  this.data.fx.owned.push(id);
+  this.save();
+  this._emit('cueball');
+  return { ok: true };
+}
+
+equipFx(id) {
+  if (!this.fxOwned(id)) return false;
+  this.data.fx.equipped = id;
+  this.save();
+  this._emit('cueball');   // trigger applyCueSkin di renderer
+  return true;
+}
+
   removeCustom(kind, id) {
     const arr = this.custom[kind]; const i = arr.findIndex((x) => x.id === id); if (i < 0) return;
     arr.splice(i, 1); this.saveCustom();

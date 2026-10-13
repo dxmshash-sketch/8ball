@@ -162,6 +162,9 @@ const ICONS = {
   user: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4.2"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z"/></svg>',
   gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1" stroke-linecap="round"/></svg>',
   friend: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8" cy="8" r="3.4"/><path d="M2 20c0-3.6 2.8-5.8 6-5.8s6 2.2 6 5.8z"/><circle cx="17.5" cy="9" r="2.6" opacity=".7"/><path d="M22 20c0-2.7-1.9-4.6-4.3-5.2 1.5 1.2 2.3 2.9 2.3 5.2z" opacity=".7"/></svg>',
+   ballFx: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="9" opacity=".5"/><path d="M12 3v1.5M12 19.5V21M3 12h1.5M19.5 12H21"/></svg>',
+   fire: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c1 4 5 6 5 11a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5.3 1.6 1.2 2.4 2 2.5C10.5 8 11 5 12 2z"/></svg>',
+   sparkle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg>',
   market: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 8l1.5-4h15L21 8z" opacity=".7"/><path d="M4 8h16v12H4z" opacity=".3"/><path d="M4 8h16v2.2A3 3 0 0114 10a3 3 0 01-6 0 3 3 0 01-6 .2z"/></svg>',
   dev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4L2 12l6 8M16 4l6 8-6 8"/></svg>',
 };
@@ -431,8 +434,13 @@ burst(x, y, n, spread) {
   }
 }
 }
-const PAGE_SCREENS = { menu: 'screenMenu', modes: 'screenModes', settings: 'screenSettings', profile: 'screenProfile', rewards: 'screenRewards', board: 'screenBoard', tables: 'screenTables', cues: 'screenCues', dev: 'screenDev', auth: 'screenAuth', market: 'screenMarket', friend: 'screenFriend' };
-
+const PAGE_SCREENS = {
+  menu: 'screenMenu', modes: 'screenModes', settings: 'screenSettings',
+  profile: 'screenProfile', rewards: 'screenRewards', board: 'screenBoard',
+  tables: 'screenTables', cues: 'screenCues', dev: 'screenDev',
+  auth: 'screenAuth', market: 'screenMarket', friend: 'screenFriend',
+  ballfx: 'screenBallFx',   // ← TAMBAH INI
+};
 class UI {
   constructor(store, audio) {
     this.store = store; this.audio = audio; this.game = null; this.renderer = null; this.board = null; this.fx = new Fx($('fx'));
@@ -553,11 +561,19 @@ class UI {
     this.show(id, true);
   }
   _renderPage(name) {
-    if (this.current === 'screenDev' && name !== 'dev' && this.dev && this.dev.preview) this.dev.preview.stop();
-    if (name === 'menu') this.refreshMenu();
-    else if (name === 'settings') this.syncSettings();
-    else if (this['render_' + name]) this['render_' + name]();
+  if (this.current === 'screenDev' && name !== 'dev' && this.dev && this.dev.preview) this.dev.preview.stop();
+
+  // Stop FX previews saat meninggalkan halaman ballfx
+  if (name !== 'ballfx' && this._fxPreviews) {
+    this._fxPreviews.forEach((p) => p.stop());
+    this._fxPreviews = null;
+    if (this._fxPreviewIO) { this._fxPreviewIO.disconnect(); this._fxPreviewIO = null; }
   }
+
+  if (name === 'menu') this.refreshMenu();
+  else if (name === 'settings') this.syncSettings();
+  else if (this['render_' + name]) this['render_' + name]();
+}
   syncSettings() {
     const s = this.store.data.settings; document.querySelectorAll('.switch').forEach((sw) => sw.setAttribute('aria-checked', String(!!s[sw.dataset.set])));
     document.querySelectorAll('#zoomSeg button').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.z === (s.aimZoom | 0))));

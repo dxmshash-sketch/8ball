@@ -640,13 +640,15 @@ class Renderer {
     if (!skipBuild && this.vw) this._buildTable();
   }
   /** Skin bola putih (DIY): tint/dekal ke sprite, jenis FX ke sistem partikel. */
-  applyCueSkin() {
-    const def = this.store.cueballDef(this.store.data.cueball.equipped);
-    this.cueFX.setType(def.fx || 'none');
-    if (def.image) { const im = new Image(); im.onload = () => this.sprites.setCueSkin(def.tint, im); im.src = def.image; }
-    else this.sprites.setCueSkin(def.tint, null);
-    this.game.world.balls[0].dirty = true;
-  }
+applyCueSkin() {
+  const def = this.store.cueballDef(this.store.data.cueball.equipped);
+  const fxType = (this.store.data.fx && this.store.data.fx.equipped) || 'none';  // ← FX dari page terpisah
+  this.cueFX.setType(fxType);
+  if (def.image) { const im = new Image(); im.onload = () => this.sprites.setCueSkin(def.tint, im); im.src = def.image; }
+  else this.sprites.setCueSkin(def.tint, null);
+  this.game.world.balls[0].dirty = true;
+}
+
   resize() {
     this.dpr = Math.min(window.devicePixelRatio || 1, 2.5); this.vw = window.innerWidth; this.vh = window.innerHeight;
     this.canvas.width = Math.round(this.vw * this.dpr); this.canvas.height = Math.round(this.vh * this.dpr);
@@ -903,5 +905,4 @@ _drawAim(c) {
     }
   }
 }
-
  

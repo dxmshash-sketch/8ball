@@ -115,14 +115,16 @@
           const it = list.find((x) => x.id === d.v); if (!it) return;
           const price = it.price || 0, pl = it.payload || {};
                      // ── FX: cuma license, tidak simpan data ──
-           if (it.kind === 'fx') {
-             const r = st.buyFxFromMarket(pl.id, price);
-             if (!r.ok) { this.toast(r.error, 'foul'); return; }
-             try { await when(be.updateProfile({ owned: (user.owned || []).concat(it.id) })); } catch (e) {}
-             this.toast('"' + it.name + '" dibuka — pakai di halaman FX Bola', 'ok');
-             this.fx.burst(innerWidth / 2, innerHeight / 2, 70);
-             this.render_market();
-             return;
+          // ── FX: cuma license, tidak simpan data ──
+              if (it.kind === 'fx') {
+                const r = st.buyFxFromMarket(pl.id, price);
+                if (!r.ok) { this.toast(r.error, 'foul'); return; }
+                try { await when(be.updateProfile({ owned: (user.owned || []).concat(it.id) })); } catch (e) {}
+                this.toast('"' + it.name + '" dibuka — pakai di halaman FX Bola', 'ok');
+                this.fx.burst(innerWidth / 2, innerHeight / 2, 70);
+                this.render_market();
+                return;
+              }   // ← TAMBAH INI
           if (st.coins < price) { this.toast('Koin tidak cukup', 'foul'); return; }
           if (lsUsed() + JSON.stringify(pl).length > 4.6e6) { this.toast('Penyimpanan browser hampir penuh — hapus skin lama di Developer dulu', 'foul'); return; }
           if (!st.spend(price)) { this.toast('Koin tidak cukup', 'foul'); return; }

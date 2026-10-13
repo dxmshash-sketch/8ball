@@ -69,11 +69,19 @@
       if (!be.__mkHook) { be.__mkHook = true; be.onMarketChanged(() => { if (this.current === 'screenMarket') this.render_market(); }); }
       el.innerHTML = this._head('Market', this._wallet()) + '<div class="pg-body"><p class="muted">Memuat…</p></div>';
       let list = []; try { list = (await when(be.listMarket())) || []; } catch (e) { list = []; }
+       this._marketCache = { list: list, ts: Date.now() };
       const user = be.currentUser() || {}, owned = new Set(user.owned || []), isAdmin = be.isAdmin();
       const own = (it) => owned.has(it.id) || st.custom.cues.some((x) => x.id === 'mk_' + it.id) || st.custom.tables.some((x) => x.id === 'mk_' + it.id) || st.custom.cueballs.some((x) => x.id === 'mk_' + it.id);
       const shown = list.filter((it) => mk.tab === 'all' || it.kind === mk.tab).sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
       const KIND = { table: 'Meja', cue: 'Cue', cueball: 'Bola putih' };
-      const tabs = [['all', 'Semua'], ['table', 'Meja'], ['cue', 'Cue'], ['cueball', 'Bola putih']];
+      const KIND = { table: 'Meja', cue: 'Cue', cueball: 'Bola putih', fx: 'FX Bola' };
+      const tabs = [
+        ['all', 'Semua'],
+        ['table', 'Meja'],
+        ['cue', 'Cue'],
+        ['cueball', 'Bola putih'],
+        ['fx', 'FX Bola'],     // ← tambah
+      ];
       el.innerHTML = this._head('Market', this._wallet()) + '<div class="pg-body">' +
         '<div class="mk-tabs seg">' + tabs.map((t) => '<button data-act="tab" data-v="' + t[0] + '" aria-pressed="' + (mk.tab === t[0]) + '">' + t[1] + ' <small>(' + (t[0] === 'all' ? list.length : list.filter((x) => x.kind === t[0]).length) + ')</small></button>').join('') + '</div>' +
         (shown.length ? '<div class="mk-grid">' + shown.map((it) =>
@@ -86,6 +94,17 @@
       shown.forEach((it) => {                                                              // pratinjau
         const slot = el.querySelector('[data-mk="' + (window.CSS && CSS.escape ? CSS.escape(it.id) : it.id) + '"]'); if (!slot) return; const pl = it.payload || {};
         if (it.kind === 'cue') { const im = new Image(); im.src = pl.image || it.image || ''; slot.appendChild(im); }
+           else if (it.kind === 'fx') {
+           const cv = document.createElement('canvas');
+           cv.width = 240; cv.height = 180;
+           cv.style.width = '100%'; cv.style.height = 'auto';
+           slot.appendChild(cv);
+           const preview = new DevBallPreview(cv);
+           preview.set(null, null, (it.payload && it.payload.id) || 'none');
+           preview.start();
+           if (!this._fxPreviews) this._fxPreviews = new Map();
+           this._fxPreviews.set(cv, preview);
+         }
         else if (it.kind === 'cueball') slot.appendChild(ballThumb({ tint: pl.tint || it.tint, image: pl.image || it.image, fx: pl.fx || it.fx }, 112));
         else if (it.thumb) { const im = new Image(); im.src = it.thumb; slot.appendChild(im); }
         else { const th = Object.assign({}, pl); loadThemeImages(th, (imgs) => { slot.appendChild(renderTablePreview(th, 220, imgs, th.imageProfile || 'american')); }); }
@@ -96,6 +115,15 @@
         buy: async (d) => {
           const it = list.find((x) => x.id === d.v); if (!it) return;
           const price = it.price || 0, pl = it.payload || {};
+                     // ── FX: cuma license, tidak simpan data ──
+           if (it.kind === 'fx') {
+             const r = st.buyFxFromMarket(pl.id, price);
+             if (!r.ok) { this.toast(r.error, 'foul'); return; }
+             try { await when(be.updateProfile({ owned: (user.owned || []).concat(it.id) })); } catch (e) {}
+             this.toast('"' + it.name + '" dibuka — pakai di halaman FX Bola', 'ok');
+             this.fx.burst(innerWidth / 2, innerHeight / 2, 70);
+             this.render_market();
+             return;
           if (st.coins < price) { this.toast('Koin tidak cukup', 'foul'); return; }
           if (lsUsed() + JSON.stringify(pl).length > 4.6e6) { this.toast('Penyimpanan browser hampir penuh — hapus skin lama di Developer dulu', 'foul'); return; }
           if (!st.spend(price)) { this.toast('Koin tidak cukup', 'foul'); return; }

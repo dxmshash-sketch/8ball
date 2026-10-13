@@ -429,19 +429,86 @@ setTimeout(() => {
     }
   };
 },
-  /* ------------------------------ peringkat ------------------------------ */
-  render_board() {
-    const kind = this.lbKind || 'coins', el = $('pageBoard'), rows = this.board.fetch(kind), you = rows.find((r) => r.isYou);
-    const val = (r) => kind === 'coins' ? COIN_SVG + ' ' + fmtShort(r.value) : kind === 'level' ? 'Lv ' + r.value : r.value + ' menang';
-    const top = rows.slice(0, 3), list = rows.slice(3, 30), order = [top[1], top[0], top[2]];
-    const row = (r) => '<div class="lb-row' + (r.isYou ? ' you' : '') + '"><span class="lb-rank">' + r.rank + '</span>' + avatarHTML(r.avatar, 36, r.badge || null) + '<span class="lb-name">' + esc(r.name) + '<small>Level ' + r.level + '</small></span><span class="lb-val">' + val(r) + '</span></div>';
-    el.innerHTML = this._head('Peringkat', this._wallet()) + '<div class="pg-body"><div class="seg" style="margin-bottom:12px">' + [['coins', 'Koin'], ['level', 'Level'], ['wins', 'Kemenangan']].map((t) => '<button data-act="kind" data-v="' + t[0] + '" aria-pressed="' + (kind === t[0]) + '">' + t[1] + '</button>').join('') + '</div>' +
-      '<div class="podium">' + order.map((r) => '<div class="pod' + (r.rank === 1 ? ' p1' : '') + '"><span class="medal">#' + r.rank + '</span>' + avatarHTML(r.avatar, r.rank === 1 ? 62 : 50, r.badge || null) + '<b>' + esc(r.name) + '</b><span class="lb-val">' + val(r) + '</span></div>').join('') + '</div>' +
-      list.map(row).join('') + (you.rank > 30 ? '<p class="muted" style="text-align:center;margin:8px 0">⋯</p>' + row(you) : '') +
-      '<p class="note">Papan peringkat masih simulasi lokal: pemain lain dibuat otomatis dan berganti tiap minggu. Layanan peringkat sungguhan cukup mengganti <code>MockLeaderboard</code> dengan klien server.</p></div>';
-    this._bind(el, { kind: (d) => { this.lbKind = d.v; this.render_board(); } });
-  },
+  // /* ------------------------------ peringkat ------------------------------ */
+  // render_board() {
+  //   const kind = this.lbKind || 'coins', el = $('pageBoard'), rows = this.board.fetch(kind), you = rows.find((r) => r.isYou);
+  //   const val = (r) => kind === 'coins' ? COIN_SVG + ' ' + fmtShort(r.value) : kind === 'level' ? 'Lv ' + r.value : r.value + ' menang';
+  //   const top = rows.slice(0, 3), list = rows.slice(3, 30), order = [top[1], top[0], top[2]];
+  //   const row = (r) => '<div class="lb-row' + (r.isYou ? ' you' : '') + '"><span class="lb-rank">' + r.rank + '</span>' + avatarHTML(r.avatar, 36, r.badge || null) + '<span class="lb-name">' + esc(r.name) + '<small>Level ' + r.level + '</small></span><span class="lb-val">' + val(r) + '</span></div>';
+  //   el.innerHTML = this._head('Peringkat', this._wallet()) + '<div class="pg-body"><div class="seg" style="margin-bottom:12px">' + [['coins', 'Koin'], ['level', 'Level'], ['wins', 'Kemenangan']].map((t) => '<button data-act="kind" data-v="' + t[0] + '" aria-pressed="' + (kind === t[0]) + '">' + t[1] + '</button>').join('') + '</div>' +
+  //     '<div class="podium">' + order.map((r) => '<div class="pod' + (r.rank === 1 ? ' p1' : '') + '"><span class="medal">#' + r.rank + '</span>' + avatarHTML(r.avatar, r.rank === 1 ? 62 : 50, r.badge || null) + '<b>' + esc(r.name) + '</b><span class="lb-val">' + val(r) + '</span></div>').join('') + '</div>' +
+  //     list.map(row).join('') + (you.rank > 30 ? '<p class="muted" style="text-align:center;margin:8px 0">⋯</p>' + row(you) : '') +
+  //     '<p class="note">Papan peringkat masih simulasi lokal: pemain lain dibuat otomatis dan berganti tiap minggu. Layanan peringkat sungguhan cukup mengganti <code>MockLeaderboard</code> dengan klien server.</p></div>';
+  //   this._bind(el, { kind: (d) => { this.lbKind = d.v; this.render_board(); } });
+  // },
+render_board() {
+  const kind = this.lbKind || 'coins', el = $('pageBoard');
+  const notLoggedIn = !this.backend || !this.backend.currentUser();
 
+  el.innerHTML = this._head('Peringkat', this._wallet()) +
+    '<div class="pg-body"><p class="muted" style="text-align:center;padding:40px 0">Memuat peringkat…</p></div>';
+
+  Promise.resolve(this.board.fetch(kind)).then((rows) => {
+    // Belum login
+    if (notLoggedIn) {
+      el.innerHTML = this._head('Peringkat', this._wallet()) +
+        '<div class="pg-body"><div style="text-align:center;padding:60px 20px">' +
+          '<p class="muted" style="font-size:16px;margin-bottom:16px">Masuk ke akun untuk melihat peringkat pemain nyata.</p>' +
+          '<button class="btn primary" data-act="login">Masuk / Daftar</button>' +
+        '</div></div>';
+      this._bind(el, { login: () => this.go('auth') });
+      return;
+    }
+
+    // Kosong (belum ada user lain)
+    if (!rows || !rows.length) {
+      el.innerHTML = this._head('Peringkat', this._wallet()) +
+        '<div class="pg-body"><p class="muted" style="text-align:center;padding:60px 0">Belum ada pemain lain.<br><small>Ajak teman untuk bermain!</small></p></div>';
+      return;
+    }
+
+    const you = rows.find((r) => r.isYou);
+    const val = (r) => kind === 'coins'
+      ? COIN_SVG + ' ' + fmtShort(r.value)
+      : kind === 'level'
+        ? 'Lv ' + r.value
+        : r.value + ' menang';
+
+    const top = rows.slice(0, 3);
+    const list = rows.slice(3, 30);
+    const order = top.length >= 3 ? [top[1], top[0], top[2]] : top;
+
+    const row = (r) => '<div class="lb-row' + (r.isYou ? ' you' : '') + '">' +
+      '<span class="lb-rank">' + r.rank + '</span>' +
+      avatarHTML(r.avatar, 36, r.badge || null) +
+      '<span class="lb-name">' + esc(r.name) + '<small>Level ' + r.level + '</small></span>' +
+      '<span class="lb-val">' + val(r) + '</span></div>';
+
+    el.innerHTML = this._head('Peringkat', this._wallet()) +
+      '<div class="pg-body">' +
+        '<div class="seg" style="margin-bottom:12px">' +
+          [['coins','Koin'],['level','Level'],['wins','Kemenangan']]
+            .map((t) => '<button data-act="kind" data-v="' + t[0] + '" aria-pressed="' + (kind === t[0]) + '">' + t[1] + '</button>')
+            .join('') +
+        '</div>' +
+        '<div class="podium">' +
+          order.map((r) => '<div class="pod' + (r.rank === 1 ? ' p1' : '') + '">' +
+            '<span class="medal">#' + r.rank + '</span>' +
+            avatarHTML(r.avatar, r.rank === 1 ? 62 : 50, r.badge || null) +
+            '<b>' + esc(r.name) + '</b>' +
+            '<span class="lb-val">' + val(r) + '</span>' +
+          '</div>').join('') +
+        '</div>' +
+        list.map(row).join('') +
+        (you && you.rank > 30
+          ? '<p class="muted" style="text-align:center;margin:8px 0">⋯</p>' + row(you)
+          : '') +
+        '<p class="note">Peringkat dari Firestore — realtime dari semua pemain yang login.</p>' +
+      '</div>';
+
+    this._bind(el, { kind: (d) => { this.lbKind = d.v; this.render_board(); } });
+  });
+},
   /* ------------------------------ toko meja ------------------------------ */
 render_tables() {
   const st = this.store, el = $('pageTables'), eq = st.data.tables.equipped;
@@ -481,6 +548,104 @@ render_tables() {
   this.fillPreviews(el, 145);
 },
 
+/* ------------------------------ FX Bola Putih ------------------------------ */
+/* ------------------------------ FX Bola Putih ------------------------------ */
+render_ballfx() {
+  const st = this.store, el = $('pageBallFx');
+  const eq = (st.data.fx && st.data.fx.equipped) || 'none';
+  const items = st.allFx();
+
+  // Load market cache (untuk tahu FX mana yang dijual admin)
+  if (!this._marketCache || Date.now() - (this._marketCache.ts || 0) > 30000) {
+    Promise.resolve(this.backend.listMarket()).then((list) => {
+      this._marketCache = { list: list || [], ts: Date.now() };
+      if (this.current === 'screenBallFx') this.render_ballfx();
+    }).catch(() => {});
+  }
+
+  const marketList = (this._marketCache && this._marketCache.list) || [];
+  const isOnMarket = (fxId) => marketList.some((it) => it.kind === 'fx' && it.payload && it.payload.id === fxId);
+  const marketItemFor = (fxId) => marketList.find((it) => it.kind === 'fx' && it.payload && it.payload.id === fxId);
+
+  const owned = items.filter((fx) => st.fxOwned(fx.id));
+  const market = items.filter((fx) => !st.fxOwned(fx.id) && isOnMarket(fx.id));
+
+  // Card builder
+  const card = (fx, mode) => {
+    const on = eq === fx.id;
+    const m = mode === 'market' ? marketItemFor(fx.id) : null;
+    let action = '';
+    if (mode === 'owned') {
+      action = '<button class="btn small ' + (on ? '' : 'primary') + '" data-act="equip" data-v="' + fx.id + '"' + (on ? ' disabled' : '') + '>' + (on ? 'Dipakai' : 'Pakai') + '</button>';
+    } else {
+      action = '<button class="btn small green" data-act="gotoMarket">Beli di Market · ' + COIN_SVG + ' ' + fmtShort(m ? m.price : 0) + '</button>';
+    }
+    return '<div class="tb-card' + (on ? ' equipped' : '') + '">' +
+      '<div class="tb-prev" style="min-height:180px"><canvas data-fx="' + fx.id + '" width="240" height="180" style="width:100%;height:auto;display:block"></canvas></div>' +
+      '<div class="tb-info">' +
+        '<h4>' + esc(fx.name) + '<span class="rar ' + fx.rarity + '">' + fx.rarity + '</span></h4>' +
+        '<p class="muted" style="margin:0;font-size:13px;line-height:1.35;min-height:36px">' + esc(fx.desc) + '</p>' +
+        action +
+      '</div>' +
+    '</div>';
+  };
+
+  let body = '';
+  // ── Seksi 1: Koleksi ──
+  body += '<h3 class="sec" style="margin-top:4px">Koleksi Kamu (' + owned.length + ')</h3>';
+  if (owned.length) body += '<div class="tb-grid">' + owned.map((fx) => card(fx, 'owned')).join('') + '</div>';
+  else body += '<p class="muted">Belum ada FX. Buka <b>Market → tab FX Bola</b> untuk membeli.</p>';
+
+  // ── Seksi 2: Market ──
+  if (market.length) {
+    body += '<h3 class="sec">Tersedia di Market (' + market.length + ')</h3>';
+    body += '<div class="tb-grid">' + market.map((fx) => card(fx, 'market')).join('') + '</div>';
+  }
+
+  el.innerHTML = this._head('FX Bola Putih', this._wallet()) +
+    '<div class="pg-body">' +
+      '<p class="note" style="margin-top:0">Efek animasi untuk bola putih. Beli di <b>Market</b> untuk membuka; di sini untuk memakai / melepas.</p>' +
+      body +
+    '</div>';
+
+  this._bind(el, {
+    equip: (d) => { st.equipFx(d.v); this.render_ballfx(); },
+    gotoMarket: () => { this.go('market'); },
+  });
+
+  this._setupFxPreviews(el);
+},
+
+/** Animasi preview untuk tiap canvas[data-fx] (IntersectionObserver). */
+_setupFxPreviews(root) {
+  if (this._fxPreviews) { this._fxPreviews.forEach((p) => p.stop()); this._fxPreviews = null; }
+  if (this._fxPreviewIO) { this._fxPreviewIO.disconnect(); this._fxPreviewIO = null; }
+
+  const canvases = root.querySelectorAll('canvas[data-fx]');
+  if (!canvases.length) return;
+
+  this._fxPreviews = new Map();
+  canvases.forEach((cv) => {
+    const preview = new DevBallPreview(cv);
+    preview.set(null, null, cv.dataset.fx || 'none');
+    this._fxPreviews.set(cv, preview);
+  });
+
+  if (typeof IntersectionObserver === 'undefined') {
+    this._fxPreviews.forEach((p) => p.start());
+    return;
+  }
+
+  this._fxPreviewIO = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      const preview = this._fxPreviews.get(e.target);
+      if (!preview) continue;
+      if (e.isIntersecting) preview.start(); else preview.stop();
+    }
+  }, { rootMargin: '60px', threshold: 0 });
+
+  canvases.forEach((cv) => this._fxPreviewIO.observe(cv));
+},
   /* ------------------------------ Cue Collection ------------------------------ */
   render_cues() {
     const st = this.store, el = $('pageCues'), eq = st.data.cues.equipped;

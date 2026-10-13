@@ -73,7 +73,6 @@
       const user = be.currentUser() || {}, owned = new Set(user.owned || []), isAdmin = be.isAdmin();
       const own = (it) => owned.has(it.id) || st.custom.cues.some((x) => x.id === 'mk_' + it.id) || st.custom.tables.some((x) => x.id === 'mk_' + it.id) || st.custom.cueballs.some((x) => x.id === 'mk_' + it.id);
       const shown = list.filter((it) => mk.tab === 'all' || it.kind === mk.tab).sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
-      const KIND = { table: 'Meja', cue: 'Cue', cueball: 'Bola putih' };
       const KIND = { table: 'Meja', cue: 'Cue', cueball: 'Bola putih', fx: 'FX Bola' };
       const tabs = [
         ['all', 'Semua'],

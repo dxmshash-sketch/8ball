@@ -283,7 +283,13 @@ const CONFIG = {
     turnSeconds: 35, breakSeconds: 45, foulBannerSeconds: 1.7,
     breakMinCushionBalls: 4,
     matchmakingSeconds: { bot: 0.9, local: 0.4, online: 2.4 },
-  },
+    disconnectGraceSeconds: 30,   // pemain punya 30 detik untuk reconnect sebelum forfeit
+    turnSeconds: 30,
+    breakSeconds: 30,
+    foulBannerSeconds: 1.6,
+    matchmakingSeconds: { bot: 1.4, online: 6, local: 1.0 },
+    breakMinCushionBalls: 4,
+    },
 
  aim: { guide: 1, pullMax: 90, cueLengthRatio: 0.75, cueGap: 5, cueAnimSeconds: 0.08, fineRate: 0.32, keyStep: 0.02, keyStepFine: 0.004 },
   bots: {

@@ -79,7 +79,7 @@
         ['table', 'Meja'],
         ['cue', 'Cue'],
         ['cueball', 'Bola putih'],
-        ['fx', 'FX Bola'],     // ← tambah
+        // ['fx', 'FX Bola'],     // ← tambah
       ];
       el.innerHTML = this._head('Market', this._wallet()) + '<div class="pg-body">' +
         '<div class="mk-tabs seg">' + tabs.map((t) => '<button data-act="tab" data-v="' + t[0] + '" aria-pressed="' + (mk.tab === t[0]) + '">' + t[1] + ' <small>(' + (t[0] === 'all' ? list.length : list.filter((x) => x.kind === t[0]).length) + ')</small></button>').join('') + '</div>' +
@@ -115,17 +115,32 @@
           const it = list.find((x) => x.id === d.v); if (!it) return;
           const price = it.price || 0, pl = it.payload || {};
                      // ── FX: cuma license, tidak simpan data ──
-          // ── FX: cuma license, tidak simpan data ──
-              if (it.kind === 'fx') {
-                const r = st.buyFxFromMarket(pl.id, price);
-                if (!r.ok) { this.toast(r.error, 'foul'); return; }
-                try { await when(be.updateProfile({ owned: (user.owned || []).concat(it.id) })); } catch (e) {}
-                this.toast('"' + it.name + '" dibuka — pakai di halaman FX Bola', 'ok');
-                this.fx.burst(innerWidth / 2, innerHeight / 2, 70);
-                this.render_market();
-                return;
-              }   // ← TAMBAH INI
-          if (st.coins < price) { this.toast('Koin tidak cukup', 'foul'); return; }
+          // // ── FX: cuma license, tidak simpan data ──
+          //     if (it.kind === 'fx') {
+          //       const r = st.buyFxFromMarket(pl.id, price);
+          //       if (!r.ok) { this.toast(r.error, 'foul'); return; }
+          //       try { await when(be.updateProfile({ owned: (user.owned || []).concat(it.id) })); } catch (e) {}
+          //       this.toast('"' + it.name + '" dibuka — pakai di halaman FX Bola', 'ok');
+          //       this.fx.burst(innerWidth / 2, innerHeight / 2, 70);
+          //       this.render_market();
+          //       return;
+          //     }   // ← TAMBAH INI
+          if (it.kind === 'fx') {
+          const def = it.payload || {};
+          const fxId = def.id || pl.id;
+          const r = st.buyFxFromMarket(fxId, price, {
+            name: it.name || def.name,
+            desc: def.desc || it.desc || '',
+            rarity: def.rarity || it.rarity || 'Epic',
+          });
+          if (!r.ok) { this.toast(r.error, 'foul'); return; }
+          try { await when(be.updateProfile({ owned: (user.owned || []).concat(it.id) })); } catch (e) {}
+          this.toast('"' + it.name + '" dibuka — pakai di halaman FX Bola', 'ok');
+          this.fx.burst(innerWidth / 2, innerHeight / 2, 70);
+          this.render_market();
+          return;
+        }
+                  if (st.coins < price) { this.toast('Koin tidak cukup', 'foul'); return; }
           if (lsUsed() + JSON.stringify(pl).length > 4.6e6) { this.toast('Penyimpanan browser hampir penuh — hapus skin lama di Developer dulu', 'foul'); return; }
           if (!st.spend(price)) { this.toast('Koin tidak cukup', 'foul'); return; }
           const nid = 'mk_' + it.id; let ok = true;
@@ -206,22 +221,49 @@
       el.innerHTML = this._head('Main dengan Teman', this._wallet()) + '<div class="pg-body"><div class="fr-wrap">' + body + '</div></div>';
       const val = (id) => ($(id) || {}).value;
       this._bind(el, {
+
+        // create: () => {
+        //   fr.game = val('frGame'); fr.table = val('frTable'); fr.bet = +val('frBet') || 0;
+        //   if (fr.bet > this.store.coins) { this.toast('Saldo tidak cukup untuk taruhan ini', 'foul'); return; }
+        //   fr.code = be.createRoom(); fr.role = 'host'; fr.peer = null; fr.step = 'room'; fr.starting = false; this._frListen(); this.render_friend();
+        // },
+
         create: () => {
           fr.game = val('frGame'); fr.table = val('frTable'); fr.bet = +val('frBet') || 0;
-          if (fr.bet > this.store.coins) { this.toast('Saldo tidak cukup untuk taruhan ini', 'foul'); return; }
-          fr.code = be.createRoom(); fr.role = 'host'; fr.peer = null; fr.step = 'room'; fr.starting = false; this._frListen(); this.render_friend();
+          if (fr.bet > this.store.coins) { this.toast('Saldo tidak cukup', 'foul'); return; }
+          fr.code = be.createRoom(); fr.role = 'host'; fr.peer = null; fr.step = 'room'; fr.starting = false;
+          this._frListen(); this.render_friend();
         },
+
         join: async () => {
           const code = String(val('frCode') || '').toUpperCase().trim(); if (!code) { this.toast('Masukkan kode room', 'foul'); return; }
           const r = await when(be.joinRoom(code)); if (!r || !r.ok) { this.toast((r && r.error) || 'Room tidak ditemukan', 'foul'); return; }
           if (r.asHost) { this.toast('Itu room milikmu — bagikan kodenya ke teman', 'foul'); return; }
           fr.code = code; fr.role = 'guest'; fr.peer = r.room.host; fr.step = 'room'; fr.starting = false; this._frListen(); this.render_friend();
         },
+
+        // start: () => {
+        //   if (!fr.peer || fr.starting) return; if (fr.bet > this.store.coins) { this.toast('Saldo tidak cukup untuk taruhan ini', 'foul'); return; }
+        //   fr.starting = true; be.sendRoomStart(fr.code, { game: fr.game, table: fr.table, bet: fr.bet }); this.render_friend();
+        //   clearTimeout(fr.startTimer); fr.startTimer = setTimeout(() => { if (fr.starting && fr.step === 'room') { fr.starting = false; this.toast('Teman tidak merespons — coba lagi', 'foul'); this.render_friend(); } }, 8000);
+        // },
+
         start: () => {
-          if (!fr.peer || fr.starting) return; if (fr.bet > this.store.coins) { this.toast('Saldo tidak cukup untuk taruhan ini', 'foul'); return; }
-          fr.starting = true; be.sendRoomStart(fr.code, { game: fr.game, table: fr.table, bet: fr.bet }); this.render_friend();
-          clearTimeout(fr.startTimer); fr.startTimer = setTimeout(() => { if (fr.starting && fr.step === 'room') { fr.starting = false; this.toast('Teman tidak merespons — coba lagi', 'foul'); this.render_friend(); } }, 8000);
+          if (!fr.peer || fr.starting) return;
+          if (fr.bet > this.store.coins) { this.toast('Saldo tidak cukup', 'foul'); return; }
+          fr.starting = true;
+          const mySkin = {
+            tableId: this.store.data.tables.equipped,
+            cueId: this.store.data.cues.equipped,
+            fxId: (this.store.data.fx && this.store.data.fx.equipped) || 'none',
+            cueballId: this.store.data.cueball.equipped,
+          };
+          be.sendRoomStart(fr.code, { game: fr.game, table: fr.table, bet: fr.bet, skin: mySkin });
+          this.render_friend();
+          clearTimeout(fr.startTimer);
+          fr.startTimer = setTimeout(() => { if (fr.starting && fr.step === 'room') { fr.starting = false; this.toast('Teman tidak merespons — coba lagi', 'foul'); this.render_friend(); } }, 8000);
         },
+
         leave: () => this._frClose(true),
       });
     },
@@ -241,14 +283,44 @@
         }
       });
     },
+
+    // _frLaunch(info, isHost) {
+    //   const fr = this.fr, be = this.backend, user = be.currentUser();
+    //   clearTimeout(fr.startTimer); be.offRoom(fr.code);
+    //   const transport = new RoomTransport(be, fr.code), peer = fr.peer || {};
+    //   const ok = this.game.startMatch({ mode: 'online', game: info.game || '8ball', table: info.table || 'american', bet: info.bet || 0, room: { transport, code: fr.code, isHost, myName: user.name, peerName: peer.name || 'Teman' } });
+    //   if (!ok) { transport.close(); this.toast('Saldo tidak cukup untuk taruhan ini', 'foul'); fr.starting = false; return; }
+    //   fr.step = 'home'; fr.starting = false;
+    // },
+
     _frLaunch(info, isHost) {
       const fr = this.fr, be = this.backend, user = be.currentUser();
       clearTimeout(fr.startTimer); be.offRoom(fr.code);
+      const mySkin = {
+        tableId: this.store.data.tables.equipped,
+        cueId: this.store.data.cues.equipped,
+        fxId: (this.store.data.fx && this.store.data.fx.equipped) || 'none',
+        cueballId: this.store.data.cueball.equipped,
+      };
+      const peerSkin = isHost ? (fr.peer && fr.peer.skin) : (info.skin || null);
       const transport = new RoomTransport(be, fr.code), peer = fr.peer || {};
-      const ok = this.game.startMatch({ mode: 'online', game: info.game || '8ball', table: info.table || 'american', bet: info.bet || 0, room: { transport, code: fr.code, isHost, myName: user.name, peerName: peer.name || 'Teman' } });
+      const ok = this.game.startMatch({
+        mode: 'online',
+        game: info.game || '8ball',
+        table: info.table || 'american',
+        bet: info.bet || 0,
+        room: {
+          transport, code: fr.code, isHost,
+          myName: user.name,
+          peerName: peer.name || 'Teman',
+          peerSkin,
+        },
+      });
       if (!ok) { transport.close(); this.toast('Saldo tidak cukup untuk taruhan ini', 'foul'); fr.starting = false; return; }
       fr.step = 'home'; fr.starting = false;
     },
+
+
     _frClose(notify) {
       const fr = this.fr; if (!fr) return;
       if (notify && fr.code) { try { this.backend.sendRoomChat(fr.code, '__left__'); } catch (e) { /* abaikan */ } }
@@ -265,19 +337,40 @@
       ov.hidden = false;
       ov.innerHTML = '<div class="qm-box"><div class="qm-spin"></div><b style="font-size:17px">Mencari lawan…</b><span class="muted">' + (bet ? 'Taruhan ' + COIN_SVG + ' <b class="gold">' + fmtCoins(bet) + '</b>' : 'Tanpa taruhan') + ' · ' + esc(opts.game || '8ball') + ' · meja ' + esc(opts.table || 'standard') + '</span><button class="btn small" id="qmCancel">Batal</button></div>';
       let done = false; const finish = () => { done = true; clearTimeout(timer); ov.hidden = true; };
+      const mySkin = {
+      tableId: st.data.tables.equipped,
+      cueId: st.data.cues.equipped,
+      fxId: (st.data.fx && st.data.fx.equipped) || 'none',
+      cueballId: st.data.cueball.equipped,
+    };
       const timer = setTimeout(() => {                                                    // tidak ada pemain sungguhan: lawan simulasi (diberi label)
         if (done) return; finish(); be.leaveQueue();
         this.toast('Belum ada pemain lain dengan taruhan yang sama — kamu melawan lawan simulasi', '');
         if (!this.game.startMatch({ mode: 'online', game: opts.game || '8ball', table: opts.table || 'standard', bet })) this.toast('Saldo tidak cukup untuk taruhan ini', 'foul');
       }, 12000);
       $('qmCancel').onclick = () => { this.click(); if (done) return; finish(); be.leaveQueue(); };
+      
       be.joinQueue((m) => {
-        if (done) return; finish(); const o = Object.assign({}, opts, m.opts || {}), user = be.currentUser();
-        const transport = new RoomTransport(be, m.code);
-        const ok = this.game.startMatch({ mode: 'online', game: o.game || '8ball', table: o.table || 'standard', bet: o.bet || 0, room: { transport, code: m.code, isHost: m.isHost, myName: user.name, peerName: (m.peer && m.peer.name) || 'Lawan' } });
-        if (!ok) { transport.close(); this.toast('Saldo tidak cukup untuk taruhan ini', 'foul'); }
-      }, { bet, game: opts.game || '8ball', table: opts.table || 'standard' });
+      if (done) return; finish();
+      const o = Object.assign({}, opts, m.opts || {}), user = be.currentUser();
+      const transport = new RoomTransport(be, m.code);
+      const ok = this.game.startMatch({
+        mode: 'online',
+        game: o.game || '8ball',
+        table: o.table || 'standard',
+        bet: o.bet || 0,
+        room: {
+          transport, code: m.code, isHost: m.isHost,
+          myName: user.name,
+          peerName: (m.peer && m.peer.name) || 'Lawan',
+          peerSkin: (m.peer && m.peer.skin) || null,
+        },
+      });
+      if (!ok) { transport.close(); this.toast('Saldo tidak cukup untuk taruhan ini', 'foul'); }
+    }, { bet, game: opts.game || '8ball', table: opts.table || 'standard', skin: mySkin });
     },
   });
 })();
+
+
 

@@ -610,7 +610,9 @@ class Renderer {
   this.themeImgs = {};
   this.theme = null;
   this.cueFX = new CueballFX();
-
+  this._tableCache = new Map();          // key: themeId|rot|scale|dpr → {canvas,pad,s}
+  this._themeImgs = new Map();            // themeId → { cloth, rail }
+  this._activeSeatSkinKey = '';
   this.applyTheme(true);
   this.applyCueSkin();
   this.resize();
@@ -633,12 +635,18 @@ class Renderer {
   onTableChanged() {
     this.geo = this.game.world.geo; const T = CONFIG.table; this.cam.zoom = 1; this.cam.cx = T.width / 2; this.cam.cy = T.height / 2; this.resize();
   }
-  applyTheme(skipBuild) {
-    this.theme = this.store.themeDef(this.store.data.tables.equipped);
+  // applyTheme(skipBuild) {
+  //   this.theme = this.store.themeDef(this.store.data.tables.equipped);
  
-    this.themeImgs = loadThemeImages(this.theme, (imgs) => { this.themeImgs = imgs; if (this.vw) this._buildTable(); });
-    if (!skipBuild && this.vw) this._buildTable();
-  }
+  //   this.themeImgs = loadThemeImages(this.theme, (imgs) => { this.themeImgs = imgs; if (this.vw) this._buildTable(); });
+  //   if (!skipBuild && this.vw) this._buildTable();
+  // }
+
+    applyTheme(themeIdOrSkip) {
+      const themeId = typeof themeIdOrSkip === 'string' ? themeIdOrSkip : this.store.data.tables.equipped;
+      this._switchTable(themeId);
+    }
+
   /** Skin bola putih (DIY): tint/dekal ke sprite, jenis FX ke sistem partikel. */
 applyCueSkin() {
   const def = this.store.cueballDef(this.store.data.cueball.equipped);
@@ -663,7 +671,85 @@ applyCueSkin() {
     this._buildTable(); this.sprites.build(this.scale * this.dpr * this.maxZoom, this.rot);
     for (const b of this.game.world.balls) b.dirty = true;
     this._buildTray();
+    this._tableCache.clear();
+    this._activeSeatSkinKey = '';   // paksa rebuild
+    this._buildTable();
   }
+
+ /** Skin TUAN RUMAH (yang break pertama) — untuk meja & FX bola putih. */
+_hostSkin() {
+  const g = this.game;
+  const host = g.seats[g.breakerSeat];
+  if (host && host.skin) return host.skin;
+  // Fallback kalau host belum punya skin (mis. fase attract di menu)
+  return {
+    tableId: this.store.data.tables.equipped,
+    fxId: (this.store.data.fx && this.store.data.fx.equipped) || 'none',
+    cueballId: this.store.data.cueball.equipped,
+    cueId: this.store.data.cues.equipped,
+  };
+}
+
+/** Skin PEMAIN yang sedang giliran — untuk cue stick saja. */
+_currentPlayerSkin() {
+  const g = this.game;
+  const seat = g.seats[g.rules.currentSeat];
+  if (seat && seat.skin) return seat.skin;
+  return this._hostSkin();
+}
+
+_syncSeatSkins() {
+  const g = this.game;
+  if (!g.isActiveMatch()) return;
+
+  const hostSkin = this._hostSkin();
+
+  // ── MEJA: milik TUAN RUMAH — hanya swap kalau themeId berbeda ──
+  if (this.theme && this.theme.id !== hostSkin.tableId) {
+    this._switchTable(hostSkin.tableId);
+  }
+
+  // ── FX BOLA PUTIH: milik TUAN RUMAH — swap tipe kalau berbeda ──
+  if (this.cueFX.type !== hostSkin.fxId) {
+    this.cueFX.setType(hostSkin.fxId);
+  }
+
+  // ── CUE STICK: otomatis via `_cueIdFor(currentSeat)` di `_drawCue` ──
+  // (tidak perlu preload di sini karena `_drawCue` dipanggil tiap frame)
+}
+_switchTable(themeId) {
+  const theme = this.store.themeDef(themeId);
+  this.theme = theme;
+  const imgs = this._themeImgs.get(themeId) || null;
+
+  // Jika gambar belum ke-load, muat dulu
+  if (!imgs && (theme.clothImage || theme.railImage)) {
+    loadThemeImages(theme, (loaded) => {
+      this._themeImgs.set(themeId, loaded);
+      if (this._activeSeatSkinKey && this._currentSeatSkin().tableId === themeId) {
+        this._buildTableForTheme(theme, loaded);
+      }
+    });
+  }
+
+  this._buildTableForTheme(theme, imgs);
+}
+
+_buildTableForTheme(theme, imgs) {
+  const T = CONFIG.table, tx = T.rail + T.cushion + 46;
+  let s = this.scale * this.dpr * this.maxZoom;
+  s = Math.min(s, 4096 / (T.width + 2 * tx));
+  const cacheKey = theme.id + '|' + this.rot + '|' + s.toFixed(4);
+  let entry = this._tableCache.get(cacheKey);
+  if (!entry) {
+    const r = renderTableLayer(theme, T, this.geo, s, this.rot, imgs || {});
+    entry = { canvas: r.canvas, pad: r.pad, s: r.s };
+    this._tableCache.set(cacheKey, entry);
+  }
+  this.tableLayer = entry.canvas;
+  this.tablePad = entry.pad;
+  this.tableS = entry.s;
+}
   _buildTable() {
     const T = CONFIG.table, tx = T.rail + T.cushion + 46;
     let s = this.scale * this.dpr * this.maxZoom; s = Math.min(s, 4096 / (T.width + 2 * tx));
@@ -696,7 +782,9 @@ applyCueSkin() {
   }
  
   render(dt) {
-    this.time += dt; this._updateCamera(dt);
+    this.time += dt; 
+    this._syncSeatSkins();      // ← tambahkan
+    this._updateCamera(dt);
     const g = this.game, c = this.ctx, world = g.world, R = CONFIG.table.ballRadius, D = this.dpr;
     c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(this.bg, 0, 0);
     const sh = g.shake > 0 ? g.shake * g.shake * 3.2 : 0;
@@ -856,12 +944,22 @@ _drawSinking(c, b, i, sp, half) {
     }
   }
  
+  // _cueIdFor(seat) {
+  //   const g = this.game;
+  //   if (g.mode === 'local') return 'maple';
+  //   if (seat === 0) return this.store.data.cues.equipped;
+  //   return CUE_CATALOG[g.seed % CUE_CATALOG.length].id;
+  // }
+
   _cueIdFor(seat) {
-    const g = this.game;
-    if (g.mode === 'local') return 'maple';
-    if (seat === 0) return this.store.data.cues.equipped;
-    return CUE_CATALOG[g.seed % CUE_CATALOG.length].id;
+  const g = this.game;
+  const s = g.seats[seat];
+  if (s && s.skin && s.skin.cueId) return s.skin.cueId;
+  if (g.mode === 'local') return 'maple';
+  if (seat === 0) return this.store.data.cues.equipped;
+  return CUE_CATALOG[g.seed % CUE_CATALOG.length].id;
   }
+
   _drawCue(c) {
     const g = this.game, cue = g.world.balls[0], R = CONFIG.table.ballRadius, img = this.store.cueImage(this._cueIdFor(g.rules.currentSeat));
     if (!img || !img.complete || !img.naturalWidth) return;

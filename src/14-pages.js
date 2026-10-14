@@ -1,3 +1,4 @@
+
 /* =====================================================================
    14 · PAGES — halaman (mixin ke UI): mode/taruhan, profil, hadiah, peringkat, meja, cue, hasil
    ===================================================================== */
@@ -117,76 +118,403 @@ fillPreviews(root, width) {
   },
 
   /* ------------------------------ mode & taruhan ------------------------------ */
-  render_modes() {
-    const st = this.store, el = $('pageModes'), coins = st.coins, local = this.selectedMode === 'local';
-    if (BETS.indexOf(this.selectedBet) === -1 || this.selectedBet > coins) this.selectedBet = [...BETS].reverse().find((b) => b <= Math.min(coins, 5000)) || BETS[0];
-    const noBet = local || this.selectedMode === 'online', bet = this.selectedBet, canPlay = noBet || coins >= bet, game = this.selectedGame || '8ball', tbl = this.selectedTable || 'standard';
-    const GAMES = { '8ball': ['8 Ball', 'Klasik: bola penuh (1–7) atau strip (9–15), bola 8 menentukan kemenangan.'], '9ball': ['9 Ball', 'Bola 1–9, selalu kena bola bernomor terkecil lebih dulu. Masukkan bola 9 untuk menang.'], '9call': ['9 Ball · Pilih Kantong', 'Aturan 9 Ball, tetapi sebelum menembak Anda memilih kantong tujuan. Bola masuk kantong lain = foul.'] };
-    el.innerHTML =
-      '<h2>Pilih permainan</h2><div class="seg" style="margin:4px 0 6px">' + Object.keys(GAMES).map((k) => '<button data-act="game" data-v="' + k + '" aria-pressed="' + (game === k) + '">' + GAMES[k][0] + '</button>').join('') + '</div><p class="sub" style="margin-bottom:12px">' + GAMES[game][1] + '</p>' +
-      '<div class="mode-grid">' + [['bot', 'Lawan bot', 'Latihan melawan komputer, tiga tingkat kesulitan.'], ['online', 'Online', 'Cari lawan lewat matchmaking. Saat ini simulasi lokal; server sungguhan tinggal disambungkan.'], ['local', 'Dua pemain', 'Gantian di satu layar. Tanpa taruhan dan tanpa hadiah.']]
-        .map((m) => '<button class="mode-card" data-act="mode" data-v="' + m[0] + '" aria-pressed="' + (this.selectedMode === m[0]) + '"><b>' + m[1] + '</b><span>' + m[2] + '</span></button>').join('') + '</div>' +
-      '<div class="tbl-row"><span>Ukuran meja</span><div class="seg">' + Object.values(TABLE_PROFILES).map((p) => '<button data-act="table" data-v="' + p.id + '" aria-pressed="' + (tbl === p.id) + '">' + p.name + '</button>').join('') + '</div></div>' +
-      '<p class="sub" style="margin:2px 0 12px">' + TABLE_PROFILES[tbl].desc + '</p>' +
-      (this.selectedMode === 'bot' ? '<div class="diff-row"><span>Tingkat kesulitan</span><div class="seg">' + [['easy', 'Mudah'], ['medium', 'Sedang'], ['hard', 'Sulit']].map((d) => '<button data-act="diff" data-v="' + d[0] + '" aria-pressed="' + (this.selectedDiff === d[0]) + '">' + d[1] + '</button>').join('') + '</div></div>' : '') +
-      (this.selectedMode === 'online' ? '<p class="note" style="margin:0 0 12px">Online: cari lawan sungguhan lewat antrian. <b>Tanpa taruhan</b> — taruhan koin antar pemain butuh server terpercaya (escrow), belum tersedia. Perlu masuk ke akun.</p>' : '') +
-      (noBet ? '' :
-        '<div class="bet-head"><span>Taruhan</span><span class="muted" style="font-size:16px">Saldo ' + COIN_SVG + ' <b class="gold">' + fmtCoins(coins) + '</b></span></div>' +
-        '<div class="bet-grid">' + BETS.map((b) => '<button class="bet" data-act="bet" data-v="' + b + '" aria-pressed="' + (b === bet) + '"' + (b > coins ? ' disabled' : '') + '>' + fmtShort(b) + '</button>').join('') + '</div>' +
+  // render_modes() {
+  //   const st = this.store, el = $('pageModes'), coins = st.coins, local = this.selectedMode === 'local';
+  //   if (BETS.indexOf(this.selectedBet) === -1 || this.selectedBet > coins) this.selectedBet = [...BETS].reverse().find((b) => b <= Math.min(coins, 5000)) || BETS[0];
+    
+  //   // const noBet = local || this.selectedMode === 'online', bet = this.selectedBet, canPlay = noBet || coins >= bet, game = this.selectedGame || '8ball', tbl = this.selectedTable || 'standard';
+  //   const noBet = local, bet = this.selectedBet, canPlay = noBet || coins >= bet;
+    
+  //   const GAMES = { '8ball': ['8 Ball', 'Klasik: bola penuh (1–7) atau strip (9–15), bola 8 menentukan kemenangan.'], '9ball': ['9 Ball', 'Bola 1–9, selalu kena bola bernomor terkecil lebih dulu. Masukkan bola 9 untuk menang.'], '9call': ['9 Ball · Pilih Kantong', 'Aturan 9 Ball, tetapi sebelum menembak Anda memilih kantong tujuan. Bola masuk kantong lain = foul.'] };
+  //   el.innerHTML =
+  //     '<h2>Pilih permainan</h2><div class="seg" style="margin:4px 0 6px">' + Object.keys(GAMES).map((k) => '<button data-act="game" data-v="' + k + '" aria-pressed="' + (game === k) + '">' + GAMES[k][0] + '</button>').join('') + '</div><p class="sub" style="margin-bottom:12px">' + GAMES[game][1] + '</p>' +
+  //     '<div class="mode-grid">' + [['bot', 'Lawan bot', 'Latihan melawan komputer, tiga tingkat kesulitan.'], ['online', 'Online', 'Cari lawan lewat matchmaking. Saat ini simulasi lokal; server sungguhan tinggal disambungkan.'], ['local', 'Dua pemain', 'Gantian di satu layar. Tanpa taruhan dan tanpa hadiah.']]
+  //       .map((m) => '<button class="mode-card" data-act="mode" data-v="' + m[0] + '" aria-pressed="' + (this.selectedMode === m[0]) + '"><b>' + m[1] + '</b><span>' + m[2] + '</span></button>').join('') + '</div>' +
+  //     '<div class="tbl-row"><span>Ukuran meja</span><div class="seg">' + Object.values(TABLE_PROFILES).map((p) => '<button data-act="table" data-v="' + p.id + '" aria-pressed="' + (tbl === p.id) + '">' + p.name + '</button>').join('') + '</div></div>' +
+  //     '<p class="sub" style="margin:2px 0 12px">' + TABLE_PROFILES[tbl].desc + '</p>' +
+  //     (this.selectedMode === 'bot' ? '<div class="diff-row"><span>Tingkat kesulitan</span><div class="seg">' + [['easy', 'Mudah'], ['medium', 'Sedang'], ['hard', 'Sulit']].map((d) => '<button data-act="diff" data-v="' + d[0] + '" aria-pressed="' + (this.selectedDiff === d[0]) + '">' + d[1] + '</button>').join('') + '</div></div>' : '') +
+  //     (this.selectedMode === 'online' ? '<p class="note" style="margin:0 0 12px">Online: matchmaking hanya menemukan lawan dengan <b>taruhan, game, dan meja yang sama</b>. Bila tidak ada dalam 12 detik → lawan simulasi (diberi label).</p>' : '') +
+  //     (noBet ? '' :
+  //       '<div class="bet-head"><span>Taruhan</span><span class="muted" style="font-size:16px">Saldo ' + COIN_SVG + ' <b class="gold">' + fmtCoins(coins) + '</b></span></div>' +
+  //       '<div class="bet-grid">' + BETS.map((b) => '<button class="bet" data-act="bet" data-v="' + b + '" aria-pressed="' + (b === bet) + '"' + (b > coins ? ' disabled' : '') + '>' + fmtShort(b) + '</button>').join('') + '</div>' +
+  //       '<div class="payout"><span>Menang <b class="ok">+' + fmtCoins(Math.floor(bet * 2 * (1 - HOUSE_FEE))) + '</b></span><span>Kalah <b class="bad">−' + fmtCoins(bet) + '</b></span><span class="muted">Biaya rumah ' + Math.round(HOUSE_FEE * 100) + '%</span></div>') +
+  //     '<div class="row"><button class="btn green" data-act="start"' + (canPlay ? '' : ' disabled') + '>Mulai main</button><button class="btn" data-back>Kembali</button>' + (canPlay ? '' : '<span class="bad">Saldo tidak cukup</span>') + '</div>';
+  //   this._bind(el, {
+  //     game: (d) => { this.selectedGame = d.v; this.render_modes(); },
+  //     mode: (d) => { this.selectedMode = d.v; this.render_modes(); },
+  //     diff: (d) => { this.selectedDiff = d.v; this.render_modes(); },
+  //     table: (d) => { this.selectedTable = d.v; this.render_modes(); },
+  //     bet: (d) => { this.selectedBet = +d.v; this.render_modes(); },
+      
+  //     // start: () => {
+  //     //   if (this.selectedMode === 'online') { this.startQuickMatch({ game: this.selectedGame || '8ball', table: this.selectedTable || 'standard' }); return; }
+  //     //   if (!this.game.startMatch({ game: this.selectedGame || '8ball', table: this.selectedTable || 'standard', mode: this.selectedMode, difficulty: this.selectedDiff, bet: this.selectedBet })) this.toast('Saldo tidak cukup untuk taruhan ini', 'foul');
+  //     //   else this.stack = [];
+  //     // },
+
+  //     start: () => {
+  //       if (this.selectedMode === 'online') {
+  //         this.startQuickMatch({
+  //           game: this.selectedGame || '8ball',
+  //           table: this.selectedTable || 'standard',
+  //           bet: this.selectedBet,   // ← sekarang bet ikut!
+  //         });
+  //         return;
+  //       }
+  //       if (!this.game.startMatch({ game: this.selectedGame || '8ball', table: this.selectedTable || 'standard', mode: this.selectedMode, difficulty: this.selectedDiff, bet: this.selectedBet }))
+  //         this.toast('Saldo tidak cukup untuk taruhan ini', 'foul');
+  //       else this.stack = [];
+  //     },
+
+  //   });
+  // },
+
+render_modes() {
+  const st = this.store;
+  const el = $('pageModes');
+  const coins = st.coins;
+  const local = this.selectedMode === 'local';
+
+  if (BETS.indexOf(this.selectedBet) === -1 || this.selectedBet > coins)
+    this.selectedBet = [...BETS].reverse().find((b) => b <= Math.min(coins, 5000)) || BETS[0];
+
+  const noBet  = local;
+  const bet    = this.selectedBet;
+  const canPlay = noBet || coins >= bet;
+  const game   = this.selectedGame || '8ball';        // ← wajib
+  const tbl    = this.selectedTable || 'standard';     // ← wajib
+
+  const GAMES = {
+    '8ball': ['8 Ball', 'Klasik: bola penuh (1–7) atau strip (9–15), bola 8 menentukan kemenangan.'],
+    '9ball': ['9 Ball', 'Bola 1–9, selalu kena bola bernomor terkecil lebih dulu. Masukkan bola 9 untuk menang.'],
+    '9call': ['9 Ball · Pilih Kantong', 'Aturan 9 Ball, tetapi sebelum menembak Anda memilih kantong tujuan. Bola masuk kantong lain = foul.'],
+  };
+
+  el.innerHTML =
+    '<h2>Pilih permainan</h2>' +
+    '<div class="seg" style="margin:4px 0 6px">' +
+      Object.keys(GAMES).map((k) =>
+        '<button data-act="game" data-v="' + k + '" aria-pressed="' + (game === k) + '">' + GAMES[k][0] + '</button>'
+      ).join('') +
+    '</div>' +
+    '<p class="sub" style="margin-bottom:12px">' + GAMES[game][1] + '</p>' +
+    '<div class="mode-grid">' +
+      [['bot', 'Lawan bot', 'Latihan melawan komputer, tiga tingkat kesulitan.'],
+       ['online', 'Online', 'Cari lawan lewat matchmaking. Saat ini simulasi lokal; server sungguhan tinggal disambungkan.'],
+       ['local', 'Dua pemain', 'Gantian di satu layar. Tanpa taruhan dan tanpa hadiah.']]
+        .map((m) =>
+          '<button class="mode-card" data-act="mode" data-v="' + m[0] + '" aria-pressed="' + (this.selectedMode === m[0]) + '"><b>' + m[1] + '</b><span>' + m[2] + '</span></button>'
+        ).join('') +
+    '</div>' +
+    '<div class="tbl-row"><span>Ukuran meja</span><div class="seg">' +
+      Object.values(TABLE_PROFILES).map((p) =>
+        '<button data-act="table" data-v="' + p.id + '" aria-pressed="' + (tbl === p.id) + '">' + p.name + '</button>'
+      ).join('') +
+    '</div></div>' +
+    '<p class="sub" style="margin:2px 0 12px">' + TABLE_PROFILES[tbl].desc + '</p>' +
+    (this.selectedMode === 'bot'
+      ? '<div class="diff-row"><span>Tingkat kesulitan</span><div class="seg">' +
+          [['easy', 'Mudah'], ['medium', 'Sedang'], ['hard', 'Sulit']].map((d) =>
+            '<button data-act="diff" data-v="' + d[0] + '" aria-pressed="' + (this.selectedDiff === d[0]) + '">' + d[1] + '</button>'
+          ).join('') +
+        '</div></div>'
+      : '') +
+    (this.selectedMode === 'online'
+      ? '<p class="note" style="margin:0 0 12px">Online: matchmaking hanya menemukan lawan dengan <b>taruhan, game, dan meja yang sama</b>. Bila tidak ada dalam 12 detik → lawan simulasi (diberi label).</p>'
+      : '') +
+    (noBet
+      ? ''
+      : '<div class="bet-head"><span>Taruhan</span><span class="muted" style="font-size:16px">Saldo ' + COIN_SVG + ' <b class="gold">' + fmtCoins(coins) + '</b></span></div>' +
+        '<div class="bet-grid">' +
+          BETS.map((b) =>
+            '<button class="bet" data-act="bet" data-v="' + b + '" aria-pressed="' + (b === bet) + '"' + (b > coins ? ' disabled' : '') + '>' + fmtShort(b) + '</button>'
+          ).join('') +
+        '</div>' +
         '<div class="payout"><span>Menang <b class="ok">+' + fmtCoins(Math.floor(bet * 2 * (1 - HOUSE_FEE))) + '</b></span><span>Kalah <b class="bad">−' + fmtCoins(bet) + '</b></span><span class="muted">Biaya rumah ' + Math.round(HOUSE_FEE * 100) + '%</span></div>') +
-      '<div class="row"><button class="btn green" data-act="start"' + (canPlay ? '' : ' disabled') + '>Mulai main</button><button class="btn" data-back>Kembali</button>' + (canPlay ? '' : '<span class="bad">Saldo tidak cukup</span>') + '</div>';
-    this._bind(el, {
-      game: (d) => { this.selectedGame = d.v; this.render_modes(); },
-      mode: (d) => { this.selectedMode = d.v; this.render_modes(); },
-      diff: (d) => { this.selectedDiff = d.v; this.render_modes(); },
-      table: (d) => { this.selectedTable = d.v; this.render_modes(); },
-      bet: (d) => { this.selectedBet = +d.v; this.render_modes(); },
-      start: () => {
-        if (this.selectedMode === 'online') { this.startQuickMatch({ game: this.selectedGame || '8ball', table: this.selectedTable || 'standard' }); return; }
-        if (!this.game.startMatch({ game: this.selectedGame || '8ball', table: this.selectedTable || 'standard', mode: this.selectedMode, difficulty: this.selectedDiff, bet: this.selectedBet })) this.toast('Saldo tidak cukup untuk taruhan ini', 'foul');
-        else this.stack = [];
-      },
-    });
-  },
+    '<div class="row">' +
+      '<button class="btn green" data-act="start"' + (canPlay ? '' : ' disabled') + '>Mulai main</button>' +
+      '<button class="btn" data-back>Kembali</button>' +
+      (canPlay ? '' : '<span class="bad">Saldo tidak cukup</span>') +
+    '</div>';
+
+  this._bind(el, {
+    game:  (d) => { this.selectedGame  = d.v; this.render_modes(); },
+    mode:  (d) => { this.selectedMode  = d.v; this.render_modes(); },
+    diff:  (d) => { this.selectedDiff  = d.v; this.render_modes(); },
+    table: (d) => { this.selectedTable = d.v; this.render_modes(); },
+    bet:   (d) => { this.selectedBet   = +d.v; this.render_modes(); },
+    start: () => {
+      if (this.selectedMode === 'online') {
+        this.startQuickMatch({
+          game:  this.selectedGame  || '8ball',
+          table: this.selectedTable || 'standard',
+          bet:   this.selectedBet,     // ← bet ikut ke matchmaking
+        });
+        return;
+      }
+      if (!this.game.startMatch({
+        game:  this.selectedGame  || '8ball',
+        table: this.selectedTable || 'standard',
+        mode:  this.selectedMode,
+        difficulty: this.selectedDiff,
+        bet:   this.selectedBet,
+      })) this.toast('Saldo tidak cukup untuk taruhan ini', 'foul');
+      else this.stack = [];
+    },
+  });
+},
 
   /* ------------------------------ profil ------------------------------ */
-  render_profile() {
-    const st = this.store, p = st.data.profile, s = st.data.stats, av = p.avatar, el = $('pageProfile'), tab = this.profTab || 'avatar', pr = st.progress();
-    let grid = '';
-    if (tab === 'avatar') {
-      grid = '<div class="pick-grid">' + Object.keys(SYMBOLS).filter((k) => k !== 'trophy').map((k) => { const ok = st.avatarUnlocked('sym:' + k); return '<button class="pick' + (ok ? '' : ' locked') + '" data-act="sym" data-v="' + k + '" aria-pressed="' + (av.sym === k) + '">' + avatarHTML({ sym: k, color: av.color, frame: 'none' }, 44) + '<span>' + SYMBOL_NAMES[k] + '</span>' + (ok ? '' : '<i class="lock">🔒</i>') + '</button>'; }).join('') + '</div>' +
-        '<h3 class="sec">Warna</h3><div class="pick-grid">' + AVATAR_COLORS.map((c, i) => '<button class="pick" data-act="color" data-v="' + i + '" aria-pressed="' + (av.color === i) + '">' + avatarHTML({ sym: av.sym, color: i, frame: 'none' }, 36) + '</button>').join('') + '</div>';
-    } else if (tab === 'frame') {
-      grid = '<div class="pick-grid">' + Object.keys(FRAMES).map((k) => { const ok = st.avatarUnlocked('frame:' + k); return '<button class="pick' + (ok ? '' : ' locked') + '" data-act="frame" data-v="' + k + '" aria-pressed="' + (av.frame === k) + '">' + avatarHTML({ sym: av.sym, color: av.color, frame: k }, 44) + '<span>' + FRAMES[k].name + '</span>' + (ok ? '' : '<i class="lock">🔒</i>') + '</button>'; }).join('') + '</div><p class="note">Bingkai dan avatar baru didapat dari hadiah naik level.</p>';
-    } else {
-      grid = '<div class="bdg-grid">' + BADGE_DEFS.map((b) => { const ok = st.data.unlocks.badges.indexOf(b.id) !== -1; return '<button class="bdg-card' + (ok ? '' : ' locked') + '" data-act="badge" data-v="' + b.id + '" aria-pressed="' + (p.badge === b.id) + '">' + badgeHTML(b, 46) + '<b>' + b.name + '</b><span>' + b.desc + '</span></button>'; }).join('') + '</div>' +
-        (p.badge ? '<div class="row" style="margin-top:10px"><button class="btn small" data-act="nobadge">Lepas badge</button></div>' : '');
-    }
-    const wr = s.matches ? Math.round(s.wins / s.matches * 100) : 0;
-    el.innerHTML = this._head('Profil', this._wallet()) + '<div class="pg-body">' +
-      '<div class="prof-top">' + '<div style="position:relative">' + this.accountAvatarHTML(this.backend.currentUser(), 84) + (this.backend.currentUser() ? '<label class="filebtn btn small" style="position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);font-size:11px;padding:4px 8px">Ganti foto<input type="file" id="profPhoto" accept="image/*"></label>' : '') + '</div><div style="flex:1;min-width:200px"><input id="profName" maxlength="14" autocomplete="off" value="' + esc(p.name) + '" aria-label="Nama pemain"><div class="row" style="margin:10px 0 6px"><b class="gold" style="font:700 22px var(--f-head)">Level ' + pr.level + '</b><span class="muted">' + pr.into + ' / ' + pr.need + ' XP</span></div><div class="xpbar"><div class="xpfill" style="width:' + (pr.pct * 100).toFixed(1) + '%"></div></div>' + (this.backend.currentUser() ? '<p class="muted" style="margin:8px 0 0;font-size:13px">Masuk sebagai ' + esc(this.backend.currentUser().email || this.backend.currentUser().name) + (this.backend.isAdmin() ? ' · <span class="gold">Admin</span>' : '') + ' · <button class="btn small" data-act="signout" style="margin-left:6px">Keluar akun</button></p>' : '<p class="muted" style="margin:8px 0 0;font-size:13px">Belum masuk akun — avatar foto & pembelian Market perlu akun. <button class="btn small primary" data-act="gotoauth">Masuk / Daftar</button></p>') + '</div></div>' +
-      '<div class="seg" style="margin-bottom:10px">' + [['avatar', 'Avatar'], ['frame', 'Bingkai'], ['badge', 'Badge']].map((t) => '<button data-act="tab" data-v="' + t[0] + '" aria-pressed="' + (tab === t[0]) + '">' + t[1] + '</button>').join('') + '</div>' + grid +
-      '<h3 class="sec">Statistik</h3><div class="stat-grid">' + [['Main', s.matches], ['Menang', s.wins], ['Kalah', s.losses], ['Win rate', wr + '%'], ['Runtun terbaik', s.bestStreak], ['Bola masuk', s.potted], ['Total untung', fmtShort(s.totalWon)], ['Taruhan terbesar dimenangkan', fmtShort(s.maxBetWon)]].map((x) => '<div class="stat-c"><small>' + x[0] + '</small><b>' + x[1] + '</b></div>').join('') + '</div></div>';
-    const redo = () => this.render_profile();
-    $('profName').addEventListener('input', (e) => { p.name = e.target.value.trim().slice(0, 14) || 'Pemain'; st.save(); if (this.backend.currentUser()) this.backend.updateProfile({ name: p.name }); });
-    const photoInput = $('profPhoto');
-    if (photoInput) photoInput.addEventListener('change', async () => {
-      if (!photoInput.files[0]) return;
-      try { const img = await readImageFile(photoInput.files[0]); const dataUrl = fitDataURL(img, 256, 256, 0.85); await this.backend.updateProfile({ avatarImage: dataUrl }); this.toast('Foto profil diperbarui', 'ok'); redo(); }
-      catch (e) { this.toast('Gagal membaca gambar', 'foul'); }
-    });
-    this._bind(el, {
-      tab: (d) => { this.profTab = d.v; redo(); },
-      signout: () => { this.backend.signOut(); this.toast('Berhasil keluar', 'ok'); this.back(); },
-      gotoauth: () => this.go('auth'),
-      sym: (d) => { if (!st.setAvatar('sym', d.v)) this.toast('Avatar ini terkunci — raih level tertentu', 'foul'); redo(); },
-      color: (d) => { st.setAvatar('color', +d.v); redo(); },
-      frame: (d) => { if (!st.setAvatar('frame', d.v)) this.toast('Bingkai ini terkunci — raih level tertentu', 'foul'); redo(); },
-      badge: (d) => { if (!st.equipBadge(d.v)) this.toast('Badge belum diraih', 'foul'); redo(); },
-      nobadge: () => { st.equipBadge(null); redo(); },
-    });
-  },
+render_profile() {
+  const st = this.store;
+  const p = st.data.profile;
+  const s = st.data.stats;
+  const av = p.avatar;
+  const el = $('pageProfile');
+  const tab = this.profTab || 'avatar';
+  const pr = st.progress();
 
+  // ── Style riwayat (sekali pakai) ──
+  if (!document.getElementById('mhStyle')) {
+    const mh = document.createElement('style');
+    mh.id = 'mhStyle';
+    mh.textContent = `
+      .match-history{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+      .mh-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;background:linear-gradient(180deg,rgba(34,46,78,.55),rgba(16,23,42,.65));border:1px solid rgba(255,255,255,.08);transition:border-color .2s}
+      .mh-row.win{border-left:3px solid #32D74B}
+      .mh-row.loss{border-left:3px solid #FF5A5F}
+      .mh-icon{width:32px;height:32px;flex:0 0 32px;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:16px;font-weight:900}
+      .mh-row.win .mh-icon{background:rgba(50,215,75,.15);color:#32D74B}
+      .mh-row.loss .mh-icon{background:rgba(255,90,95,.15);color:#FF5A5F}
+      .mh-main{flex:1;min-width:0}
+      .mh-top{display:flex;align-items:center;gap:8px;font-size:14px}
+      .mh-top b{font-weight:800}
+      .mh-mode{padding:1px 7px;border-radius:999px;background:rgba(255,255,255,.08);font-size:11px;font-weight:700;letter-spacing:.3px;text-transform:uppercase}
+      .mh-sub{display:flex;gap:6px;flex-wrap:wrap;font-size:12px;opacity:.65;margin-top:2px}
+      .mh-net{font-weight:900;font-size:15px;white-space:nowrap}
+      .mh-net.ok{color:#32D74B}
+      .mh-net.bad{color:#FF5A5F}
+    `;
+    document.head.appendChild(mh);
+  }
+
+  // ── Grid konten per tab ──
+  let grid = '';
+  if (tab === 'avatar') {
+    grid =
+      '<div class="pick-grid">' +
+        Object.keys(SYMBOLS).filter((k) => k !== 'trophy').map((k) => {
+          const ok = st.avatarUnlocked('sym:' + k);
+          return '<button class="pick' + (ok ? '' : ' locked') +
+            '" data-act="sym" data-v="' + k +
+            '" aria-pressed="' + (av.sym === k) + '">' +
+            avatarHTML({ sym: k, color: av.color, frame: 'none' }, 44) +
+            '<span>' + SYMBOL_NAMES[k] + '</span>' +
+            (ok ? '' : '<i class="lock">🔒</i>') +
+            '</button>';
+        }).join('') +
+      '</div>' +
+      '<h3 class="sec">Warna</h3>' +
+      '<div class="pick-grid">' +
+        AVATAR_COLORS.map((c, i) =>
+          '<button class="pick" data-act="color" data-v="' + i +
+          '" aria-pressed="' + (av.color === i) + '">' +
+          avatarHTML({ sym: av.sym, color: i, frame: 'none' }, 36) +
+          '</button>'
+        ).join('') +
+      '</div>';
+  } else if (tab === 'frame') {
+    grid =
+      '<div class="pick-grid">' +
+        Object.keys(FRAMES).map((k) => {
+          const ok = st.avatarUnlocked('frame:' + k);
+          return '<button class="pick' + (ok ? '' : ' locked') +
+            '" data-act="frame" data-v="' + k +
+            '" aria-pressed="' + (av.frame === k) + '">' +
+            avatarHTML({ sym: av.sym, color: av.color, frame: k }, 44) +
+            '<span>' + FRAMES[k].name + '</span>' +
+            (ok ? '' : '<i class="lock">🔒</i>') +
+            '</button>';
+        }).join('') +
+      '</div>' +
+      '<p class="note">Bingkai dan avatar baru didapat dari hadiah naik level.</p>';
+  } else if (tab === 'history') {
+    grid = '<div id="profHistory"><p class="muted" style="text-align:center;padding:24px 0">Memuat riwayat…</p></div>';
+  } else {
+    grid =
+      '<div class="bdg-grid">' +
+        BADGE_DEFS.map((b) => {
+          const ok = st.data.unlocks.badges.indexOf(b.id) !== -1;
+          return '<button class="bdg-card' + (ok ? '' : ' locked') +
+            '" data-act="badge" data-v="' + b.id +
+            '" aria-pressed="' + (p.badge === b.id) + '">' +
+            badgeHTML(b, 46) +
+            '<b>' + b.name + '</b>' +
+            '<span>' + b.desc + '</span>' +
+            '</button>';
+        }).join('') +
+      '</div>' +
+      (p.badge ? '<div class="row" style="margin-top:10px"><button class="btn small" data-act="nobadge">Lepas badge</button></div>' : '');
+  }
+
+  // ── Statistik ──
+  const wr = s.matches ? Math.round(s.wins / s.matches * 100) : 0;
+  const stats = [
+    ['Main',                  s.matches],
+    ['Menang',                s.wins],
+    ['Kalah',                 s.losses],
+    ['Win rate',              wr + '%'],
+    ['Runtun terbaik',        s.bestStreak],
+    ['Bola masuk',            s.potted],
+    ['Total untung',          fmtShort(s.totalWon)],
+    ['Taruhan terbesar dimenangkan', fmtShort(s.maxBetWon)],
+  ];
+
+  // ── Render ──
+  el.innerHTML =
+    this._head('Profil', this._wallet()) +
+    '<div class="pg-body">' +
+      '<div class="prof-top">' +
+        '<div style="position:relative">' +
+          this.accountAvatarHTML(this.backend.currentUser(), 84) +
+          (this.backend.currentUser()
+            ? '<label class="filebtn btn small" style="position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);font-size:11px;padding:4px 8px">Ganti foto<input type="file" id="profPhoto" accept="image/*"></label>'
+            : '') +
+        '</div>' +
+        '<div style="flex:1;min-width:200px">' +
+          '<input id="profName" maxlength="14" autocomplete="off" value="' + esc(p.name) + '" aria-label="Nama pemain">' +
+          '<div class="row" style="margin:10px 0 6px">' +
+            '<b class="gold" style="font:700 22px var(--f-head)">Level ' + pr.level + '</b>' +
+            '<span class="muted">' + pr.into + ' / ' + pr.need + ' XP</span>' +
+          '</div>' +
+          '<div class="xpbar"><div class="xpfill" style="width:' + (pr.pct * 100).toFixed(1) + '%"></div></div>' +
+          (this.backend.currentUser()
+            ? '<p class="muted" style="margin:8px 0 0;font-size:13px">Masuk sebagai ' +
+                esc(this.backend.currentUser().email || this.backend.currentUser().name) +
+                (this.backend.isAdmin() ? ' · <span class="gold">Admin</span>' : '') +
+                ' · <button class="btn small" data-act="signout" style="margin-left:6px">Keluar akun</button></p>'
+            : '<p class="muted" style="margin:8px 0 0;font-size:13px">Belum masuk akun — avatar foto & pembelian Market perlu akun. <button class="btn small primary" data-act="gotoauth">Masuk / Daftar</button></p>') +
+        '</div>' +
+      '</div>' +
+
+      // Tabs
+      '<div class="seg" style="margin-bottom:10px">' +
+        [['avatar', 'Avatar'], ['frame', 'Bingkai'], ['badge', 'Badge'], ['history', 'Riwayat']]
+          .map((t) =>
+            '<button data-act="tab" data-v="' + t[0] +
+            '" aria-pressed="' + (tab === t[0]) + '">' + t[1] + '</button>'
+          ).join('') +
+      '</div>' +
+
+      // Konten tab
+      grid +
+
+      // Statistik
+      '<h3 class="sec">Statistik</h3>' +
+      '<div class="stat-grid">' +
+        stats.map((x) =>
+          '<div class="stat-c"><small>' + x[0] + '</small><b>' + x[1] + '</b></div>'
+        ).join('') +
+      '</div>' +
+
+    '</div>';
+
+  // ── Handlers ──
+  const redo = () => this.render_profile();
+
+  const nameEl = $('profName');
+  if (nameEl) nameEl.addEventListener('input', (e) => {
+    p.name = e.target.value.trim().slice(0, 14) || 'Pemain';
+    st.save();
+    if (this.backend.currentUser()) this.backend.updateProfile({ name: p.name });
+  });
+
+  const photoInput = $('profPhoto');
+  if (photoInput) photoInput.addEventListener('change', async () => {
+    if (!photoInput.files[0]) return;
+    try {
+      const img = await readImageFile(photoInput.files[0]);
+      const dataUrl = fitDataURL(img, 256, 256, 0.85);
+      await this.backend.updateProfile({ avatarImage: dataUrl });
+      this.toast('Foto profil diperbarui', 'ok');
+      redo();
+    } catch (e) {
+      this.toast('Gagal membaca gambar', 'foul');
+    }
+  });
+
+  if (tab === 'history') this._renderHistory();
+
+  this._bind(el, {
+    tab:      (d) => { this.profTab = d.v; redo(); },
+    signout:  () => { this.backend.signOut(); this.toast('Berhasil keluar', 'ok'); this.back(); },
+    gotoauth: () => this.go('auth'),
+    sym:      (d) => { if (!st.setAvatar('sym', d.v)) this.toast('Avatar ini terkunci — raih level tertentu', 'foul'); redo(); },
+    color:    (d) => { st.setAvatar('color', +d.v); redo(); },
+    frame:    (d) => { if (!st.setAvatar('frame', d.v)) this.toast('Bingkai ini terkunci — raih level tertentu', 'foul'); redo(); },
+    badge:    (d) => { if (!st.equipBadge(d.v)) this.toast('Badge belum diraih', 'foul'); redo(); },
+    nobadge:  () => { st.equipBadge(null); redo(); },
+  });
+},
+async _renderHistory() {
+  const el = $('profHistory');
+  if (!el) return;
+
+  // Belum login
+  if (!this.backend || !this.backend.currentUser()) {
+    el.innerHTML = '<p class="muted" style="text-align:center;padding:24px 0">Masuk ke akun untuk melihat riwayat pertandingan.</p>';
+    return;
+  }
+
+  let rows = [];
+  try {
+    rows = await Promise.resolve(this.backend.listMatchHistory(30)) || [];
+  } catch (e) {
+    el.innerHTML = '<p class="muted" style="text-align:center;padding:24px 0">Gagal memuat riwayat.</p>';
+    return;
+  }
+
+  if (!rows.length) {
+    el.innerHTML = '<p class="muted" style="text-align:center;padding:32px 0">Belum ada riwayat pertandingan.<br><small>Main dulu di mode Lawan Bot atau Online.</small></p>';
+    return;
+  }
+
+  const modeLabel = { bot: 'Bot', online: 'Online', local: '2 Pemain' };
+  const gameLabel = { '8ball': '8-Ball', '9ball': '9-Ball', '9call': '9-Ball (Call)' };
+
+  const fmtTime = (ts) => {
+    if (!ts) return '—';
+    const d = new Date(ts);
+    const now = new Date();
+    const diff = Math.floor((now - d) / 1000);   // detik
+    if (diff < 60) return 'Baru saja';
+    if (diff < 3600) return Math.floor(diff / 60) + ' menit lalu';
+    if (diff < 86400) return Math.floor(diff / 3600) + ' jam lalu';
+    if (diff < 86400 * 7) return Math.floor(diff / 86400) + ' hari lalu';
+    return d.getDate() + '/' + (d.getMonth() + 1) + '/' + d.getFullYear();
+  };
+
+  el.innerHTML = '<div class="match-history">' + rows.map((r) => {
+    const win = !!r.youWon;
+    const net = win ? '+' + fmtCoins(r.payout || 0) : '−' + fmtCoins(r.bet || 0);
+    return '<div class="mh-row ' + (win ? 'win' : 'loss') + '">' +
+      '<div class="mh-icon">' + (win ? '🏆' : '✕') + '</div>' +
+      '<div class="mh-main">' +
+        '<div class="mh-top">' +
+          '<b>' + esc(gameLabel[r.game] || 'Match') + '</b>' +
+          '<span class="mh-mode">' + esc(modeLabel[r.mode] || r.mode || '—') + '</span>' +
+        '</div>' +
+        '<div class="mh-sub">' +
+          '<span>' + fmtTime(r.ts) + '</span>' +
+          '<span>·</span>' +
+          '<span>Masuk ' + (r.potted | 0) + ' bola</span>' +
+          (r.bet ? '<span>·</span><span>Bet ' + fmtShort(r.bet) + '</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="mh-net ' + (win ? 'ok' : 'bad') + '">' + net + '</div>' +
+    '</div>';
+  }).join('') + '</div>';
+},
   /* ------------------------------ hadiah ------------------------------ */
   render_rewards() {
     const st = this.store, el = $('pageRewards'), pr = st.progress(), daily = st.dailyStatus(), claimable = st.claimableLevels(), claimed = st.data.progress.claimedLevel;
@@ -552,10 +880,10 @@ render_tables() {
 /* ------------------------------ FX Bola Putih ------------------------------ */
 render_ballfx() {
   const st = this.store, el = $('pageBallFx');
-  const eq = (st.data.fx && st.data.fx.equipped) || 'none';
-  const items = st.allFx();
+  const eqFx = (st.data.fx && st.data.fx.equipped) || 'none';
+  const eqCb = st.data.cueball.equipped || 'none';
 
-  // Load market cache (untuk tahu FX mana yang dijual admin)
+  // Muat market cache
   if (!this._marketCache || Date.now() - (this._marketCache.ts || 0) > 30000) {
     Promise.resolve(this.backend.listMarket()).then((list) => {
       this._marketCache = { list: list || [], ts: Date.now() };
@@ -564,24 +892,52 @@ render_ballfx() {
   }
 
   const marketList = (this._marketCache && this._marketCache.list) || [];
-  const isOnMarket = (fxId) => marketList.some((it) => it.kind === 'fx' && it.payload && it.payload.id === fxId);
-  const marketItemFor = (fxId) => marketList.find((it) => it.kind === 'fx' && it.payload && it.payload.id === fxId);
+  const cbMarketItemFor = (cbId) =>
+    marketList.find((it) => it.kind === 'cueball' && 'mk_' + it.id === cbId);
+  const fxMarketItemFor = (fxId) =>
+    marketList.find((it) => it.kind === 'fx' && it.payload && it.payload.id === fxId);
 
-  const owned = items.filter((fx) => st.fxOwned(fx.id));
-  const market = items.filter((fx) => !st.fxOwned(fx.id) && isOnMarket(fx.id));
+  // ── Cueball ──
+  const allCb    = st.allCueballs();                             // bawaan + custom (termasuk dari market)
+  const ownedCb  = allCb.filter((cb) => cb.builtin || st.custom.cueballs.some((x) => x.id === cb.id));
+  const marketCb = marketList
+    .filter((it) => it.kind === 'cueball' && !st.custom.cueballs.some((x) => x.id === 'mk_' + it.id))
+    .map((it) => Object.assign({}, it.payload || {}, { id: 'mk_' + it.id, _mk: it }));
 
-  // Card builder
-  const card = (fx, mode) => {
-    const on = eq === fx.id;
-    const m = mode === 'market' ? marketItemFor(fx.id) : null;
-    let action = '';
-    if (mode === 'owned') {
-      action = '<button class="btn small ' + (on ? '' : 'primary') + '" data-act="equip" data-v="' + fx.id + '"' + (on ? ' disabled' : '') + '>' + (on ? 'Dipakai' : 'Pakai') + '</button>';
-    } else {
-      action = '<button class="btn small green" data-act="gotoMarket">Beli di Market · ' + COIN_SVG + ' ' + fmtShort(m ? m.price : 0) + '</button>';
-    }
+  // ── FX ──
+  const fxItems  = st.allFx();
+  const ownedFx  = fxItems.filter((fx) => st.fxOwned(fx.id));
+  const marketFx = fxItems.filter((fx) => !st.fxOwned(fx.id) && fxMarketItemFor(fx.id));
+
+  // ── Card builders ──
+  const cueballCard = (cb, mode) => {
+    const on = eqCb === cb.id;
+    const fxName = cb.fx && cb.fx !== 'none' && CUEBALL_FX[cb.fx] ? CUEBALL_FX[cb.fx].name : 'Tanpa efek';
+    const action = mode === 'owned'
+      ? '<button class="btn small ' + (on ? '' : 'primary') + '" data-act="equipCueball" data-v="' + cb.id + '"' + (on ? ' disabled' : '') + '>' + (on ? 'Dipakai' : 'Pakai') + '</button>'
+      : '<button class="btn small green" data-act="buyCueball" data-v="' + cb._mk.id + '">Beli · ' + COIN_SVG + ' ' + fmtShort(cb._mk.price || 0) + '</button>';
     return '<div class="tb-card' + (on ? ' equipped' : '') + '">' +
-      '<div class="tb-prev" style="min-height:180px"><canvas data-fx="' + fx.id + '" width="240" height="180" style="width:100%;height:auto;display:block"></canvas></div>' +
+      '<div class="tb-prev" style="min-height:180px">' +
+        '<canvas data-cb="' + cb.id + '" width="240" height="180" style="width:100%;height:auto;display:block"></canvas>' +
+      '</div>' +
+      '<div class="tb-info">' +
+        '<h4>' + esc(cb.name) + '<span class="rar ' + (cb.rarity || (cb.builtin ? 'Standard' : 'Epic')) + '">' + (cb.rarity || (cb.builtin ? 'Standard' : 'Epic')) + '</span></h4>' +
+        '<p class="muted" style="margin:0;font-size:13px;line-height:1.35;min-height:36px">' + esc(cb.desc || fxName) + '</p>' +
+        action +
+      '</div>' +
+    '</div>';
+  };
+
+  const fxCard = (fx, mode) => {
+    const on = eqFx === fx.id;
+    const m = mode === 'market' ? fxMarketItemFor(fx.id) : null;
+    const action = mode === 'owned'
+      ? '<button class="btn small ' + (on ? '' : 'primary') + '" data-act="equipFx" data-v="' + fx.id + '"' + (on ? ' disabled' : '') + '>' + (on ? 'Dipakai' : 'Pakai') + '</button>'
+      : '<button class="btn small green" data-act="gotoMarket">Beli di Market · ' + COIN_SVG + ' ' + fmtShort(m ? m.price : 0) + '</button>';
+    return '<div class="tb-card' + (on ? ' equipped' : '') + '">' +
+      '<div class="tb-prev" style="min-height:180px">' +
+        '<canvas data-fx="' + fx.id + '" width="240" height="180" style="width:100%;height:auto;display:block"></canvas>' +
+      '</div>' +
       '<div class="tb-info">' +
         '<h4>' + esc(fx.name) + '<span class="rar ' + fx.rarity + '">' + fx.rarity + '</span></h4>' +
         '<p class="muted" style="margin:0;font-size:13px;line-height:1.35;min-height:36px">' + esc(fx.desc) + '</p>' +
@@ -591,29 +947,179 @@ render_ballfx() {
   };
 
   let body = '';
-  // ── Seksi 1: Koleksi ──
-  body += '<h3 class="sec" style="margin-top:4px">Koleksi Kamu (' + owned.length + ')</h3>';
-  if (owned.length) body += '<div class="tb-grid">' + owned.map((fx) => card(fx, 'owned')).join('') + '</div>';
-  else body += '<p class="muted">Belum ada FX. Buka <b>Market → tab FX Bola</b> untuk membeli.</p>';
 
-  // ── Seksi 2: Market ──
-  if (market.length) {
-    body += '<h3 class="sec">Tersedia di Market (' + market.length + ')</h3>';
-    body += '<div class="tb-grid">' + market.map((fx) => card(fx, 'market')).join('') + '</div>';
+  // ════════ SECTION 1: SKIN BOLA PUTIH ════════
+  body += '<h3 class="sec" style="margin-top:4px">Skin Bola Putih (' + ownedCb.length + ')</h3>';
+  body += '<div class="tb-grid">' + ownedCb.map((cb) => cueballCard(cb, 'owned')).join('') + '</div>';
+
+  if (marketCb.length) {
+    body += '<h3 class="sec">Skin Bola Putih — Tersedia di Market (' + marketCb.length + ')</h3>';
+    body += '<div class="tb-grid">' + marketCb.map((cb) => cueballCard(cb, 'market')).join('') + '</div>';
   }
 
-  el.innerHTML = this._head('FX Bola Putih', this._wallet()) +
+  // ════════ SECTION 2: FX ANIMASI ════════
+  body += '<h3 class="sec">Efek Animasi — Koleksi Kamu (' + ownedFx.length + ')</h3>';
+  if (ownedFx.length) body += '<div class="tb-grid">' + ownedFx.map((fx) => fxCard(fx, 'owned')).join('') + '</div>';
+  else body += '<p class="muted">Belum ada FX.</p>';
+
+  if (marketFx.length) {
+    body += '<h3 class="sec">Efek Animasi — Tersedia di Market (' + marketFx.length + ')</h3>';
+    body += '<div class="tb-grid">' + marketFx.map((fx) => fxCard(fx, 'market')).join('') + '</div>';
+  }
+
+  el.innerHTML = this._head('Bola Putih', this._wallet()) +
     '<div class="pg-body">' +
-      '<p class="note" style="margin-top:0">Efek animasi untuk bola putih. Beli di <b>Market</b> untuk membuka; di sini untuk memakai / melepas.</p>' +
+      '<p class="note" style="margin-top:0">Pilih <b>skin bola putih</b> (warna/decal/efek) dan <b>efek animasi</b>. Beli item baru di <b>Market</b>.</p>' +
       body +
     '</div>';
 
   this._bind(el, {
-    equip: (d) => { st.equipFx(d.v); this.render_ballfx(); },
-    gotoMarket: () => { this.go('market'); },
+    equipFx:      (d) => { st.equipFx(d.v); this.render_ballfx(); },
+    equipCueball: (d) => { st.equipCueball(d.v); this.render_ballfx(); },
+    gotoMarket:   () => { this.go('market'); },
+    buyCueball:   (d) => this._buyCueballFromPage(d.v),
   });
 
   this._setupFxPreviews(el);
+  this._setupCueballPreviews(el);
+},
+
+/** Beli cueball dari halaman Bola Putih (shortcut — tidak perlu buka Market). */
+async _buyCueballFromPage(mkId) {
+  const st = this.store, be = this.backend;
+  const it = (this._marketCache && this._marketCache.list || []).find((x) => x.id === mkId);
+  if (!it) { this.toast('Item tidak ditemukan', 'foul'); return; }
+  const price = it.price || 0;
+  if (st.coins < price) { this.toast('Koin tidak cukup', 'foul'); return; }
+  if (!st.spend(price)) { this.toast('Koin tidak cukup', 'foul'); return; }
+  const pl = it.payload || {};
+  const nid = 'mk_' + it.id;
+  const ok = st.addCustomCueball({
+    id: nid, name: it.name,
+    tint: pl.tint || null,
+    image: pl.image || null,
+    fx: pl.fx || 'none',
+  });
+  if (!ok) { st.addCoins(price); this.toast('Penyimpanan penuh — koin dikembalikan', 'foul'); return; }
+  try { await Promise.resolve(be.updateProfile({ owned: ((be.currentUser() || {}).owned || []).concat(it.id) })); } catch (e) {}
+  this.toast('"' + it.name + '" dibeli', 'ok');
+  this.fx.burst(innerWidth / 2, innerHeight / 2, 70);
+  this.render_ballfx();
+},
+
+/** Preview statis untuk tiap canvas[data-cb]. */
+_setupCueballPreviews(root) {
+  const canvases = root.querySelectorAll('canvas[data-cb]');
+  if (!canvases.length) return;
+  const st = this.store;
+  canvases.forEach((cv) => {
+    let def;
+    // Kalau id diawali "mk_", ambil dari payload market
+    if (cv.dataset.cb.startsWith('mk_')) {
+      const mkId = cv.dataset.cb.slice(3);
+      const it = (this._marketCache && this._marketCache.list || []).find((x) => x.id === mkId);
+      def = it ? (it.payload || {}) : {};
+    } else {
+      def = st.cueballDef(cv.dataset.cb);
+    }
+    const W = cv.width, H = cv.height, c = cv.getContext('2d');
+    const cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.28;
+    c.clearRect(0, 0, W, H);
+
+    const fxCol = { fire: '255,130,40', ice: '140,210,255', aurora: '170,140,255', electric: '120,220,255', gold: '255,205,80' }[def.fx];
+    if (fxCol) {
+      const g = c.createRadialGradient(cx, cy, R * 0.3, cx, cy, R * 1.6);
+      g.addColorStop(0, 'rgba(' + fxCol + ',.55)');
+      g.addColorStop(1, 'rgba(' + fxCol + ',0)');
+      c.fillStyle = g;
+      c.beginPath(); c.arc(cx, cy, R * 1.6, 0, 7); c.fill();
+    }
+    c.save();
+    c.beginPath(); c.arc(cx, cy, R, 0, 7); c.clip();
+    c.fillStyle = def.tint || '#f6f6f0';
+    c.fillRect(0, 0, W, H);
+    const paintShade = () => {
+      const sh = c.createRadialGradient(cx - R * 0.4, cy - R * 0.5, R * 0.1, cx, cy, R * 1.15);
+      sh.addColorStop(0, 'rgba(255,255,255,0.55)');
+      sh.addColorStop(0.5, 'rgba(255,255,255,0)');
+      sh.addColorStop(1, 'rgba(0,20,40,0.55)');
+      c.fillStyle = sh; c.fillRect(0, 0, W, H); c.restore();
+    };
+    if (def.image) {
+      const im = new Image();
+      im.onload = () => {
+        const s = R * 1.7;
+        c.globalAlpha = 0.92;
+        c.drawImage(im, cx - s / 2, cy - s / 2, s, s);
+        c.globalAlpha = 1;
+        paintShade();
+      };
+      im.onerror = paintShade;
+      im.src = def.image;
+    } else paintShade();
+    c.strokeStyle = 'rgba(0,15,30,0.35)';
+    c.lineWidth = 1;
+    c.beginPath(); c.arc(cx, cy, R, 0, 7); c.stroke();
+  });
+},
+/** Preview statis untuk tiap canvas[data-cb] (tint + decal, tanpa animasi FX). */
+_setupCueballPreviews(root) {
+  const canvases = root.querySelectorAll('canvas[data-cb]');
+  if (!canvases.length) return;
+  const st = this.store;
+
+  canvases.forEach((cv) => {
+    const def = st.cueballDef(cv.dataset.cb);
+    const W = cv.width, H = cv.height;
+    const c = cv.getContext('2d');
+    const cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.28;
+    c.clearRect(0, 0, W, H);
+
+    // Aura FX kalau ada
+    const fxCol = { fire: '255,130,40', ice: '140,210,255', aurora: '170,140,255', electric: '120,220,255', gold: '255,205,80' }[def.fx];
+    if (fxCol) {
+      const g = c.createRadialGradient(cx, cy, R * 0.3, cx, cy, R * 1.6);
+      g.addColorStop(0, 'rgba(' + fxCol + ',.55)');
+      g.addColorStop(1, 'rgba(' + fxCol + ',0)');
+      c.fillStyle = g;
+      c.beginPath(); c.arc(cx, cy, R * 1.6, 0, 7); c.fill();
+    }
+
+    // Bola: tint + decal + shading
+    c.save();
+    c.beginPath(); c.arc(cx, cy, R, 0, 7); c.clip();
+    c.fillStyle = def.tint || '#f6f6f0';
+    c.fillRect(0, 0, W, H);
+
+    const paintShade = () => {
+      const sh = c.createRadialGradient(cx - R * 0.4, cy - R * 0.5, R * 0.1, cx, cy, R * 1.15);
+      sh.addColorStop(0, 'rgba(255,255,255,0.55)');
+      sh.addColorStop(0.5, 'rgba(255,255,255,0)');
+      sh.addColorStop(1, 'rgba(0,20,40,0.55)');
+      c.fillStyle = sh;
+      c.fillRect(0, 0, W, H);
+      c.restore();
+    };
+
+    if (def.image) {
+      const im = new Image();
+      im.onload = () => {
+        const s = R * 1.7;
+        c.globalAlpha = 0.92;
+        c.drawImage(im, cx - s / 2, cy - s / 2, s, s);
+        c.globalAlpha = 1;
+        paintShade();
+      };
+      im.onerror = paintShade;
+      im.src = def.image;
+    } else {
+      paintShade();
+    }
+
+    c.strokeStyle = 'rgba(0,15,30,0.35)';
+    c.lineWidth = 1;
+    c.beginPath(); c.arc(cx, cy, R, 0, 7); c.stroke();
+  });
 },
 
 /** Animasi preview untuk tiap canvas[data-fx] (IntersectionObserver). */

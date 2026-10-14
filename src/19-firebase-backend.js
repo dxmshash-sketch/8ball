@@ -48,7 +48,33 @@ class FirebaseBackend {
   // ═══════════════════════════════════════════════════════════
   // USER BARU — buat doc lengkap
   // ═══════════════════════════════════════════════════════════
- if (!snap.exists) {
+//  if (!snap.exists) {
+//   const s = window.ui && window.ui.store;
+//   const doc = {
+//     uid: fbUser.uid,
+//     email: fbUser.email,
+//     name: (s && s.data.profile.name !== 'Pemain')
+//           ? s.data.profile.name
+//           : (fbUser.displayName || fbUser.email.split('@')[0]).slice(0, 20),
+//     avatarImage: fbUser.photoURL || null,
+//     role: 'user',
+//     coins: (s && s.data.profile.coins) || START_COINS,        // ← pakai coins guest
+//     xp: (s && s.data.profile.xp) || 0,                        // ← pakai xp guest
+//     wins: (s && s.data.stats.wins) || 0,                      // ← pakai wins guest
+//     bestStreak: (s && s.data.stats.bestStreak) || 0,
+//     potted: (s && s.data.stats.potted) || 0,
+//     avatar: (s && s.data.profile.avatar) || { sym: 'ball8', color: 0, frame: 'none' },
+//     badge: null,
+//     fx: { equipped: 'none', owned: ['none'] },   // ← tambah
+//     owned: [],
+//     createdAt: Date.now(),
+//   };
+//   await ref.set(doc);
+//   snap = await ref.get();
+//   console.log('[Firebase] User baru dibuat:', doc.name, '· coins:', doc.coins);
+// }
+
+if (!snap.exists) {
   const s = window.ui && window.ui.store;
   const doc = {
     uid: fbUser.uid,
@@ -58,44 +84,63 @@ class FirebaseBackend {
           : (fbUser.displayName || fbUser.email.split('@')[0]).slice(0, 20),
     avatarImage: fbUser.photoURL || null,
     role: 'user',
-    coins: (s && s.data.profile.coins) || START_COINS,        // ← pakai coins guest
-    xp: (s && s.data.profile.xp) || 0,                        // ← pakai xp guest
-    wins: (s && s.data.stats.wins) || 0,                      // ← pakai wins guest
+    coins: (s && s.data.profile.coins) || START_COINS,
+    xp:    (s && s.data.profile.xp)    || 0,
+    // Stats lengkap
+    wins:       (s && s.data.stats.wins)       || 0,
+    losses:     (s && s.data.stats.losses)     || 0,
+    matches:    (s && s.data.stats.matches)    || 0,
+    streak:     (s && s.data.stats.streak)     || 0,
     bestStreak: (s && s.data.stats.bestStreak) || 0,
-    potted: (s && s.data.stats.potted) || 0,
+    potted:     (s && s.data.stats.potted)     || 0,
+    totalWon:   (s && s.data.stats.totalWon)   || 0,
+    totalLost:  (s && s.data.stats.totalLost)  || 0,
+    maxBetWon:  (s && s.data.stats.maxBetWon)  || 0,
+    wins9:      (s && s.data.stats.wins9)      || 0,
+    golden:     (s && s.data.stats.golden)     || 0,
+    // Kosmetik
     avatar: (s && s.data.profile.avatar) || { sym: 'ball8', color: 0, frame: 'none' },
     badge: null,
-    fx: { equipped: 'none', owned: ['none'] },   // ← tambah
+    fx: { equipped: 'none', owned: ['none'], defs: {} },
     owned: [],
     createdAt: Date.now(),
   };
   await ref.set(doc);
   snap = await ref.get();
-  console.log('[Firebase] User baru dibuat:', doc.name, '· coins:', doc.coins);
 }
+
   // ═══════════════════════════════════════════════════════════
   // USER LAMA — migrasi field baru kalau belum ada
   // ═══════════════════════════════════════════════════════════
-  else {
-    const u = snap.data();
-    const patch = {};
-
-    if (u.xp === undefined) patch.xp = 0;
-    if (u.wins === undefined) patch.wins = 0;
-    if (u.bestStreak === undefined) patch.bestStreak = 0;
-    if (u.potted === undefined) patch.potted = 0;
-    if (u.badge === undefined) patch.badge = null;
-    if (u.avatar === undefined) patch.avatar = { sym: 'ball8', color: 0, frame: 'none' };
-    if (!Array.isArray(u.owned)) patch.owned = [];
-    if (u.coins === undefined || u.coins === null) patch.coins = START_COINS;
-    if (u.fx === undefined) patch.fx = { equipped: 'none', owned: ['none'] };
-    if (Object.keys(patch).length > 0) {
-      console.log('[Firebase] Migrasi user lama — field baru:', Object.keys(patch).join(', '));
-      await ref.update(patch);
-      snap = await ref.get();
-    }
+ else {
+  const u = snap.data();
+  const patch = {};
+  if (u.xp === undefined)         patch.xp = 0;
+  if (u.wins === undefined)       patch.wins = 0;
+  if (u.losses === undefined)     patch.losses = 0;
+  if (u.matches === undefined)    patch.matches = 0;
+  if (u.streak === undefined)     patch.streak = 0;
+  if (u.bestStreak === undefined) patch.bestStreak = 0;
+  if (u.potted === undefined)     patch.potted = 0;
+  if (u.totalWon === undefined)   patch.totalWon = 0;
+  if (u.totalLost === undefined)  patch.totalLost = 0;
+  if (u.maxBetWon === undefined)  patch.maxBetWon = 0;
+  if (u.wins9 === undefined)      patch.wins9 = 0;
+  if (u.golden === undefined)     patch.golden = 0;
+  if (u.badge === undefined)      patch.badge = null;
+  if (u.avatar === undefined)     patch.avatar = { sym: 'ball8', color: 0, frame: 'none' };
+  if (!Array.isArray(u.owned))    patch.owned = [];
+  if (u.coins === undefined || u.coins === null) patch.coins = START_COINS;
+  if (u.fx === undefined || !u.fx.defs) {
+    const fx = u.fx || { equipped: 'none', owned: ['none'] };
+    patch.fx = { equipped: fx.equipped || 'none', owned: fx.owned || ['none'], defs: fx.defs || {} };
   }
-
+  if (Object.keys(patch).length > 0) {
+    console.log('[Firebase] Migrasi user lama:', Object.keys(patch).join(', '));
+    await ref.update(patch);
+    snap = await ref.get();
+  }
+}
   // ═══════════════════════════════════════════════════════════
   // ASSIGN USER
   // ═══════════════════════════════════════════════════════════
@@ -104,29 +149,70 @@ class FirebaseBackend {
   // ═══════════════════════════════════════════════════════════
 // SINKRON Firebase → store lokal (localStorage)
 // ═══════════════════════════════════════════════════════════
+// if (typeof window !== 'undefined' && window.store) {
+//   const store = window.store;
+
+//   // ▼ DISABLE sync biar tidak loop
+//   if (typeof store._setSyncingFromCloud === 'function') store._setSyncingFromCloud(true);
+
+//   if (this.user.coins !== undefined) store.data.profile.coins = this.user.coins;
+//   if (this.user.name) store.data.profile.name = this.user.name;
+//   if (this.user.xp !== undefined) store.data.profile.xp = this.user.xp;
+//   if (this.user.avatar) store.data.profile.avatar = this.user.avatar;
+//   if (this.user.badge !== undefined) store.data.profile.badge = this.user.badge;
+//   if (this.user.wins !== undefined) store.data.stats.wins = this.user.wins;
+//   if (this.user.bestStreak !== undefined) store.data.stats.bestStreak = this.user.bestStreak;
+//   if (this.user.potted !== undefined) store.data.stats.potted = this.user.potted;
+//   if (this.user.fx) store.data.fx = this.user.fx;
+//   // Tulis langsung ke localStorage — jangan pakai store.save()
+//   try { window.localStorage.setItem(store.key, JSON.stringify(store.data)); } catch (e) {}
+
+//   // ▼ RE-ENABLE sync
+//   if (typeof store._setSyncingFromCloud === 'function') store._setSyncingFromCloud(false);
+
+//   if (window.ui && window.ui.refreshMenu) window.ui.refreshMenu();
+// }
+
 if (typeof window !== 'undefined' && window.store) {
   const store = window.store;
-
-  // ▼ DISABLE sync biar tidak loop
   if (typeof store._setSyncingFromCloud === 'function') store._setSyncingFromCloud(true);
 
-  if (this.user.coins !== undefined) store.data.profile.coins = this.user.coins;
-  if (this.user.name) store.data.profile.name = this.user.name;
-  if (this.user.xp !== undefined) store.data.profile.xp = this.user.xp;
-  if (this.user.avatar) store.data.profile.avatar = this.user.avatar;
-  if (this.user.badge !== undefined) store.data.profile.badge = this.user.badge;
-  if (this.user.wins !== undefined) store.data.stats.wins = this.user.wins;
-  if (this.user.bestStreak !== undefined) store.data.stats.bestStreak = this.user.bestStreak;
-  if (this.user.potted !== undefined) store.data.stats.potted = this.user.potted;
-  if (this.user.fx) store.data.fx = this.user.fx;
-  // Tulis langsung ke localStorage — jangan pakai store.save()
+  // ── Profile ──
+  if (this.user.coins !== undefined)  store.data.profile.coins = this.user.coins;
+  if (this.user.name)                 store.data.profile.name  = this.user.name;
+  if (this.user.xp !== undefined)     store.data.profile.xp    = this.user.xp;
+  if (this.user.avatar)               store.data.profile.avatar = this.user.avatar;
+  if (this.user.badge !== undefined)  store.data.profile.badge = this.user.badge;
+  if (this.user.fx)                   store.data.fx = this.user.fx;
+// ── Stats via helper ──
+  if (typeof store.syncStatsFromCloud === 'function') {
+    store.syncStatsFromCloud(this.user);
+  }
+  // ── Stats LENGKAP ──
+  const u = this.user;
+  if (u.wins        !== undefined) store.data.stats.wins        = u.wins;
+  if (u.losses      !== undefined) store.data.stats.losses      = u.losses;
+  if (u.matches     !== undefined) store.data.stats.matches     = u.matches;
+  if (u.streak      !== undefined) store.data.stats.streak      = u.streak;
+  if (u.bestStreak  !== undefined) store.data.stats.bestStreak  = u.bestStreak;
+  if (u.potted      !== undefined) store.data.stats.potted      = u.potted;
+  if (u.totalWon    !== undefined) store.data.stats.totalWon    = u.totalWon;
+  if (u.totalLost   !== undefined) store.data.stats.totalLost   = u.totalLost;
+  if (u.maxBetWon   !== undefined) store.data.stats.maxBetWon   = u.maxBetWon;
+  if (u.wins9       !== undefined) store.data.stats.wins9       = u.wins9;
+  if (u.golden      !== undefined) store.data.stats.golden      = u.golden;
+
   try { window.localStorage.setItem(store.key, JSON.stringify(store.data)); } catch (e) {}
 
-  // ▼ RE-ENABLE sync
   if (typeof store._setSyncingFromCloud === 'function') store._setSyncingFromCloud(false);
-
   if (window.ui && window.ui.refreshMenu) window.ui.refreshMenu();
 }
+
+
+
+
+
+
   // ═══════════════════════════════════════════════════════════
   // NOTIFIKASI semua listener (UI update, redirect dari auth, dll)
   // ═══════════════════════════════════════════════════════════
@@ -174,24 +260,63 @@ async incrementCoins(delta) {
 }
 
 /** Atomic multi-field increment (untuk XP + wins sekaligus setelah match). */
+// async incrementStats(deltas) {
+//   if (!this.user) return false;
+//   const patch = {};
+//   if (deltas.xp)    patch.xp    = firebase.firestore.FieldValue.increment(deltas.xp);
+//   if (deltas.wins)  patch.wins  = firebase.firestore.FieldValue.increment(deltas.wins);
+//   if (deltas.losses)patch.losses= firebase.firestore.FieldValue.increment(deltas.losses);
+//   if (deltas.potted)patch.potted= firebase.firestore.FieldValue.increment(deltas.potted);
+//   if (deltas.matches)patch.matches= firebase.firestore.FieldValue.increment(deltas.matches);   // ← TAMBAH INI
+//   if (deltas.coins) patch.coins = firebase.firestore.FieldValue.increment(deltas.coins);
+  
+//   if (Object.keys(patch).length === 0) return true;
+//   try {
+//     await this.db.collection('users').doc(this.user.uid).update(patch);
+//     // Update local mirror
+//     for (const k of Object.keys(deltas)) {
+//       if (k === 'coins') this.user.coins = (this.user.coins || 0) + deltas[k];
+//       else this.user[k] = (this.user[k] || 0) + deltas[k];
+//     }
+//     this._emitAuth();
+//     return true;
+//   } catch (e) {
+//     console.error('[Firebase] incrementStats gagal:', e.message);
+//     return false;
+//   }
+// }
 async incrementStats(deltas) {
   if (!this.user) return false;
   const patch = {};
-  if (deltas.xp)    patch.xp    = firebase.firestore.FieldValue.increment(deltas.xp);
-  if (deltas.wins)  patch.wins  = firebase.firestore.FieldValue.increment(deltas.wins);
-  if (deltas.losses)patch.losses= firebase.firestore.FieldValue.increment(deltas.losses);
-  if (deltas.potted)patch.potted= firebase.firestore.FieldValue.increment(deltas.potted);
-  if (deltas.matches)patch.matches= firebase.firestore.FieldValue.increment(deltas.matches);   // ← TAMBAH INI
-  if (deltas.coins) patch.coins = firebase.firestore.FieldValue.increment(deltas.coins);
-  
+  if (deltas.xp)        patch.xp        = firebase.firestore.FieldValue.increment(deltas.xp);
+  if (deltas.coins)     patch.coins     = firebase.firestore.FieldValue.increment(deltas.coins);
+  if (deltas.wins)      patch.wins      = firebase.firestore.FieldValue.increment(deltas.wins);
+  if (deltas.losses)    patch.losses    = firebase.firestore.FieldValue.increment(deltas.losses);
+  if (deltas.matches)   patch.matches   = firebase.firestore.FieldValue.increment(deltas.matches);
+  if (deltas.potted)    patch.potted    = firebase.firestore.FieldValue.increment(deltas.potted);
+  if (deltas.totalWon)  patch.totalWon  = firebase.firestore.FieldValue.increment(deltas.totalWon);
+  if (deltas.totalLost) patch.totalLost = firebase.firestore.FieldValue.increment(deltas.totalLost);
+  if (deltas.wins9)     patch.wins9     = firebase.firestore.FieldValue.increment(deltas.wins9);
+  if (deltas.golden)    patch.golden    = firebase.firestore.FieldValue.increment(deltas.golden);
+
   if (Object.keys(patch).length === 0) return true;
   try {
     await this.db.collection('users').doc(this.user.uid).update(patch);
-    // Update local mirror
     for (const k of Object.keys(deltas)) {
       if (k === 'coins') this.user.coins = (this.user.coins || 0) + deltas[k];
       else this.user[k] = (this.user[k] || 0) + deltas[k];
     }
+    for (const k of Object.keys(deltas)) {
+  if (k === 'coins') this.user.coins = (this.user.coins || 0) + deltas[k];
+  else this.user[k] = (this.user[k] || 0) + deltas[k];
+}
+
+// ── Sync balik ke store lokal agar UI update ──
+if (window.store && typeof window.store.syncStatsFromCloud === 'function') {
+  window.store.syncStatsFromCloud(this.user);
+}
+
+
     this._emitAuth();
     return true;
   } catch (e) {
@@ -219,7 +344,19 @@ async incrementStats(deltas) {
  /* ------------ matchmaking (antrian cari lawan, lintas perangkat) ------------ */
   async joinQueue(cb, filter) {
     filter = filter || {}; const same = (d) => (d.bet || 0) === (filter.bet || 0) && (d.game || '') === (filter.game || '') && (d.table || '') === (filter.table || '');
-    const me = { uid: this.user.uid, name: this.user.name, avatarImage: this.user.avatarImage }, qref = this.db.collection('queue');
+    
+    // const me = { 
+    // uid: this.user.uid, 
+    // name: this.user.name, 
+    // avatarImage: this.user.avatarImage }, 
+    // qref = this.db.collection('queue');
+    const me = {
+      uid: this.user.uid,
+      name: this.user.name,
+      avatarImage: this.user.avatarImage,
+      skin: filter.skin || this._mySkin(),
+    };
+    
     const found = await this.db.runTransaction(async (tx) => {
       const snap = await qref.orderBy('ts').limit(5).get(); const other = snap.docs.find((d) => d.id !== me.uid && Date.now() - d.data().ts < 45000 && same(d.data()));
       if (other) { tx.delete(other.ref); return other.data(); }
@@ -261,4 +398,39 @@ async incrementStats(deltas) {
   sendRoomCtl(code, ctl, from) { this.db.collection('rooms').doc(code).update({ msgs: firebase.firestore.FieldValue.arrayUnion({ kind: 'ctl', ctl, from }) }); }
    sendRoomChat(code, text) { this.db.collection('rooms').doc(code).update({ msgs: firebase.firestore.FieldValue.arrayUnion({ kind: 'chat', text, from: this.user.name }) }); }
   sendRoomStart(code, info) { this.db.collection('rooms').doc(code).update({ msgs: firebase.firestore.FieldValue.arrayUnion({ kind: 'start', info }) }); }
+  
+  
+  /** Riwayat pertandingan → koleksi `matchHistory` di Firestore. */
+    async recordMatchHistory(entry) {
+      if (!this.user) return false;
+      try {
+        await this.db.collection('matchHistory').add(Object.assign({}, entry, {
+          uid: this.user.uid,
+          name: this.user.name,
+        }));
+        return true;
+      } catch (e) {
+        console.error('[Firebase] recordMatchHistory gagal:', e.message);
+        return false;
+      }
+    }
+
+ /** Ambil riwayat pertandingan terakhir milik user (sort di client, tanpa composite index). */
+async listMatchHistory(limitN) {
+  if (!this.user) return [];
+  try {
+    // Fetch 200 terakhir tanpa orderBy (cukup untuk 30 terbaru setelah sort di client)
+    const q = await this.db.collection('matchHistory')
+      .where('uid', '==', this.user.uid)
+      .limit(200)
+      .get();
+    const rows = q.docs.map((d) => Object.assign({ id: d.id }, d.data()));
+    rows.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    return rows.slice(0, limitN || 30);
+  } catch (e) {
+    console.error('[Firebase] listMatchHistory gagal:', e.message);
+    return [];
+  }
 }
+}
+

@@ -18,7 +18,7 @@ class Store {
       cues: { equipped: 'maple', owned: { maple: 1 } },
       tables: { equipped: 'klasik', owned: ['klasik'] },
       cueball: { equipped: 'none' },
-      fx: { equipped: 'none', owned: ['none'] },   // ← TAMBAH INI
+      fx: { equipped: 'none', owned: ['none'], defs: {} },  // defs = metadata dari market
       settings: { sfx: true, music: false, aimAssist: true, showBounce: true, aimZoom: 1 },
     };
     this.custom = { cues: [], tables: [], cueballs: [] };
@@ -55,7 +55,10 @@ _syncToCloud() {
     avatar: this.data.profile.avatar,
     badge: this.data.profile.badge,
     fx: this.data.fx,   // ← tambah
-
+    // Absolute-set stats (yang tidak increment)
+      streak: this.data.stats.streak,       // ← absolute set
+    bestStreak: this.data.stats.bestStreak,
+    maxBetWon: this.data.stats.maxBetWon,
   }).catch((e) => console.warn('[Store] sync profile gagal:', e.message));
 }
 
@@ -76,7 +79,23 @@ _syncCoinsToBackend() {
 _syncStatsToBackend() {
   // no-op: stats di-sync saat recordMatch via incrementStats
 }
-
+/** Update stats lokal dari data user cloud (Firebase). Dipanggil setelah login & setelah increment. */
+syncStatsFromCloud(u) {
+  if (!u) return;
+  const s = this.data.stats;
+  if (u.wins       !== undefined && u.wins       !== null) s.wins       = u.wins;
+  if (u.losses     !== undefined && u.losses     !== null) s.losses     = u.losses;
+  if (u.matches    !== undefined && u.matches    !== null) s.matches    = u.matches;
+  if (u.streak     !== undefined && u.streak     !== null) s.streak     = u.streak;
+  if (u.bestStreak !== undefined && u.bestStreak !== null) s.bestStreak = u.bestStreak;
+  if (u.potted     !== undefined && u.potted     !== null) s.potted     = u.potted;
+  if (u.totalWon   !== undefined && u.totalWon   !== null) s.totalWon   = u.totalWon;
+  if (u.totalLost  !== undefined && u.totalLost  !== null) s.totalLost  = u.totalLost;
+  if (u.maxBetWon  !== undefined && u.maxBetWon  !== null) s.maxBetWon  = u.maxBetWon;
+  if (u.wins9      !== undefined && u.wins9      !== null) s.wins9      = u.wins9;
+  if (u.golden     !== undefined && u.golden     !== null) s.golden     = u.golden;
+  try { window.localStorage.setItem(this.key, JSON.stringify(this.data)); } catch (e) {}
+}
 /** Paksa kirim semua state lokal ke cloud (untuk logout / pindah device). */
 async forceSync() {
   const b = window.ui && window.ui.backend;
@@ -129,34 +148,65 @@ spend(n) {
   return true;
 }
 
-  /** Dipanggil setelah pertandingan (mode bertaruh). Taruhan sudah dipotong saat mulai. */
-  recordMatch(r) {
-    const p = this.data.profile, s = this.data.stats, prevXp = p.xp, prevLevel = levelInfo(prevXp).level, bet = r.bet || 0;
-    let payout = 0;
-    s.matches++;
-    if (r.youWon) { s.wins++; s.streak++; s.bestStreak = Math.max(s.bestStreak, s.streak); payout = Math.floor(bet * 2 * (1 - HOUSE_FEE)); p.coins += payout; s.totalWon += payout - bet; s.maxBetWon = Math.max(s.maxBetWon, bet); }
-    else { s.losses++; s.streak = 0; s.totalLost += bet; }
-    if (r.youWon && r.game && r.game !== '8ball') { s.wins9++; if (r.golden) s.golden++; }
-    s.potted += r.potted || 0;
-    const lg = Math.log10(Math.max(100, bet));
-    const xpGain = r.youWon ? 40 + Math.round(lg * 12) : 15 + Math.round(lg * 4);
-    p.xp += xpGain;
-    const newBadges = this._checkBadges();
-    this.save(); this._emit('coins');
-    // setelah this.save(); this._emit('coins');
-const b = window.ui && window.ui.backend;
-if (b && b.currentUser() && typeof b.incrementStats === 'function') {
-  b.incrementStats({
-    xp: xpGain,
-    coins: payout,
-    wins: r.youWon ? 1 : 0,
-    losses: r.youWon ? 0 : 1,
-    matches: 1,                    // ← tambah
-    potted: r.potted || 0,
-  }).catch((e) => console.warn('[Store] recordMatch sync gagal:', e.message));
-}
-    return { bet, payout, net: r.youWon ? payout - bet : -bet, xpGain, prevXp, newXp: p.xp, prevLevel, newLevel: levelInfo(p.xp).level, newBadges };
+recordMatch(r) {
+  const p = this.data.profile, s = this.data.stats, prevXp = p.xp, prevLevel = levelInfo(prevXp).level, bet = r.bet || 0;
+  let payout = 0;
+  s.matches++;
+  if (r.youWon) {
+    s.wins++; s.streak++; s.bestStreak = Math.max(s.bestStreak, s.streak);
+    payout = Math.floor(bet * 2 * (1 - HOUSE_FEE));
+    p.coins += payout;
+    s.totalWon += payout - bet;
+    s.maxBetWon = Math.max(s.maxBetWon, bet);
+  } else {
+    s.losses++; s.streak = 0;
+    s.totalLost += bet;
   }
+  if (r.youWon && r.game && r.game !== '8ball') { s.wins9++; if (r.golden) s.golden++; }
+  s.potted += r.potted || 0;
+  const lg = Math.log10(Math.max(100, bet));
+  const xpGain = r.youWon ? 40 + Math.round(lg * 12) : 15 + Math.round(lg * 4);
+  p.xp += xpGain;
+  const newBadges = this._checkBadges();
+  this.save(); this._emit('coins');
+
+  // ── Sync ke backend (semua keluar dari nested) ──
+  const b = window.ui && window.ui.backend;
+if (b && b.currentUser()) {
+  // 1. Stats delta (increment) — single write
+  if (typeof b.incrementStats === 'function') {
+    b.incrementStats({
+      xp: xpGain, coins: payout,
+      wins: r.youWon ? 1 : 0, losses: r.youWon ? 0 : 1,
+      matches: 1, potted: r.potted || 0,
+      totalWon: r.youWon ? (payout - bet) : 0,
+      totalLost: r.youWon ? 0 : bet,
+      wins9: (r.youWon && r.game && r.game !== '8ball') ? 1 : 0,
+      golden: (r.youWon && r.golden) ? 1 : 0,
+    }).catch((e) => console.warn('[Store] incrementStats gagal:', e.message));
+  }
+  // 2. Streak & bestStreak → absolute (bisa naik/turun)
+  if (typeof b.updateProfile === 'function') {
+    b.updateProfile({
+      streak: s.streak,
+      bestStreak: s.bestStreak,
+      maxBetWon: s.maxBetWon,
+    }).catch((e) => console.warn('[Store] updateProfile stats gagal:', e.message));
+  }
+  // 3. History — TERPISAH, selalu dipanggil
+  if (typeof b.recordMatchHistory === 'function') {
+    b.recordMatchHistory({
+      game: r.game || '8ball', mode: r.mode || 'bot',
+      youWon: !!r.youWon, bet: bet, payout: payout,
+      potted: r.potted || 0, xpGain: xpGain, ts: Date.now(),
+    }).catch((e) => console.warn('[Store] recordMatchHistory gagal:', e.message));
+  }
+}
+  return { bet, payout, net: r.youWon ? payout - bet : -bet, xpGain, prevXp, newXp: p.xp, prevLevel, newLevel: levelInfo(p.xp).level, newBadges };
+}
+
+  
+
   _checkBadges() {
     const out = [];
     for (const b of BADGE_DEFS) if (this.data.unlocks.badges.indexOf(b.id) === -1 && b.check(this.data.stats, this.data.profile, this)) { this.data.unlocks.badges.push(b.id); out.push(b); }
@@ -269,16 +319,34 @@ if (b && b.currentUser() && typeof b.incrementStats === 'function') {
   cueballDef(id) { return this.allCueballs().find((c) => c.id === id) || this.allCueballs()[0]; }
   equipCueball(id) { if (this.allCueballs().some((c) => c.id === id)) { this.data.cueball.equipped = id; this.save(); this._emit('cueball'); return true; } return false; }
   /* ------------ FX bola putih ------------ */
-allFx() { return FX_CATALOG; }
-fxDef(id) { return FX_CATALOG.find((f) => f.id === id) || FX_CATALOG[0]; }
+/* ------------ FX bola putih ------------ */
+allFx() {
+  // FX_CATALOG = tipe efek yang didukung engine. defs = override metadata dari Market.
+  const defs = this.data.fx.defs || {};
+  return FX_CATALOG.map((f) => {
+    const d = defs[f.id];
+    return d ? Object.assign({}, f, { name: d.name, desc: d.desc, rarity: d.rarity }) : f;
+  });
+}
+fxDef(id) {
+  return this.allFx().find((f) => f.id === id) || FX_CATALOG[0];
+}
 fxOwned(id) { return this.data.fx.owned.indexOf(id) !== -1; }
 
-/* Beli FX dari Market (bukan harga lokal). Return {ok, error}. */
-buyFxFromMarket(id, price) {
+/** Beli FX dari Market. `def` = { name, desc, rarity } dari listing Firestore. */
+buyFxFromMarket(id, price, def) {
   if (this.fxOwned(id)) return { ok: false, error: 'Sudah dimiliki' };
   if (this.data.profile.coins < price) return { ok: false, error: 'Koin tidak cukup' };
   if (!this.spend(price)) return { ok: false, error: 'Koin tidak cukup' };
   this.data.fx.owned.push(id);
+  if (def && def.name) {
+    this.data.fx.defs = this.data.fx.defs || {};
+    this.data.fx.defs[id] = {
+      name: String(def.name).slice(0, 32),
+      desc: String(def.desc || '').slice(0, 140),
+      rarity: ['Rare', 'Epic', 'Legendary'].includes(def.rarity) ? def.rarity : 'Epic',
+    };
+  }
   this.save();
   this._emit('cueball');
   return { ok: true };
@@ -291,6 +359,7 @@ equipFx(id) {
   this._emit('cueball');   // trigger applyCueSkin di renderer
   return true;
 }
+/* ------------ sisa method (removeCustom, dst) ------------ */
 
   removeCustom(kind, id) {
     const arr = this.custom[kind]; const i = arr.findIndex((x) => x.id === id); if (i < 0) return;
@@ -313,3 +382,4 @@ equipFx(id) {
   }
   resetAll() { try { window.localStorage.removeItem(this.key); window.localStorage.removeItem(this.customKey); } catch (e) { /* abaikan */ } }
 }
+

@@ -131,34 +131,119 @@ class MockBackend {
     if (msg.type === 'user-joined' || msg.type === 'user-updated') { if (this._directoryCb) this._directoryCb(); }
     const rc = this.roomChannels.get(msg.room); if (rc && msg.type === 'room-msg') rc(msg.payload);
   }
+  
+  _mySkin() {
+    const st = window.store;
+    if (!st) return null;
+    return {
+      tableId: st.data.tables.equipped,
+      cueId: st.data.cues.equipped,
+      fxId: (st.data.fx && st.data.fx.equipped) || 'none',
+      cueballId: st.data.cueball.equipped,
+    };
+  }
+  
   onDirectoryChanged(fn) { this._directoryCb = fn; }
   createRoom() { const code = Math.random().toString(36).slice(2, 7).toUpperCase(); writeJSON(ROOM_PREFIX + code, { code, host: this._publicUser(this.user), guest: null, log: [] }); return code; }
+  
+  // joinRoom(code) {
+  //   code = code.toUpperCase().trim(); const room = readJSON(ROOM_PREFIX + code, null);
+  //   if (!room) return { ok: false, error: 'Kode room tidak ditemukan (harus tab/browser yang sama)' };
+  //   if (room.host.uid === this.user.uid) return { ok: true, room, asHost: true };
+  //   room.guest = this._publicUser(this.user); writeJSON(ROOM_PREFIX + code, room);
+  //   this._roomSend(code, { kind: 'guest-joined', guest: room.guest });
+  //   return { ok: true, room, asHost: false };
+  // }
+
   joinRoom(code) {
-    code = code.toUpperCase().trim(); const room = readJSON(ROOM_PREFIX + code, null);
-    if (!room) return { ok: false, error: 'Kode room tidak ditemukan (harus tab/browser yang sama)' };
-    if (room.host.uid === this.user.uid) return { ok: true, room, asHost: true };
-    room.guest = this._publicUser(this.user); writeJSON(ROOM_PREFIX + code, room);
-    this._roomSend(code, { kind: 'guest-joined', guest: room.guest });
-    return { ok: true, room, asHost: false };
-  }
+  code = code.toUpperCase().trim();
+  const room = readJSON(ROOM_PREFIX + code, null);
+  if (!room) return { ok: false, error: 'Kode room tidak ditemukan (harus tab/browser yang sama)' };
+  if (room.host.uid === this.user.uid) return { ok: true, room, asHost: true };
+  const guest = Object.assign(this._publicUser(this.user), { skin: this._mySkin() });
+  room.guest = guest;
+  writeJSON(ROOM_PREFIX + code, room);
+  this._roomSend(code, { kind: 'guest-joined', guest });
+  return { ok: true, room, asHost: false };
+}
+
   /* ------------ matchmaking (antrian cari lawan) ------------ */
   /** cb({code,isHost,peer}) dipanggil sekali saat lawan ditemukan. Mock: hanya menemukan pemain di browser yang sama. */
+  
+  // joinQueue(cb, filter) {
+  //   filter = filter || {};
+  //   const me = this._publicUser(this.user), now = Date.now(), same = (e) => (e.bet || 0) === (filter.bet || 0) && (e.game || '') === (filter.game || '') && (e.table || '') === (filter.table || '');
+  //   let q = readJSON('pantul.queue.v1', []).filter((e) => now - e.ts < 45000 && e.uid !== me.uid);
+  //   const wi = q.findIndex(same), waiting = wi >= 0 ? q.splice(wi, 1)[0] : null;                 // hanya cocokkan lawan dengan taruhan, game, dan meja yang sama
+  //   if (waiting) {
+  //     writeJSON('pantul.queue.v1', q);
+  //     const code = Math.random().toString(36).slice(2, 7).toUpperCase();
+  //     writeJSON(ROOM_PREFIX + code, { code, host: me, guest: waiting.user, log: [] });
+  //     this._netSend({ type: 'match-found', to: waiting.uid, code, peer: me, opts: { bet: waiting.bet || 0, game: waiting.game, table: waiting.table } });
+  //     cb({ code, isHost: true, peer: waiting.user, opts: { bet: waiting.bet || 0, game: waiting.game, table: waiting.table } });
+  //   } else {
+  //     q.push({ uid: me.uid, user: me, ts: now, bet: filter.bet || 0, game: filter.game || '', table: filter.table || '' }); writeJSON('pantul.queue.v1', q);
+  //     this._queueCb = cb; this._queueUid = me.uid;
+  //   }
+  // }
+
   joinQueue(cb, filter) {
-    filter = filter || {};
-    const me = this._publicUser(this.user), now = Date.now(), same = (e) => (e.bet || 0) === (filter.bet || 0) && (e.game || '') === (filter.game || '') && (e.table || '') === (filter.table || '');
-    let q = readJSON('pantul.queue.v1', []).filter((e) => now - e.ts < 45000 && e.uid !== me.uid);
-    const wi = q.findIndex(same), waiting = wi >= 0 ? q.splice(wi, 1)[0] : null;                 // hanya cocokkan lawan dengan taruhan, game, dan meja yang sama
-    if (waiting) {
-      writeJSON('pantul.queue.v1', q);
-      const code = Math.random().toString(36).slice(2, 7).toUpperCase();
-      writeJSON(ROOM_PREFIX + code, { code, host: me, guest: waiting.user, log: [] });
-      this._netSend({ type: 'match-found', to: waiting.uid, code, peer: me, opts: { bet: waiting.bet || 0, game: waiting.game, table: waiting.table } });
-      cb({ code, isHost: true, peer: waiting.user, opts: { bet: waiting.bet || 0, game: waiting.game, table: waiting.table } });
-    } else {
-      q.push({ uid: me.uid, user: me, ts: now, bet: filter.bet || 0, game: filter.game || '', table: filter.table || '' }); writeJSON('pantul.queue.v1', q);
-      this._queueCb = cb; this._queueUid = me.uid;
-    }
+  filter = filter || {};
+  const now = Date.now(), mySkin = filter.skin || this._mySkin();
+  const me = Object.assign(this._publicUser(this.user), { skin: mySkin });
+  const same = (e) => (e.bet || 0) === (filter.bet || 0)
+                    && (e.game || '') === (filter.game || '')
+                    && (e.table || '') === (filter.table || '');
+  let q = readJSON('pantul.queue.v1', []).filter((e) => now - e.ts < 45000 && e.uid !== me.uid);
+  const wi = q.findIndex(same), waiting = wi >= 0 ? q.splice(wi, 1)[0] : null;
+  if (waiting) {
+    writeJSON('pantul.queue.v1', q);
+    const code = Math.random().toString(36).slice(2, 7).toUpperCase();
+    writeJSON(ROOM_PREFIX + code, { code, host: me, guest: waiting.user, log: [] });
+    this._netSend({ type: 'match-found', to: waiting.uid, code, peer: me, opts: { bet: waiting.bet || 0, game: waiting.game, table: waiting.table } });
+    cb({ code, isHost: true, peer: waiting.user, opts: { bet: waiting.bet || 0, game: waiting.game, table: waiting.table } });
+  } else {
+    q.push({ uid: me.uid, user: me, ts: now, bet: filter.bet || 0, game: filter.game || '', table: filter.table || '' });
+    writeJSON('pantul.queue.v1', q);
+    this._queueCb = cb; this._queueUid = me.uid;
   }
+}
+
+/** Atomic-like increment untuk stats — mirror Firebase API. */
+incrementStats(deltas) {
+  if (!this.user) return Promise.resolve(false);
+  const u = this.user;
+  if (deltas.xp)        u.xp        = (u.xp || 0) + deltas.xp;
+  if (deltas.coins)     u.coins     = (u.coins || 0) + deltas.coins;
+  if (deltas.wins)      u.wins      = (u.wins || 0) + deltas.wins;
+  if (deltas.losses)    u.losses    = (u.losses || 0) + deltas.losses;
+  if (deltas.matches)   u.matches   = (u.matches || 0) + deltas.matches;
+  if (deltas.potted)    u.potted    = (u.potted || 0) + deltas.potted;
+  if (deltas.totalWon)  u.totalWon  = (u.totalWon || 0) + deltas.totalWon;
+  if (deltas.totalLost) u.totalLost = (u.totalLost || 0) + deltas.totalLost;
+  if (deltas.wins9)     u.wins9     = (u.wins9 || 0) + deltas.wins9;
+  if (deltas.golden)    u.golden    = (u.golden || 0) + deltas.golden;
+  const dir = this._directory();
+  dir[u.uid] = u;
+  this._saveDirectory(dir);
+    // ── Sync balik ke store ──
+  if (window.store && typeof window.store.syncStatsFromCloud === 'function') {
+    window.store.syncStatsFromCloud(u);
+  }
+
+  return Promise.resolve(true);
+}
+
+/** Atomic-like increment untuk coins. */
+incrementCoins(delta) {
+  if (!this.user) return Promise.resolve(false);
+  this.user.coins = (this.user.coins || 0) + delta;
+  const dir = this._directory();
+  dir[this.user.uid] = this.user;
+  this._saveDirectory(dir);
+  if (window.store) window.store.data.profile.coins = this.user.coins;
+  return Promise.resolve(true);
+}
   leaveQueue() { this._queueCb = null; if (this.user) writeJSON('pantul.queue.v1', readJSON('pantul.queue.v1', []).filter((e) => e.uid !== this.user.uid)); }
   onRoom(code, fn) { this.roomChannels.set(code, fn); }
   offRoom(code) { this.roomChannels.delete(code); }
@@ -167,4 +252,15 @@ class MockBackend {
   sendRoomChat(code, text) { this._roomSend(code, { kind: 'chat', text, from: this.user.name }); }
   sendRoomCtl(code, ctl, from) { this._roomSend(code, { kind: 'ctl', ctl, from }); }
   sendRoomStart(code, info) { this._roomSend(code, { kind: 'start', info }); }
+  recordMatchHistory(entry) {
+    const all = readJSON('pantul.matchHistory.v1', []);
+    all.unshift(Object.assign({}, entry, {
+      uid: this.user ? this.user.uid : null,
+      ts: entry.ts || Date.now(),
+    }));
+    writeJSON('pantul.matchHistory.v1', all.slice(0, 200));
+    return true;
+  }
 }
+
+

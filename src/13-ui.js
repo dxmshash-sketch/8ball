@@ -461,7 +461,16 @@ class UI {
     $('btnSettingsBack').addEventListener('click', () => { this.click(); this.store.save(); this.back(); });
     $('btnRestart').addEventListener('click', () => { this.click(); if (!game.restartMatch()) { this.toast('Saldo tidak cukup untuk taruhan yang sama', 'foul'); this.go('modes'); } });
     $('btnQuit').addEventListener('click', () => { this.click(); game.quitToMenu(); });
-    $('btnDisc').addEventListener('click', () => { this.click(); if (game.simulateDisconnect()) game.setPaused(false); });
+    // $('btnDisc').addEventListener('click', () => { this.click(); if (game.simulateDisconnect()) game.setPaused(false); });
+    $('btnDisc').addEventListener('click', () => {
+      this.click();
+      // Tahan Shift = reconnect cepat (blip), tanpa Shift = disconnect permanen (forfeit)
+      const mode = window.event && window.event.shiftKey ? 'blip' : 'drop';
+      if (game.simulateDisconnect(mode)) {
+        game.setPaused(false);
+        this.toast(mode === 'blip' ? 'Reconnect dalam 1.5s…' : 'Disconnect permanen — forfeit dalam 30s', mode === 'blip' ? '' : 'foul');
+      }
+    });
     document.querySelectorAll('.switch').forEach((sw) => sw.addEventListener('click', () => {
       const k = sw.dataset.set, s = this.store.data.settings; s[k] = !s[k]; this.syncSettings(); this.store.save();
       if (k === 'sfx' || k === 'music') { this.audio.unlock(); this.audio.applySettings(); }

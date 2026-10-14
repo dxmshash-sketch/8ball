@@ -46,7 +46,9 @@ class Game {
     this.ballInHandZone = 'none'; this.turnLeft = 0; this.turnTotal = 1;
     this.report = null; this.shotTime = 0; this.foulTimer = 0; this.mmTimer = 0; this.foulInfo = null; this.result = null;
     this.transport = null; this.brain = null; this.botState = { t: 0, plan: null, placed: false };
-    this.disconnected = false; this.attract = { t: 0, phase: 'wait' };
+    this.disconnected = false;  
+    this.disconnectTimer = 0;   // hitung mundur grace period
+    this.attract = { t: 0, phase: 'wait' };
     this.sessionScore = [0, 0]; this.pauseAsk = null; this.pauseLeft = 2; this.pauseT = 0; this.rematchAsk = null; this._keepScore = false;
     this.cueStats = { force: 5, aim: 5, spin: 5, time: 5 };
     this.bet = 0; this.pottedBySeat = [0, 0]; this.tableId = 'standard';
@@ -143,6 +145,8 @@ class Game {
  /* ------------------------------ match lifecycle ------------------------------ */
   /** @returns {boolean} false bila saldo tidak cukup untuk taruhan. */
   startMatch(opts) {
+    const mySkin = this._mySkin();
+    const botSkin = this._botSkin();
     const reuseTransport = !!(opts.room && this.transport && this.transport === opts.room.transport);   // rematch di room: transport yang sama dipakai lagi
     if (!reuseTransport) this._closeTransport();
     const bet = opts.mode === 'local' ? 0 : Math.max(0, opts.bet | 0);
@@ -157,14 +161,37 @@ class Game {
     const profile = this.store.data.profile, bot = this.cfg.bots[this.difficulty];
     const myLevel = 1 + Math.floor(profile.xp / 100);
     this.seed = opts.room ? seedFromRoomCode(opts.room.code) : (Math.random() * 4294967296) >>> 0;
-    if (opts.room) {
-      const me = { name: opts.room.myName || profile.name, control: 'local', level: myLevel }, peer = { name: opts.room.peerName || 'Teman', control: 'remote', level: 1 };
+    // if (opts.room) {
+    //   const me = { name: opts.room.myName || profile.name, control: 'local', level: myLevel }, peer = { name: opts.room.peerName || 'Teman', control: 'remote', level: 1 };
+    //   this.seats = opts.room.isHost ? [me, peer] : [peer, me];
+    // } else if (this.mode === 'bot') this.seats = [{ name: profile.name, control: 'local', level: myLevel }, { name: bot.name, control: 'bot', level: bot.level }];
+    // else if (this.mode === 'local') this.seats = [{ name: 'Pemain 1', control: 'local', level: 1 }, { name: 'Pemain 2', control: 'local', level: 1 }];
+    // else {
+    //   const names = this.cfg.onlineOpponents;
+    //   this.seats = [{ name: profile.name, control: 'local', level: myLevel }, { name: names[this.seed % names.length], control: 'bot', level: 3 + (this.seed % 6) }];
+    // }
+        if (opts.room) {
+      const peerSkin = (opts.room.peerSkin) || botSkin;   // fallback ke bot skin kalau kosong
+      const me   = { name: opts.room.myName || profile.name, control: 'local',  level: myLevel, skin: mySkin };
+      const peer = { name: opts.room.peerName || 'Teman',   control: 'remote', level: 1,       skin: peerSkin };
       this.seats = opts.room.isHost ? [me, peer] : [peer, me];
-    } else if (this.mode === 'bot') this.seats = [{ name: profile.name, control: 'local', level: myLevel }, { name: bot.name, control: 'bot', level: bot.level }];
-    else if (this.mode === 'local') this.seats = [{ name: 'Pemain 1', control: 'local', level: 1 }, { name: 'Pemain 2', control: 'local', level: 1 }];
-    else {
+    } else if (this.mode === 'bot') {
+      this.seats = [
+        { name: profile.name, control: 'local', level: myLevel, skin: mySkin },
+        { name: bot.name,     control: 'bot',   level: bot.level, skin: botSkin },
+      ];
+    } else if (this.mode === 'local') {
+      const p2Skin = { tableId: 'klasik', cueId: 'maple', fxId: 'none', cueballId: 'none' };
+      this.seats = [
+        { name: 'Pemain 1', control: 'local', level: 1, skin: mySkin },
+        { name: 'Pemain 2', control: 'local', level: 1, skin: p2Skin },
+      ];
+    } else {
       const names = this.cfg.onlineOpponents;
-      this.seats = [{ name: profile.name, control: 'local', level: myLevel }, { name: names[this.seed % names.length], control: 'bot', level: 3 + (this.seed % 6) }];
+      this.seats = [
+        { name: profile.name, control: 'local', level: myLevel, skin: mySkin },
+        { name: names[this.seed % names.length], control: 'bot', level: 3 + (this.seed % 6), skin: botSkin },
+      ];
     }
     this.brain = new BotBrain(this.cfg, this.mode === 'bot' ? this.difficulty : 'medium', new Rng(this.seed ^ 0x9e3779b9));
     this.matchId = 'M-' + this.seed.toString(36);
@@ -199,11 +226,18 @@ class Game {
       if (this.seats[this.rules.currentSeat] && this.seats[this.rules.currentSeat].control === 'bot') { this.botState.plan = null; this.botState.t = 0; }
       this.ui.toast('Tembakan ditolak: ' + e.reason, 'foul');
     });
-    t.on('disconnected', () => { this.disconnected = true; this.ui.toast('Koneksi terputus. Menyambung ulang…', 'foul'); this.ui.connectionChanged(this, false); });
+    t.on('disconnected', () => {
+      this.disconnected = true;
+      this.disconnectTimer = this.cfg.rules.disconnectGraceSeconds;
+      this.ui.toast('Koneksi terputus. Menyambung ulang… (' + this.disconnectTimer + 's)', 'foul');
+      this.ui.connectionChanged(this, false);
+    });
     t.on('reconnected', (e) => {
       this.disconnected = false;
+      this.disconnectTimer = 0;
       if (e.snapshot) this.restore(e.snapshot);
-      this.ui.toast('Tersambung kembali', 'ok'); this.ui.connectionChanged(this, true);
+      this.ui.toast('Tersambung kembali', 'ok');
+      this.ui.connectionChanged(this, true);
     });
   }
   _closeTransport() { if (this.transport) { this.transport.close(); this.transport = null; } }
@@ -248,6 +282,18 @@ class Game {
     if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 2.4);
     for (let i = 0; i < 16; i++) { const b = this.world.balls[i]; if (b.state === BallState.POCKETED && b.sinkT < 1 && this.world.stepSink(b, dt)) this.audio.play('cushion', 0.3); }
      this._updatePauseConsent(dt);
+    // ── Grace period disconnect ──
+if (this.disconnected && this.isActiveMatch() && !this.paused) {
+  this.disconnectTimer -= dt;
+  if (this.disconnectTimer <= 0) {
+    const mySeat = this.seats.findIndex((s) => s.control === 'local');
+    const f = this.rules.forfeit(mySeat >= 0 ? mySeat : 0);
+    this._endMatch(f.winner, 'Koneksi tidak kembali — kamu dinyatakan kalah', false);
+    return;
+  }
+}
+
+     
      if (this.paused) return;
     switch (this.sm.state) {
       case GameState.MENU: this._updateAttract(dt); break;
@@ -400,6 +446,8 @@ class Game {
   }
 
   _endMatch(winner, reason, golden) {
+    this.disconnected = false;         // ← reset
+    this.disconnectTimer = 0;          // ← reset
     const youWon = winner === 0;
     this.result = { winner, reason, youWon, golden: !!golden, game: this.gameType, bet: this.bet, mode: this.mode, winnerName: this.seats[winner].name, potted: this.pottedBySeat[0], summary: null };
     if (this.mode !== 'local') this.result.summary = this.store.recordMatch(this.result);
@@ -409,11 +457,55 @@ class Game {
      this.ui.showResult(this);
   }
   /** Keluar di tengah pertandingan bertaruh = kalah (taruhan hangus). */
-  forfeit() {
-    if (this.sm.state === GameState.MATCHMAKING && this.bet > 0) { this.store.addCoins(this.bet); this.bet = 0; return null; }   // batal sebelum main: taruhan kembali
-    if (!this.isActiveMatch() || this.mode === 'local' || this.bet <= 0) return null;
-    return this.store.recordMatch({ youWon: false, bet: this.bet, potted: this.pottedBySeat[0], mode: this.mode });
+  // forfeit() {
+  //   if (this.sm.state === GameState.MATCHMAKING && this.bet > 0) { this.store.addCoins(this.bet); this.bet = 0; return null; }   // batal sebelum main: taruhan kembali
+  //   if (!this.isActiveMatch() || this.mode === 'local' || this.bet <= 0) return null;
+  //   return this.store.recordMatch({ youWon: false, bet: this.bet, potted: this.pottedBySeat[0], mode: this.mode });
+  // }
+/** Keluar di tengah pertandingan = kalah (taruhan hangus bila ada). */
+forfeit() {
+  // Batal di matchmaking: taruhan dikembalikan
+  if (this.sm.state === GameState.MATCHMAKING && this.bet > 0) {
+    this.store.addCoins(this.bet); this.bet = 0; return null;
   }
+  // Matchmaking tanpa bet: cuma keluar, tidak dicatat
+  if (this.sm.state === GameState.MATCHMAKING) return null;
+  // Menu / game over / local: tidak dicatat
+  if (!this.isActiveMatch() || this.mode === 'local') return null;
+  // Kabari lawan (via transport)
+  if (this.isRoomMatch && this.transport && this.transport.sendCtl) {
+    this.transport.sendCtl({ t: 'leave' });
+  }
+  // Kalah, catat di stats + history
+  return this.store.recordMatch({
+    youWon: false,
+    bet: this.bet,
+    potted: this.pottedBySeat[0],
+    mode: this.mode,
+    game: this.gameType,   // ← kirim tipe game agar history akurat
+  });
+}
+
+
+  _botSkin() {
+  const r = new Rng(this.seed ^ 0xabcdef);
+  const pick = (arr) => arr[Math.floor(r.next() * arr.length)];
+  return {
+    tableId: pick(TABLE_THEMES).id,
+    cueId: pick(CUE_CATALOG).id,
+    fxId: pick(FX_CATALOG).id,
+    cueballId: 'none',
+  };
+}
+_mySkin() {
+  const st = this.store;
+  return {
+    tableId: st.data.tables.equipped,
+    cueId: st.data.cues.equipped,
+    fxId: (st.data.fx && st.data.fx.equipped) || 'none',
+    cueballId: st.data.cueball.equipped,
+  };
+}
 
   /* ------------------------------ bot ------------------------------ */
   _botView() {
@@ -527,20 +619,33 @@ class Game {
       case 'pause-ack':
         if (this.pauseAsk && this.pauseAsk.mine) { if (m.ok) this._grantPause(true); else { this.pauseAsk = null; this.ui.pausePending && this.ui.pausePending(this, false); this.ui.toast('Lawan menolak jeda', 'foul'); } } break;
       case 'resume': if (this.paused) { this.paused = false; this.ui.pausedChanged(this, false); } break;
-      case 'leave': if (this.isActiveMatch()) { this.paused = false; this.pauseAsk = null; this.shotPending = false; this.cueAnim = null; this.ui.pausedChanged(this, false); if (this.sm.state !== GameState.SHOT_RESOLVING) this.sm.restore(GameState.SHOT_RESOLVING); this._endMatch(0, 'Lawan meninggalkan pertandingan'); } break;
+      case 'leave': if (this.isActiveMatch()) {
+      this.paused = false; this.pauseAsk = null; this.shotPending = false; this.cueAnim = null;
+      this.ui.pausedChanged(this, false);
+      if (this.sm.state !== GameState.SHOT_RESOLVING) this.sm.restore(GameState.SHOT_RESOLVING);
+      // Lawan (seat 1) keluar → kita (seat 0) menang
+      const f = this.rules.forfeit(1);
+      this._endMatch(f.winner, 'Lawan meninggalkan pertandingan — kamu menang', false);
+    } break;
       case 'rematch-req': if (this.sm.state === GameState.GAME_OVER) { this.rematchAsk = { mine: false }; this.ui.toast('Lawan mengajak main lagi — tekan "Main Lagi" untuk setuju', 'ok'); } break;
       case 'rematch-ack': if (this.rematchAsk && this.rematchAsk.mine && m.ok) { this.rematchAsk = null; this._startRematch(); } break;
     }
   }
   _startRematch() { this._keepScore = true; const ok = this.startMatch(this.lastOptions); if (!ok) { this._keepScore = false; this.ui.toast('Saldo tidak cukup untuk taruhan yang sama', 'foul'); } return ok; }
-  quitToMenu() {
-    if (this.isRoomMatch && this.isActiveMatch() && this.transport && this.transport.sendCtl) this.transport.sendCtl({ t: 'leave' });
-    const forfeited = this.forfeit();
-    this._closeTransport(); this.paused = false; this.disconnected = false; this.cueAnim = null; this.shotPending = false; this.pauseAsk = null; this.rematchAsk = null;
-    if (this.sm.state !== GameState.MENU) this.sm.transition(GameState.MENU);
-    this._resetAttract(); this.ui.pausedChanged(this, false); this.ui.pausePending && this.ui.pausePending(this, false); this.ui.pausePrompt && this.ui.pausePrompt(this, false);
-    return forfeited;
-  }
+quitToMenu() {
+  // forfeit() sudah kirim ctl leave kalau perlu
+  const forfeited = this.forfeit();
+  this._closeTransport();
+  this.paused = false; this.disconnected = false; this.cueAnim = null;
+  this.shotPending = false; this.pauseAsk = null; this.rematchAsk = null;
+  this.disconnectTimer = 0;
+  if (this.sm.state !== GameState.MENU) this.sm.transition(GameState.MENU);
+  this._resetAttract();
+  this.ui.pausedChanged(this, false);
+  this.ui.pausePending && this.ui.pausePending(this, false);
+  this.ui.pausePrompt && this.ui.pausePrompt(this, false);
+  return forfeited;
+}
   restartMatch() { if (this.needsConsent()) { this.ui.toast('Mulai ulang tidak tersedia di pertandingan online', ''); return true; } const o = this.lastOptions; this.quitToMenu(); return o ? this.startMatch(o) : false; }
   rematch() {
     if (!this.lastOptions || this.sm.state !== GameState.GAME_OVER) return false;
@@ -552,7 +657,18 @@ class Game {
     if (this.store.coins < this.bet) return false;
     this.rematchAsk = { mine: true }; this.transport.sendCtl({ t: 'rematch-req' }); this.ui.toast('Menunggu persetujuan lawan untuk main lagi…', ''); return true;
   }
-  simulateDisconnect() { if (this.transport && this.mode === 'online' && this.isTurnState()) { this.transport.disconnect(); this.transport.reconnect(); return true; } return false; }
+  /** Mode 'drop' = disconnect permanen (uji forfeit). Mode 'blip' = reconnect cepat (uji resiliensi). */
+simulateDisconnect(mode) {
+  if (!this.transport || this.mode !== 'online' || !this.isTurnState()) return false;
+  if (mode === 'blip') {
+    this.transport.disconnect();
+    setTimeout(() => this.transport.reconnect(), 1500);   // reconnect setelah 1.5s
+    return true;
+  }
+  // Default: permanent disconnect → forfeit setelah grace period
+  this.transport.disconnect();
+  return true;
+}
 
   /* ------------------------------ snapshot (reconnect) ------------------------------ */
   serialize() {
@@ -588,3 +704,5 @@ class Game {
   /** Panjang garis putus-putus bantu bidik (lintasan bola target, pantulan, defleksi bola putih). Mengikuti ukuran bola, bukan lebar meja; atur lewat CONFIG.aim.guide (1 = normal, 0.5 = setengah). */
   aimGuideLength() { return (50 + this.cueStats.aim * 22) * (this.cfg.table.ballRadius / 15) * (this.cfg.aim.guide || 1); }
 }
+
+

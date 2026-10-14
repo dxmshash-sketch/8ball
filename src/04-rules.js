@@ -96,6 +96,22 @@ class MatchRules {
 
   /** Waktu habis: seat yang sedang giliran melakukan foul. */
   forceFoul() { this.isBreak = false; this.currentSeat = 1 - this.currentSeat; return this.currentSeat; }
+  /**
+ * Pemain keluar / disconnect permanen → lawan menang.
+ * @param {number} leaverSeat - seat pemain yang keluar (0 atau 1)
+ * @returns {{winner:number, loser:number, reason:string}}
+ */
+forfeit(leaverSeat) {
+  const winner = 1 - leaverSeat;
+  this.winner = winner;
+  this.currentSeat = winner;
+  return {
+    winner,
+    loser: leaverSeat,
+    reason: 'Pemain keluar dari pertandingan',
+  };
+}
+
 }
 
 
@@ -144,4 +160,20 @@ class NineBallRules {
     return res;
   }
   forceFoul() { this.isBreak = false; this.currentSeat = 1 - this.currentSeat; return this.currentSeat; }
+  /**
+ * Pemain keluar / disconnect permanen → lawan menang.
+ * @param {number} leaverSeat - seat pemain yang keluar (0 atau 1)
+ * @returns {{winner:number, loser:number, reason:string}}
+ */
+forfeit(leaverSeat) {
+  const winner = 1 - leaverSeat;
+  this.winner = winner;
+  this.currentSeat = winner;
+  return {
+    winner,
+    loser: leaverSeat,
+    reason: 'Pemain keluar dari pertandingan',
+  };
 }
+}
+
